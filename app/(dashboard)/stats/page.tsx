@@ -1,21 +1,21 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Spinner } from '@heroui/react'
+import { Spinner, Drawer, DrawerContent, DrawerHeader, DrawerBody } from '@heroui/react'
 import { useSession } from '@/hooks/useSession'
 import { PageHeader } from '@/components/PageHeader'
 import type { ChoirEvent, Member } from '@/lib/types'
-
-function monthStr(offset = 0) {
-  const d = new Date()
-  d.setMonth(d.getMonth() + offset)
-  return d.toISOString().slice(0, 7)
-}
+import { plural, SINGER } from '@/lib/plural'
 
 const MONTHS_RU = [
   'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
 ]
+
+function currentMonthStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
 
 interface MemberStat {
   member: Member
@@ -26,10 +26,11 @@ interface MemberStat {
 
 export default function StatsPage() {
   const { session } = useSession()
-  const [month, setMonth] = useState(monthStr())
+  const [month, setMonth] = useState(currentMonthStr)
   const [stats, setStats] = useState<MemberStat[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<MemberStat | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -60,10 +61,16 @@ export default function StatsPage() {
 
   useEffect(() => { load() }, [load])
 
+  // ✅ Исправлен баг: toISOString использует UTC, что сдвигает месяц в UTC+X
   function changeMonth(delta: number) {
     const [y, m] = month.split('-').map(Number)
     const d = new Date(y, m - 1 + delta, 1)
-    setMonth(d.toISOString().slice(0, 7))
+    setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+  }
+
+  function openDetail(s: MemberStat) {
+    setSelected(s)
+    setDrawerOpen(true)
   }
 
   const [y, mo] = month.split('-').map(Number)
@@ -74,7 +81,7 @@ export default function StatsPage() {
     <div className="max-w-lg mx-auto">
       <PageHeader
         title="Статистика"
-        subtitle={monthLabel}
+        subtitle={loading ? '' : monthLabel}
         displayName={session?.displayName}
         choirType={session?.choirType}
         right={
@@ -95,115 +102,142 @@ export default function StatsPage() {
         }
       />
 
-      <div className="px-2">
+      <div className="px-0">
         {loading ? (
           <div className="flex justify-center py-12"><Spinner color="warning" /></div>
         ) : stats.length === 0 ? (
-          <div className="warm-card p-8 text-center">
+          <div className="mx-2 warm-card p-8 text-center">
             <div className="text-4xl mb-3">📊</div>
-            <p className="font-slab font-semibold text-warm-700">Нет данных</p>
+            <p className="font-semibold text-warm-700">Нет данных</p>
             <p className="text-sm text-warm-400 mt-1">За {monthLabel} записей не найдено</p>
           </div>
         ) : (
-          <>
-            <div className="warm-card overflow-hidden mb-3">
-              <table className="warm-table">
-                <thead>
-                  <tr>
-                    <th>Певчий</th>
-                    <th className="text-center">Выходы</th>
-                    <th className="text-center">Сумма</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.map((s) => (
-                    <tr
-                      key={s.member._id}
-                      onClick={() => setSelected(selected?.member._id === s.member._id ? null : s)}
-                      className="cursor-pointer"
-                    >
-                      <td>
-                        <span className="font-slab font-semibold text-warm-900">{s.member.name}</span>
-                      </td>
-                      <td className="text-center tabular-nums text-warm-600 text-xs">
-                        {s.events}
-                      </td>
-                      <td className="text-center tabular-nums font-slab font-semibold text-warm-800">
-                        {s.total > 0 ? `${s.total.toLocaleString('ru-RU')} ₽` : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-warm-50">
-                    <td className="font-slab font-bold text-warm-900 text-sm">Итого</td>
-                    <td />
-                    <td className="text-center font-slab font-bold text-warm-900 tabular-nums">
-                      {grandTotal.toLocaleString('ru-RU')} ₽
+          <div className="warm-card overflow-hidden mx-2">
+            <table className="warm-table">
+              <thead>
+                <tr>
+                  <th>Певчий</th>
+                  <th className="text-center w-16">Выходы</th>
+                  <th className="text-center">Сумма</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.map((s) => (
+                  <tr
+                    key={s.member._id}
+                    onClick={() => openDetail(s)}
+                    className="cursor-pointer active:bg-warm-50"
+                  >
+                    <td>
+                      <span className="font-semibold text-warm-900">{s.member.name}</span>
+                    </td>
+                    <td className="text-center tabular-nums text-warm-500 text-sm">
+                      {s.events > 0 ? s.events : '—'}
+                    </td>
+                    <td className="text-center tabular-nums font-semibold text-warm-800">
+                      {s.total > 0 ? `${s.total.toLocaleString('ru-RU')} ₽` : '—'}
                     </td>
                   </tr>
-                </tfoot>
-              </table>
-            </div>
-
-            {/* Detail panel */}
-            {selected && selected.rows.length > 0 && (
-              <div className="warm-card overflow-hidden mb-3">
-                <div className="px-4 py-3 border-b border-warm-100 flex items-center justify-between">
-                  <p className="font-slab font-bold text-warm-900 text-sm">{selected.member.name}</p>
-                  <button
-                    onClick={() => setSelected(null)}
-                    className="w-6 h-6 rounded-full bg-warm-100 text-warm-500 text-xs flex items-center justify-center"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <table className="warm-table">
-                  <thead>
-                    <tr>
-                      <th>Дата</th>
-                      <th>Тип</th>
-                      <th className="text-right">Сумма</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...selected.rows]
-                      .sort((a, b) => a.date.localeCompare(b.date))
-                      .map((r, i) => {
-                        const [, , d] = r.date.split('-').map(Number)
-                        return (
-                          <tr key={i}>
-                            <td className="text-warm-500 text-xs tabular-nums">
-                              {d} {MONTHS_RU[mo - 1].toLowerCase().slice(0, 3)}
-                            </td>
-                            <td>
-                              <span className="text-xs font-slab font-medium text-warm-700">{r.eventType}</span>
-                            </td>
-                            <td className="text-right tabular-nums text-sm font-medium text-warm-800">
-                              {r.basePrice.toLocaleString('ru-RU')}
-                              {r.bonus > 0 && (
-                                <span className="text-green-600 ml-1">+{r.bonus.toLocaleString('ru-RU')}</span>
-                              )}
-                              {' '}₽
-                            </td>
-                          </tr>
-                        )
-                      })}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-warm-50">
-                      <td colSpan={2} className="font-slab font-bold text-warm-900 text-sm">Итого</td>
-                      <td className="text-right font-slab font-bold text-warm-900 tabular-nums">
-                        {selected.total.toLocaleString('ru-RU')} ₽
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            )}
-          </>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-warm-50">
+                  <td className="font-bold text-warm-900 text-sm">Итого</td>
+                  <td />
+                  <td className="text-center font-bold text-warm-900 tabular-nums">
+                    {grandTotal.toLocaleString('ru-RU')} ₽
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         )}
       </div>
+
+      {/* Drawer с деталями певчего */}
+      <Drawer
+        isOpen={drawerOpen}
+        onOpenChange={(open) => { if (!open) setDrawerOpen(false) }}
+        placement="bottom"
+        scrollBehavior="inside"
+        classNames={{
+          base: 'bg-white rounded-t-2xl max-h-[75dvh] shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
+          header: 'border-b border-warm-200 py-3 px-4',
+          body: 'px-0 py-0',
+          closeButton: 'hidden',
+        }}
+      >
+        <DrawerContent>
+          {(close) => (
+            <>
+              <div className="flex justify-center pt-3 pb-0">
+                <div className="w-10 h-1 rounded-full bg-warm-300" />
+              </div>
+              <DrawerHeader className="flex items-center justify-between">
+                <div>
+                  <p className="text-base font-bold text-warm-900">{selected?.member.name}</p>
+                  <p className="text-xs text-warm-400 mt-0.5">{monthLabel}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-warm-800 tabular-nums">
+                    {selected?.total.toLocaleString('ru-RU')} ₽
+                  </p>
+                  <p className="text-xs text-warm-400">
+                    {selected?.events ?? 0} {plural(selected?.events ?? 0, SINGER === SINGER ? ['выход', 'выхода', 'выходов'] : ['выход', 'выхода', 'выходов'])}
+                  </p>
+                </div>
+              </DrawerHeader>
+              <DrawerBody>
+                {selected && selected.rows.length > 0 ? (
+                  <table className="warm-table">
+                    <thead>
+                      <tr>
+                        <th>Дата</th>
+                        <th>Тип</th>
+                        <th className="text-right">Сумма</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...selected.rows]
+                        .sort((a, b) => a.date.localeCompare(b.date))
+                        .map((r, i) => {
+                          const [, , d] = r.date.split('-').map(Number)
+                          return (
+                            <tr key={i}>
+                              <td className="text-warm-500 text-xs tabular-nums whitespace-nowrap">
+                                {d} {MONTHS_RU[mo - 1].toLowerCase().slice(0, 3)}
+                              </td>
+                              <td className="font-medium text-warm-700 text-xs">{r.eventType}</td>
+                              <td className="text-right tabular-nums font-medium text-warm-800">
+                                {r.basePrice.toLocaleString('ru-RU')}
+                                {r.bonus > 0 && (
+                                  <span className="text-green-600 ml-1">+{r.bonus.toLocaleString('ru-RU')}</span>
+                                )}
+                                {' '}₽
+                              </td>
+                            </tr>
+                          )
+                        })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-warm-50">
+                        <td colSpan={2} className="font-bold text-warm-900 text-sm">Итого</td>
+                        <td className="text-right font-bold text-warm-900 tabular-nums">
+                          {selected.total.toLocaleString('ru-RU')} ₽
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                ) : (
+                  <div className="py-8 text-center text-warm-400">
+                    Выходов нет
+                  </div>
+                )}
+              </DrawerBody>
+            </>
+          )}
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 }

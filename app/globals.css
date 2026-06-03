@@ -31,6 +31,17 @@ input, textarea, select {
   font-size: 16px !important;
 }
 
+/* Убрать стрелки у number-инпута */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* Gradient button */
 .btn-gradient {
   background: var(--gradient);

@@ -83,7 +83,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     if (choirType !== 'festive' || !resolvedType || members.length === 0) return
     const existingAtt = editingEvent?.attendances || []
     const newRows: Row[] = members.map((m) => {
-      const existing = existingAtt.find((a) => a.memberId === m._id)
+      const existing = existingAtt.find((a) => a.memberId === m._id || a.memberName === m.name)
       const priceMap = pricesToMap(m.defaultPrices)
       const basePrice = existing?.basePrice ?? (
         priceMap[resolvedType] !== undefined
@@ -197,7 +197,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       placement="bottom"
       scrollBehavior="inside"
       classNames={{
-        base: 'bg-page rounded-t-2xl max-h-[92dvh]',
+        base: 'bg-white rounded-t-2xl max-h-[92dvh] shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
         header: 'border-b border-warm-200 py-3 px-4',
         body: 'px-4 py-4',
         footer: 'border-t border-warm-200 bg-white px-4 py-3',
