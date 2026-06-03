@@ -23,6 +23,7 @@ html, body {
   background-color: #F7F4F1;
   color: #2c1a0e;
   overscroll-behavior: none;
+  font-family: 'Roboto Slab', serif;
 }
 
 /* Prevent iOS auto-zoom on input focus */
