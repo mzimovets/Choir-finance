@@ -123,6 +123,18 @@ input[type="number"] {
 }
 .warm-input::placeholder { color: #c4a88a; }
 
+/* Step slide animations */
+@keyframes slideFromRight {
+  from { transform: translateX(28px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slideFromLeft {
+  from { transform: translateX(-28px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.anim-slide-right { animation: slideFromRight 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+.anim-slide-left  { animation: slideFromLeft  0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+
 /* Chip role */
 .role-chip {
   display: inline-flex;

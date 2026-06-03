@@ -30,6 +30,9 @@ const ALL_TYPES = [...EVENT_TYPES, 'Другое'] as const
 
 export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, onSaved }: Props) {
   const [step, setStep] = useState<'type' | 'members'>('type')
+  const [animDir, setAnimDir] = useState<'right' | 'left'>('right')
+  const [stepKey, setStepKey] = useState(0)
+
   const [eventType, setEventType] = useState('')
   const [customType, setCustomType] = useState('')
   const [members, setMembers] = useState<Member[]>([])
@@ -42,6 +45,18 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   const searchRef = useRef<HTMLInputElement>(null)
 
   const resolvedType = eventType === 'Другое' ? customType.trim() : eventType
+
+  function goToMembers() {
+    setAnimDir('right')
+    setStepKey((k) => k + 1)
+    setStep('members')
+  }
+
+  function goToType() {
+    setAnimDir('left')
+    setStepKey((k) => k + 1)
+    setStep('type')
+  }
 
   // Загрузка певчих при открытии
   useEffect(() => {
@@ -69,6 +84,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       setStep('members')
     } else {
       setStep('type')
+      setAnimDir('right')
+      setStepKey(0)
       setEventType('')
       setCustomType('')
       setSearch('')
@@ -206,242 +223,265 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     >
       <DrawerContent>
         {(closeDrawer) => (
-        <>
-        {/* Ручка */}
-        <div className="flex justify-center pt-3 pb-0">
-          <div className="w-10 h-1 rounded-full bg-warm-300" />
-        </div>
-
-        <DrawerHeader className="flex items-center justify-between">
-          <span className="text-base font-bold text-warm-900">
-            {editingEvent ? `Редактировать: ${editingEvent.eventType}` : 'Новый выход'}
-          </span>
-          {checkedCount > 0 && (
-            <span className="text-xs text-warm-500">
-              {checkedCount} {plural(checkedCount, SINGER)}
-            </span>
-          )}
-        </DrawerHeader>
-
-        <DrawerBody>
-          {/* Шаг 1: тип выхода */}
-          {step === 'type' && (
-            <div className="flex flex-col gap-3">
-              <p className="text-xs font-semibold text-warm-600 uppercase tracking-wide">
-                Тип выхода
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {ALL_TYPES.map((t) => {
-                  const active = eventType === t
-                  return (
-                    <button
-                      key={t}
-                      onClick={() => setEventType(t)}
-                      className={`py-3 rounded-xl text-sm font-semibold border transition-all ${
-                        active
-                          ? 'text-white border-transparent'
-                          : 'bg-white border-warm-200 text-warm-700 active:bg-warm-50'
-                      }`}
-                      style={active ? { background: 'linear-gradient(to right, #bd9673, #7d5e42)' } : {}}
-                    >
-                      {t}
-                    </button>
-                  )
-                })}
-              </div>
-              {eventType === 'Другое' && (
-                <input
-                  className="warm-input"
-                  placeholder="Введите название выхода"
-                  value={customType}
-                  onChange={(e) => setCustomType(e.target.value)}
-                  autoFocus
-                />
-              )}
+          <>
+            {/* Ручка */}
+            <div className="flex justify-center pt-3 pb-0">
+              <div className="w-10 h-1 rounded-full bg-warm-300" />
             </div>
-          )}
 
-          {/* Шаг 2: певчие */}
-          {step === 'members' && (
-            <>
-              {membersLoading ? (
-                <div className="flex justify-center py-8">
-                  <Spinner color="warning" />
-                </div>
-              ) : (
-                <>
-                  {/* Праздничный хор — чеклист */}
-                  {choirType === 'festive' && (
-                    <div className="flex flex-col gap-1">
-                      {rows.map((row) => (
-                        <div
-                          key={row.memberId}
-                          className={`rounded-xl p-2.5 transition-colors ${
-                            row.checked ? 'bg-warm-50 border border-warm-200' : 'bg-white border border-warm-100'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => updateFestiveRow(row.memberId, 'checked', !row.checked)}
-                              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
-                                row.checked ? 'border-transparent' : 'border-warm-300 bg-white'
-                              }`}
-                              style={row.checked ? { background: 'linear-gradient(135deg, #bd9673, #7d5e42)' } : {}}
-                            >
-                              {row.checked && (
-                                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                                  <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                              )}
-                            </button>
-                            <span
-                              className="flex-1 text-sm text-warm-900 cursor-pointer"
-                              onClick={() => updateFestiveRow(row.memberId, 'checked', !row.checked)}
-                            >
-                              {row.memberName}
-                            </span>
-                            {row.checked && (
-                              <div className="flex items-center gap-1.5">
-                                <div className="flex flex-col items-end">
-                                  <span className="text-[10px] text-warm-400">цена</span>
-                                  <input
-                                    type="number"
-                                    value={row.basePrice || ''}
-                                    onChange={(e) => updateFestiveRow(row.memberId, 'basePrice', parseInt(e.target.value) || 0)}
-                                    className="w-20 text-right bg-white border border-warm-200 rounded-lg px-2 py-1 text-sm font-medium text-warm-900"
-                                  />
-                                </div>
-                                <div className="flex flex-col items-end">
-                                  <span className="text-[10px] text-warm-400">+доп</span>
-                                  <input
-                                    type="number"
-                                    value={row.bonus || ''}
-                                    placeholder="0"
-                                    onChange={(e) => updateFestiveRow(row.memberId, 'bonus', parseInt(e.target.value) || 0)}
-                                    className="w-16 text-right bg-white border border-warm-200 rounded-lg px-2 py-1 text-sm text-green-700"
-                                  />
+            <DrawerHeader className="flex items-center gap-2">
+              {/* Кнопка «Назад» — только на шаге певчих, не при редактировании */}
+              {step === 'members' && !editingEvent && (
+                <button
+                  onClick={goToType}
+                  className="w-8 h-8 rounded-xl bg-warm-100 text-warm-600 flex items-center justify-center shrink-0 active:bg-warm-200 transition-colors"
+                  aria-label="Назад"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path
+                      fillRule="evenodd" clipRule="evenodd"
+                      d="M15.5695 4.43057C15.8841 4.70014 15.9205 5.17361 15.6509 5.48811L10.0693 12L15.6509 18.5119C15.9205 18.8264 15.8841 19.2999 15.5695 19.5695C15.255 19.839 14.7816 19.8026 14.5120 19.4881L8.51192 12.4881C8.27128 12.2072 8.27128 11.7928 8.51192 11.5119L14.5120 4.51192C14.7816 4.19743 15.255 4.161 15.5695 4.43057Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                </button>
+              )}
+
+              <div className="flex-1 flex items-center justify-between min-w-0">
+                <span className="text-base font-bold text-warm-900 truncate">
+                  {editingEvent
+                    ? `Редактировать: ${editingEvent.eventType}`
+                    : step === 'type'
+                      ? 'Новый выход'
+                      : resolvedType || 'Певчие'}
+                </span>
+                {step === 'members' && checkedCount > 0 && (
+                  <span className="text-xs text-warm-500 shrink-0 ml-2">
+                    {checkedCount} {plural(checkedCount, SINGER)}
+                  </span>
+                )}
+              </div>
+            </DrawerHeader>
+
+            <DrawerBody>
+              {/* Анимированный контейнер шагов */}
+              <div
+                key={stepKey}
+                className={animDir === 'right' ? 'anim-slide-right' : 'anim-slide-left'}
+              >
+                {/* Шаг 1: тип выхода */}
+                {step === 'type' && (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-xs font-semibold text-warm-600 uppercase tracking-wide">
+                      Тип выхода
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {ALL_TYPES.map((t) => {
+                        const active = eventType === t
+                        return (
+                          <button
+                            key={t}
+                            onClick={() => setEventType(t)}
+                            className={`py-3 rounded-xl text-sm font-semibold border transition-all ${
+                              active
+                                ? 'text-white border-transparent'
+                                : 'bg-white border-warm-200 text-warm-700 active:bg-warm-50'
+                            }`}
+                            style={active ? { background: 'linear-gradient(to right, #bd9673, #7d5e42)' } : {}}
+                          >
+                            {t}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {eventType === 'Другое' && (
+                      <input
+                        className="warm-input"
+                        placeholder="Введите название выхода"
+                        value={customType}
+                        onChange={(e) => setCustomType(e.target.value)}
+                        autoFocus
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Шаг 2: певчие */}
+                {step === 'members' && (
+                  <>
+                    {membersLoading ? (
+                      <div className="flex justify-center py-8">
+                        <Spinner color="warning" />
+                      </div>
+                    ) : (
+                      <>
+                        {/* Праздничный хор — чеклист */}
+                        {choirType === 'festive' && (
+                          <div className="flex flex-col gap-1">
+                            {rows.map((row) => (
+                              <div
+                                key={row.memberId}
+                                className={`rounded-xl p-2.5 transition-colors ${
+                                  row.checked ? 'bg-warm-50 border border-warm-200' : 'bg-white border border-warm-100'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => updateFestiveRow(row.memberId, 'checked', !row.checked)}
+                                    className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
+                                      row.checked ? 'border-transparent' : 'border-warm-300 bg-white'
+                                    }`}
+                                    style={row.checked ? { background: 'linear-gradient(135deg, #bd9673, #7d5e42)' } : {}}
+                                  >
+                                    {row.checked && (
+                                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                        <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                  <span
+                                    className="flex-1 text-sm text-warm-900 cursor-pointer"
+                                    onClick={() => updateFestiveRow(row.memberId, 'checked', !row.checked)}
+                                  >
+                                    {row.memberName}
+                                  </span>
+                                  {row.checked && (
+                                    <div className="flex items-center gap-1.5">
+                                      <div className="flex flex-col items-end">
+                                        <span className="text-[10px] text-warm-400">цена</span>
+                                        <input
+                                          type="number"
+                                          value={row.basePrice || ''}
+                                          onChange={(e) => updateFestiveRow(row.memberId, 'basePrice', parseInt(e.target.value) || 0)}
+                                          className="w-20 text-right bg-white border border-warm-200 rounded-lg px-2 py-1 text-sm font-medium text-warm-900"
+                                        />
+                                      </div>
+                                      <div className="flex flex-col items-end">
+                                        <span className="text-[10px] text-warm-400">+доп</span>
+                                        <input
+                                          type="number"
+                                          value={row.bonus || ''}
+                                          placeholder="0"
+                                          onChange={(e) => updateFestiveRow(row.memberId, 'bonus', parseInt(e.target.value) || 0)}
+                                          className="w-16 text-right bg-white border border-warm-200 rounded-lg px-2 py-1 text-sm text-green-700"
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Будний хор — поиск */}
-                  {choirType === 'weekday' && (
-                    <div className="flex flex-col gap-3">
-                      <div className="relative">
-                        <input
-                          ref={searchRef}
-                          className="warm-input"
-                          placeholder="Поиск по фамилии..."
-                          value={search}
-                          onChange={(e) => handleSearch(e.target.value)}
-                          autoComplete="off"
-                        />
-                        {searchResults.length > 0 && (
-                          <div className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-hidden">
-                            {searchResults.map((m) => (
-                              <button
-                                key={m._id}
-                                className="w-full text-left px-4 py-3 text-sm border-b border-warm-100 last:border-b-0 active:bg-warm-50"
-                                onClick={() => addWeekdayMember(m)}
-                              >
-                                <span className="font-semibold text-warm-900">{m.name}</span>
-                                <span className="ml-2 text-xs text-warm-400">
-                                  {m.role === 'soloist' ? 'Солист' : m.role === 'regent' ? 'Регент' : 'Певчий'}
-                                  {' · '}{getPriceForMember(m, resolvedType)} ₽
-                                </span>
-                              </button>
                             ))}
                           </div>
                         )}
-                      </div>
 
-                      {weekdayRows.length > 0 && (
-                        <div className="warm-card overflow-hidden">
-                          {weekdayRows.map((row, idx) => (
-                            <div key={row.memberId} className="flex items-center gap-2 px-3 py-2.5 border-b border-warm-100 last:border-b-0">
-                              <span className="flex-1 text-sm font-medium text-warm-900">{row.memberName}</span>
-                              <div className="flex flex-col items-end">
-                                <span className="text-[10px] text-warm-400">цена</span>
-                                <input
-                                  type="number"
-                                  value={row.basePrice || ''}
-                                  onChange={(e) => updateRow(idx, 'basePrice', e.target.value)}
-                                  className="w-20 text-right bg-warm-50 border border-warm-200 rounded-lg px-2 py-1 text-sm font-medium"
-                                />
-                              </div>
-                              <div className="flex flex-col items-end">
-                                <span className="text-[10px] text-warm-400">+доп</span>
-                                <input
-                                  type="number"
-                                  value={row.bonus || ''}
-                                  placeholder="0"
-                                  onChange={(e) => updateRow(idx, 'bonus', e.target.value)}
-                                  className="w-16 text-right bg-warm-50 border border-warm-200 rounded-lg px-2 py-1 text-sm text-green-700"
-                                />
-                              </div>
-                              <button
-                                onClick={() => setWeekdayRows((prev) => prev.filter((_, i) => i !== idx))}
-                                className="w-7 h-7 rounded-full bg-red-50 text-red-500 text-sm flex items-center justify-center shrink-0 active:bg-red-100"
-                              >
-                                ✕
-                              </button>
+                        {/* Будний хор — поиск */}
+                        {choirType === 'weekday' && (
+                          <div className="flex flex-col gap-3">
+                            <div className="relative">
+                              <input
+                                ref={searchRef}
+                                className="warm-input"
+                                placeholder="Поиск по фамилии..."
+                                value={search}
+                                onChange={(e) => handleSearch(e.target.value)}
+                                autoComplete="off"
+                              />
+                              {searchResults.length > 0 && (
+                                <div className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-hidden">
+                                  {searchResults.map((m) => (
+                                    <button
+                                      key={m._id}
+                                      className="w-full text-left px-4 py-3 text-sm border-b border-warm-100 last:border-b-0 active:bg-warm-50"
+                                      onClick={() => addWeekdayMember(m)}
+                                    >
+                                      <span className="font-semibold text-warm-900">{m.name}</span>
+                                      <span className="ml-2 text-xs text-warm-400">
+                                        {m.role === 'soloist' ? 'Солист' : m.role === 'regent' ? 'Регент' : 'Певчий'}
+                                        {' · '}{getPriceForMember(m, resolvedType)} ₽
+                                      </span>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
+
+                            {weekdayRows.length > 0 && (
+                              <div className="warm-card overflow-hidden">
+                                {weekdayRows.map((row, idx) => (
+                                  <div key={row.memberId} className="flex items-center gap-2 px-3 py-2.5 border-b border-warm-100 last:border-b-0">
+                                    <span className="flex-1 text-sm font-medium text-warm-900">{row.memberName}</span>
+                                    <div className="flex flex-col items-end">
+                                      <span className="text-[10px] text-warm-400">цена</span>
+                                      <input
+                                        type="number"
+                                        value={row.basePrice || ''}
+                                        onChange={(e) => updateRow(idx, 'basePrice', e.target.value)}
+                                        className="w-20 text-right bg-warm-50 border border-warm-200 rounded-lg px-2 py-1 text-sm font-medium"
+                                      />
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                      <span className="text-[10px] text-warm-400">+доп</span>
+                                      <input
+                                        type="number"
+                                        value={row.bonus || ''}
+                                        placeholder="0"
+                                        onChange={(e) => updateRow(idx, 'bonus', e.target.value)}
+                                        className="w-16 text-right bg-warm-50 border border-warm-200 rounded-lg px-2 py-1 text-sm text-green-700"
+                                      />
+                                    </div>
+                                    <button
+                                      onClick={() => setWeekdayRows((prev) => prev.filter((_, i) => i !== idx))}
+                                      className="w-7 h-7 rounded-full bg-red-50 text-red-500 flex items-center justify-center shrink-0 active:bg-red-100"
+                                    >
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                        <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                      </svg>
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </DrawerBody>
+
+            <DrawerFooter
+              style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+            >
+              <button
+                onClick={closeDrawer}
+                className="flex-1 py-3 rounded-xl border border-warm-200 text-warm-700 text-sm font-semibold active:bg-warm-50"
+              >
+                Отмена
+              </button>
+
+              {step === 'type' ? (
+                <button
+                  onClick={goToMembers}
+                  disabled={!eventType || (eventType === 'Другое' && !customType.trim())}
+                  className="flex-1 py-3 rounded-xl text-white text-sm font-semibold disabled:opacity-40"
+                  style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}
+                >
+                  Далее →
+                </button>
+              ) : (
+                <button
+                  onClick={handleSave}
+                  disabled={saving || !resolvedType}
+                  className="flex-1 py-3 rounded-xl text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+                  style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}
+                >
+                  {saving && <Spinner size="sm" color="white" />}
+                  Сохранить
+                </button>
               )}
-            </>
-          )}
-        </DrawerBody>
-
-        <DrawerFooter
-          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
-        >
-          {step === 'members' && !editingEvent && (
-            <button
-              onClick={() => setStep('type')}
-              className="flex-1 py-3 rounded-xl border border-warm-200 text-warm-700 text-sm font-semibold active:bg-warm-50"
-            >
-              ← Назад
-            </button>
-          )}
-          <button
-            onClick={closeDrawer}
-            className="flex-1 py-3 rounded-xl border border-warm-200 text-warm-700 text-sm font-semibold active:bg-warm-50"
-          >
-            Отмена
-          </button>
-
-          {step === 'type' ? (
-            <button
-              onClick={() => setStep('members')}
-              disabled={!eventType || (eventType === 'Другое' && !customType.trim())}
-              className="flex-1 py-3 rounded-xl text-white text-sm font-semibold disabled:opacity-40"
-              style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}
-            >
-              Далее →
-            </button>
-          ) : (
-            <button
-              onClick={handleSave}
-              disabled={saving || !resolvedType}
-              className="flex-1 py-3 rounded-xl text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
-              style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}
-            >
-              {saving && <Spinner size="sm" color="white" />}
-              Сохранить
-            </button>
-          )}
-        </DrawerFooter>
-        </>
+            </DrawerFooter>
+          </>
         )}
       </DrawerContent>
     </Drawer>
