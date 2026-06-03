@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Spinner } from '@heroui/react'
+import { Spinner, DatePicker } from '@heroui/react'
+import { parseDate } from '@internationalized/date'
 import { useSession } from '@/hooks/useSession'
 import type { ChoirEvent } from '@/lib/types'
 import { AddEventModal } from '@/components/AddEventModal'
@@ -41,6 +42,13 @@ export default function DayPage() {
     setDate(d.toLocaleDateString('sv-SE'))
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function handleCalendarChange(val: any) {
+    if (!val) return
+    const str = `${val.year}-${String(val.month).padStart(2, '0')}-${String(val.day).padStart(2, '0')}`
+    setDate(str)
+  }
+
   async function deleteEvent(id: string) {
     if (!confirm('Удалить выход?')) return
     await fetch(`/api/events/${id}`, { method: 'DELETE' })
@@ -65,6 +73,9 @@ export default function DayPage() {
     )
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const calendarValue = parseDate(date) as any
+
   return (
     <div className="max-w-lg mx-auto">
       <PageHeader
@@ -75,7 +86,7 @@ export default function DayPage() {
 
       {/* Date navigation */}
       <div className="px-4 mb-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mb-3">
           <button
             onClick={() => changeDate(-1)}
             className="flex-1 py-2 rounded-xl border border-warm-200 bg-white text-warm-700 text-sm font-medium active:bg-warm-50 transition-colors"
@@ -84,7 +95,7 @@ export default function DayPage() {
           </button>
           <button
             onClick={() => setDate(todayStr())}
-            className="px-4 py-2 rounded-xl text-sm font-slab font-semibold transition-colors"
+            className="px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
             style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)', color: 'white' }}
           >
             Сегодня
@@ -97,14 +108,38 @@ export default function DayPage() {
           </button>
         </div>
 
-        <div className="mt-2">
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="warm-input text-sm"
-          />
-        </div>
+        <DatePicker
+          value={calendarValue}
+          onChange={handleCalendarChange}
+          granularity="day"
+          showMonthAndYearPickers
+          calendarProps={{
+            classNames: {
+              base: 'bg-white border border-warm-200 rounded-2xl shadow-sm',
+              headerWrapper: 'bg-white rounded-t-2xl',
+              title: 'font-semibold text-warm-900',
+              gridHeader: 'bg-white',
+              gridHeaderCell: 'text-warm-400 text-xs font-semibold',
+              cell: 'text-warm-800',
+              cellButton: [
+                'rounded-xl font-medium',
+                'data-[selected=true]:bg-gradient-to-r data-[selected=true]:from-[#bd9673] data-[selected=true]:to-[#7d5e42] data-[selected=true]:text-white',
+                'data-[today=true]:text-[#9b7653] data-[today=true]:font-bold',
+                'hover:bg-warm-100',
+              ].join(' '),
+            },
+          }}
+          classNames={{
+            base: 'w-full',
+            inputWrapper: [
+              'bg-white border border-warm-200 rounded-xl shadow-none h-10',
+              'hover:border-[#9b7653] focus-within:border-[#9b7653]',
+              'data-[focus-within=true]:ring-0',
+            ].join(' '),
+            input: 'text-warm-900 font-medium text-sm',
+            selectorButton: 'text-warm-500',
+          }}
+        />
       </div>
 
       {/* Events */}
@@ -116,7 +151,7 @@ export default function DayPage() {
         ) : events.length === 0 ? (
           <div className="warm-card p-8 text-center">
             <div className="text-4xl mb-3">📭</div>
-            <p className="font-slab font-semibold text-warm-700">Выходов нет</p>
+            <p className="font-semibold text-warm-700">Выходов нет</p>
             <p className="text-sm text-warm-400 mt-1">Нажмите + чтобы добавить</p>
           </div>
         ) : (
