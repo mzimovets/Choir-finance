@@ -106,7 +106,7 @@ export default function SingersPage() {
     <div className="max-w-lg mx-auto">
       <PageHeader
         title={choirLabel}
-        subtitle={`${members.length} ${plural(members.length, PERSON)}`}
+        subtitle={loading ? '' : `${members.length} ${plural(members.length, PERSON)}`}
         displayName={session?.displayName}
         choirType={session?.choirType}
         right={
@@ -120,7 +120,7 @@ export default function SingersPage() {
         }
       />
 
-      <div className="px-4">
+      <div className="px-2">
         {loading ? (
           <div className="flex justify-center py-12"><Spinner color="warning" /></div>
         ) : (
@@ -129,9 +129,9 @@ export default function SingersPage() {
               <thead>
                 <tr>
                   <th>Имя</th>
-                  <th>Роль</th>
-                  <th className="text-right">Спевка</th>
-                  <th className="text-right">Служба</th>
+                  <th className="text-center">Роль</th>
+                  <th className="text-center">Спевка</th>
+                  <th className="text-center">Служба</th>
                   <th style={{ width: '80px' }} />
                 </tr>
               </thead>
@@ -144,7 +144,7 @@ export default function SingersPage() {
                       <td>
                         <span className="font-slab font-semibold text-warm-900">{m.name}</span>
                       </td>
-                      <td>
+                      <td className="text-center">
                         <span
                           className="role-chip text-warm-800"
                           style={{ backgroundColor: roleInfo.color }}
@@ -153,10 +153,10 @@ export default function SingersPage() {
                           {m.role === 'regent' && ` ×${m.regentMultiplier}`}
                         </span>
                       </td>
-                      <td className="text-right tabular-nums text-warm-600 text-xs">
+                      <td className="text-center tabular-nums text-warm-600 text-xs">
                         {pm['Спевка'] ?? '—'}
                       </td>
-                      <td className="text-right tabular-nums text-warm-600 text-xs">
+                      <td className="text-center tabular-nums text-warm-600 text-xs">
                         {pm['Арх. Служба'] ?? pm['Служба'] ?? '—'}
                       </td>
                       <td>

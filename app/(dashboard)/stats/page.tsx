@@ -28,7 +28,7 @@ export default function StatsPage() {
   const { session } = useSession()
   const [month, setMonth] = useState(monthStr())
   const [stats, setStats] = useState<MemberStat[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<MemberStat | null>(null)
 
   const load = useCallback(async () => {
@@ -95,7 +95,7 @@ export default function StatsPage() {
         }
       />
 
-      <div className="px-4">
+      <div className="px-2">
         {loading ? (
           <div className="flex justify-center py-12"><Spinner color="warning" /></div>
         ) : stats.length === 0 ? (
@@ -111,8 +111,8 @@ export default function StatsPage() {
                 <thead>
                   <tr>
                     <th>Певчий</th>
-                    <th className="text-right">Выходы</th>
-                    <th className="text-right">Сумма</th>
+                    <th className="text-center">Выходы</th>
+                    <th className="text-center">Сумма</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -125,10 +125,10 @@ export default function StatsPage() {
                       <td>
                         <span className="font-slab font-semibold text-warm-900">{s.member.name}</span>
                       </td>
-                      <td className="text-right tabular-nums text-warm-600 text-xs">
+                      <td className="text-center tabular-nums text-warm-600 text-xs">
                         {s.events}
                       </td>
-                      <td className="text-right tabular-nums font-slab font-semibold text-warm-800">
+                      <td className="text-center tabular-nums font-slab font-semibold text-warm-800">
                         {s.total > 0 ? `${s.total.toLocaleString('ru-RU')} ₽` : '—'}
                       </td>
                     </tr>
@@ -138,7 +138,7 @@ export default function StatsPage() {
                   <tr className="bg-warm-50">
                     <td className="font-slab font-bold text-warm-900 text-sm">Итого</td>
                     <td />
-                    <td className="text-right font-slab font-bold text-warm-900 tabular-nums">
+                    <td className="text-center font-slab font-bold text-warm-900 tabular-nums">
                       {grandTotal.toLocaleString('ru-RU')} ₽
                     </td>
                   </tr>

@@ -91,7 +91,7 @@ export default function ExportPage() {
         }
       />
 
-      <div className="px-4">
+      <div className="px-2">
         {loading ? (
           <div className="flex justify-center py-12"><Spinner color="warning" /></div>
         ) : (

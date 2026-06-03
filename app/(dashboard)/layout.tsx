@@ -81,32 +81,61 @@ const NAV = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const activeIndex = NAV.findIndex(({ href }) => pathname === href)
 
   return (
     <div className="min-h-screen bg-page flex flex-col">
       <main className="flex-1 pb-nav overflow-auto">{children}</main>
 
       <nav
-        className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-warm-200 z-50"
+        className="fixed bottom-0 left-0 right-0 z-50"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
-        <div className="grid grid-cols-4 h-[4.5rem] max-w-lg mx-auto">
-          {NAV.map(({ href, label, icon }) => {
-            const active = pathname === href
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`flex flex-col items-center justify-center gap-1 text-[11px] transition-colors ${
-                  active ? 'font-semibold' : 'text-warm-400 font-medium'
-                }`}
-                style={active ? { color: '#9b7653' } : {}}
-              >
-                {icon(active)}
-                <span>{label}</span>
-              </Link>
-            )
-          })}
+        {/* Glass background */}
+        <div
+          className="border-t border-white/40"
+          style={{
+            background: 'rgba(247, 244, 241, 0.75)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+          }}
+        >
+          <div className="relative grid grid-cols-4 h-[4.5rem] max-w-lg mx-auto px-2">
+
+            {/* Liquid glass sliding pill */}
+            {activeIndex >= 0 && (
+              <div
+                className="absolute top-1/2 -translate-y-1/2 h-12 rounded-2xl pointer-events-none"
+                style={{
+                  width: 'calc(25% - 8px)',
+                  left: `calc(${activeIndex} * 25% + 4px)`,
+                  transition: 'left 0.35s cubic-bezier(0.34, 1.4, 0.64, 1)',
+                  background: 'rgba(189, 150, 115, 0.18)',
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(189, 150, 115, 0.35)',
+                  boxShadow: '0 2px 12px rgba(124, 80, 40, 0.12), inset 0 1px 0 rgba(255,255,255,0.5)',
+                }}
+              />
+            )}
+
+            {NAV.map(({ href, label, icon }) => {
+              const active = pathname === href
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`relative flex flex-col items-center justify-center gap-1 text-[11px] transition-colors duration-200 ${
+                    active ? 'font-semibold' : 'text-warm-400 font-medium'
+                  }`}
+                  style={active ? { color: '#9b7653' } : {}}
+                >
+                  {icon(active)}
+                  <span>{label}</span>
+                </Link>
+              )
+            })}
+          </div>
         </div>
       </nav>
     </div>
