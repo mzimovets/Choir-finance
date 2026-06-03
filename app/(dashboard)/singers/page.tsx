@@ -9,6 +9,7 @@ import {
 import type { Member, MemberRole } from '@/lib/types'
 import { EVENT_TYPES, DEFAULT_PRICES, pricesToMap, mapToPrices } from '@/lib/types'
 import { plural, PERSON } from '@/lib/plural'
+import { splitName } from '@/lib/nameFormat'
 import { PageHeader } from '@/components/PageHeader'
 import { useSession } from '@/hooks/useSession'
 
@@ -118,8 +119,6 @@ export default function SingersPage() {
       <PageHeader
         title={choirLabel}
         subtitle={loading ? '' : `${members.length} ${plural(members.length, PERSON)}`}
-        displayName={session?.displayName}
-        choirType={session?.choirType}
         right={
           <button
             onClick={openNew}
@@ -139,15 +138,21 @@ export default function SingersPage() {
             <table className="warm-table">
               <thead>
                 <tr>
+                  <th>Фамилия</th>
                   <th>Имя</th>
                   <th style={{ width: '72px' }} />
                 </tr>
               </thead>
               <tbody>
-                {members.map((m) => (
+                {members.map((m) => {
+                  const { lastName, firstName } = splitName(m.name)
+                  return (
                   <tr key={m._id}>
                     <td>
-                      <span className="font-slab font-semibold text-warm-900">{m.name}</span>
+                      <span className="font-slab font-semibold text-warm-900">{lastName}</span>
+                    </td>
+                    <td>
+                      <span className="font-slab text-warm-700">{firstName}</span>
                     </td>
                     <td>
                       <div className="flex items-center gap-1 justify-end">
@@ -168,10 +173,11 @@ export default function SingersPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
                 {members.length === 0 && (
                   <tr>
-                    <td colSpan={2} className="text-center text-warm-400 py-8 font-slab">
+                    <td colSpan={3} className="text-center text-warm-400 py-8 font-slab">
                       Певчих нет — добавьте первого
                     </td>
                   </tr>

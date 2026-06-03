@@ -19,7 +19,7 @@ const MONTHS_RU = [
 ]
 
 export default function ExportPage() {
-  const { session } = useSession()
+  useSession()
   const [month, setMonth] = useState(monthStr())
   const [events, setEvents] = useState<ChoirEvent[]>([])
   const [loading, setLoading] = useState(false)
@@ -71,8 +71,6 @@ export default function ExportPage() {
       <PageHeader
         title="Экспорт"
         subtitle={monthLabel}
-        displayName={session?.displayName}
-        choirType={session?.choirType}
         right={
           <div className="flex items-center gap-1">
             <button

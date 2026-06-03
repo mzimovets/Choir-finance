@@ -84,7 +84,6 @@ input[type="number"] {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 0.625rem 0.875rem;
-  text-align: left;
   border-bottom: 1px solid #e5d9cc;
 }
 .warm-table td {

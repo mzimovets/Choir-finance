@@ -25,7 +25,7 @@ interface MemberStat {
 }
 
 export default function StatsPage() {
-  const { session } = useSession()
+  useSession()
   const [month, setMonth] = useState(currentMonthStr)
   const [stats, setStats] = useState<MemberStat[]>([])
   const [loading, setLoading] = useState(true)
@@ -82,8 +82,6 @@ export default function StatsPage() {
       <PageHeader
         title="Статистика"
         subtitle={loading ? '' : monthLabel}
-        displayName={session?.displayName}
-        choirType={session?.choirType}
         right={
           <div className="flex items-center gap-1">
             <button
