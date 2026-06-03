@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Spinner, Calendar } from '@heroui/react'
-import { I18nProvider } from 'react-aria'
+import { I18nProvider } from '@react-aria/i18n'
 import { parseDate } from '@internationalized/date'
 import { useSession } from '@/hooks/useSession'
 import type { ChoirEvent } from '@/lib/types'
