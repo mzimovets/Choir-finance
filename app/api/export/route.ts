@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import ExcelJS from 'exceljs'
 import { getSession } from '@/lib/auth'
-import { db } from '@/lib/db'
+import { db, dbFind } from '@/lib/db'
 import type { ChoirEvent, Member } from '@/lib/types'
 
 const MONTHS_RU = [
@@ -26,18 +26,11 @@ export async function GET(req: NextRequest) {
   const choirLabel = session.choirType === 'festive' ? 'праздничного' : 'буднего'
 
   const [events, members] = await Promise.all([
-    new Promise<ChoirEvent[]>((res) =>
-      db.events.find(
-        { choirType: session.choirType, date: { $regex: new RegExp(`^${month}`) } },
-        (err, docs) => res(err ? [] : (docs as unknown as ChoirEvent[]))
-      )
-    ),
-    new Promise<Member[]>((res) =>
-      db.members.find(
-        { choirType: session.choirType, isActive: true },
-        (err, docs) => res(err ? [] : (docs as unknown as Member[]))
-      )
-    ),
+    dbFind<ChoirEvent>(db.events, {
+      choirType: session.choirType,
+      date: { $regex: new RegExp(`^${month}`) },
+    }),
+    dbFind<Member>(db.members, { choirType: session.choirType, isActive: true }),
   ])
 
   events.sort((a, b) => {
@@ -141,7 +134,7 @@ export async function GET(req: NextRequest) {
   totalRow.getCell(sumCol).border = allBorders()
   totalRow.getCell(2).border = allBorders()
 
-  // Sheet 2: summary
+  // Sheet 2
   const ws2 = wb.addWorksheet('Ведомость')
   ws2.mergeCells(1, 1, 1, 3)
   ws2.getCell(1, 1).value = `Итоговая ведомость по вознаграждению ${choirLabel} хора ${monthName} ${year}г.`

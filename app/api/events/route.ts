@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { db } from '@/lib/db'
+import { db, dbFind, dbInsert } from '@/lib/db'
 import type { ChoirEvent } from '@/lib/types'
 
 export async function GET(req: NextRequest) {
@@ -12,19 +12,10 @@ export async function GET(req: NextRequest) {
   const month = searchParams.get('month')
 
   const query: Record<string, unknown> = { choirType: session.choirType }
+  if (date) query.date = date
+  else if (month) query.date = { $regex: new RegExp(`^${month}`) }
 
-  if (date) {
-    query.date = date
-  } else if (month) {
-    query.date = { $regex: new RegExp(`^${month}`) }
-  }
-
-  const events = await new Promise<ChoirEvent[]>((res) =>
-    db.events.find(query, (err, docs) =>
-      res(err ? [] : (docs as unknown as ChoirEvent[]))
-    )
-  )
-
+  const events = await dbFind<ChoirEvent>(db.events, query)
   events.sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date)
     return a.createdAt.localeCompare(b.createdAt)
@@ -39,20 +30,14 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const now = new Date().toISOString()
 
-  const doc = {
+  const event = await dbInsert<ChoirEvent>(db.events, {
     date: body.date,
     choirType: session.choirType,
     eventType: body.eventType,
     attendances: body.attendances || [],
     createdAt: now,
     updatedAt: now,
-  }
-
-  const event = await new Promise<ChoirEvent>((res, rej) =>
-    db.events.insert(doc, (err, newDoc) =>
-      err ? rej(err) : res(newDoc as unknown as ChoirEvent)
-    )
-  )
+  })
 
   return Response.json(event, { status: 201 })
 }
