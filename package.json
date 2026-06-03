@@ -1,0 +1,33 @@
+{
+  "name": "chorus-finance",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "seed": "tsx scripts/seed.ts"
+  },
+  "dependencies": {
+    "@heroui/react": "^2.6.11",
+    "@seald-io/nedb": "^4.0.4",
+    "bcryptjs": "^2.4.3",
+    "exceljs": "^4.4.0",
+    "framer-motion": "^11.18.2",
+    "jose": "^5.10.0",
+    "next": "^15.3.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.4",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.4",
+    "typescript": "^5"
+  }
+}
