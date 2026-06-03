@@ -100,15 +100,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             WebkitBackdropFilter: 'blur(20px)',
           }}
         >
-          <div className="relative grid grid-cols-4 h-[4.5rem] max-w-lg mx-auto px-2">
+          <div className="relative grid grid-cols-4 h-[4.5rem] max-w-lg mx-auto">
 
-            {/* Liquid glass sliding pill */}
+            {/* Liquid glass sliding pill — точно по центру каждой колонки */}
             {activeIndex >= 0 && (
               <div
                 className="absolute top-1/2 -translate-y-1/2 h-12 rounded-2xl pointer-events-none"
                 style={{
-                  width: 'calc(25% - 8px)',
-                  left: `calc(${activeIndex} * 25% + 4px)`,
+                  width: '20%',
+                  left: `calc(${activeIndex} * 25% + 2.5%)`,
                   transition: 'left 0.35s cubic-bezier(0.34, 1.4, 0.64, 1)',
                   background: 'rgba(189, 150, 115, 0.18)',
                   backdropFilter: 'blur(16px)',
