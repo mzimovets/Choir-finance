@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Spinner,
   Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter,
-  Modal, ModalContent, ModalHeader, ModalBody, ModalFooter,
 } from '@heroui/react'
 import type { Member, MemberRole } from '@/lib/types'
 import { EVENT_TYPES, DEFAULT_PRICES, pricesToMap, mapToPrices } from '@/lib/types'
@@ -139,7 +138,7 @@ export default function SingersPage() {
               <thead>
                 <tr>
                   <th>Фамилия</th>
-                  <th>Имя</th>
+                  <th className="text-center">Имя</th>
                   <th style={{ width: '72px' }} />
                 </tr>
               </thead>
@@ -151,7 +150,7 @@ export default function SingersPage() {
                     <td>
                       <span className="font-slab font-semibold text-warm-900">{lastName}</span>
                     </td>
-                    <td>
+                    <td className="text-center">
                       <span className="font-slab text-warm-700">{firstName}</span>
                     </td>
                     <td>
@@ -203,22 +202,21 @@ export default function SingersPage() {
         placement="bottom"
         scrollBehavior="inside"
         classNames={{
-          base: 'bg-white rounded-t-2xl max-h-[92dvh] shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
-          header: 'border-b border-warm-200 py-3 px-4',
-          body: 'px-4 py-4',
-          footer: 'border-t border-warm-200 bg-white px-4 py-3',
+          base: 'bg-white rounded-t-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
+          header: 'border-b border-warm-200 px-4 pt-2 pb-3 shrink-0',
+          body: 'overflow-y-auto px-4 py-4',
+          footer: 'border-t border-warm-200 bg-white px-4 py-3 shrink-0',
           closeButton: 'hidden',
         }}
       >
         <DrawerContent>
           {(closeDrawer) => (
             <>
-              {/* Ручка */}
-              <div className="flex justify-center pt-3 pb-0">
-                <div className="w-10 h-1 rounded-full bg-warm-300" />
-              </div>
-
-              <DrawerHeader>
+              <DrawerHeader className="flex-col gap-0">
+                {/* Ручка */}
+                <div className="flex justify-center pt-1 pb-2 w-full">
+                  <div className="w-10 h-1 rounded-full bg-warm-300" />
+                </div>
                 <span className="text-base font-slab font-bold text-warm-900">
                   {editing ? 'Редактировать певчего' : 'Добавить певчего'}
                 </span>
@@ -329,34 +327,28 @@ export default function SingersPage() {
         </DrawerContent>
       </Drawer>
 
-      {/* Modal: подтверждение удаления */}
-      <Modal
-        isOpen={!!deleteTarget}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
-        placement="center"
-        classNames={{
-          base: 'rounded-2xl mx-4',
-          header: 'border-b border-warm-200 py-3 px-4',
-          body: 'px-4 py-4',
-          footer: 'border-t border-warm-200 px-4 py-3',
-        }}
-      >
-        <ModalContent>
-          {(closeModal) => (
-            <>
-              <ModalHeader>
-                <span className="text-base font-slab font-bold text-warm-900">Удалить певчего?</span>
-              </ModalHeader>
-              <ModalBody>
-                <p className="text-sm text-warm-700">
+      {/* Подтверждение удаления */}
+      {deleteTarget && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/50"
+            onClick={() => { if (!deleting) setDeleteTarget(null) }}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-5">
+            <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl">
+              <div className="px-5 pt-5 pb-4">
+                <h2 className="text-base font-slab font-bold text-warm-900 mb-2">
+                  Удалить певчего?
+                </h2>
+                <p className="text-sm text-warm-600 leading-relaxed">
                   Вы уверены, что хотите удалить{' '}
-                  <span className="font-semibold">{deleteTarget?.name}</span>?
+                  <span className="font-semibold text-warm-900">{deleteTarget.name}</span>?{' '}
                   Это действие нельзя отменить.
                 </p>
-              </ModalBody>
-              <ModalFooter>
+              </div>
+              <div className="flex gap-2 px-4 pb-4">
                 <button
-                  onClick={closeModal}
+                  onClick={() => setDeleteTarget(null)}
                   className="flex-1 py-2.5 rounded-xl border border-warm-200 text-warm-700 text-sm font-slab font-semibold active:bg-warm-50"
                 >
                   Отмена
@@ -369,11 +361,11 @@ export default function SingersPage() {
                   {deleting && <Spinner size="sm" color="white" />}
                   Удалить
                 </button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

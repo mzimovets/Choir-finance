@@ -6,6 +6,7 @@ import { useSession } from '@/hooks/useSession'
 import { PageHeader } from '@/components/PageHeader'
 import type { ChoirEvent, Member } from '@/lib/types'
 import { plural, SINGER } from '@/lib/plural'
+import { shortName } from '@/lib/nameFormat'
 
 const MONTHS_RU = [
   'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
@@ -127,7 +128,7 @@ export default function StatsPage() {
                     className="cursor-pointer active:bg-warm-50"
                   >
                     <td>
-                      <span className="font-semibold text-warm-900">{s.member.name}</span>
+                      <span className="font-semibold text-warm-900">{shortName(s.member.name)}</span>
                     </td>
                     <td className="text-center tabular-nums text-warm-500 text-sm">
                       {s.events > 0 ? s.events : '—'}
@@ -159,30 +160,33 @@ export default function StatsPage() {
         placement="bottom"
         scrollBehavior="inside"
         classNames={{
-          base: 'bg-white rounded-t-2xl max-h-[75dvh] shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
-          header: 'border-b border-warm-200 py-3 px-4',
-          body: 'px-0 py-0',
+          base: 'bg-white rounded-t-2xl max-h-[80dvh] flex flex-col overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
+          header: 'border-b border-warm-200 px-4 pt-2 pb-3 shrink-0',
+          body: 'overflow-y-auto px-0 py-0',
           closeButton: 'hidden',
         }}
       >
         <DrawerContent>
           {(close) => (
             <>
-              <div className="flex justify-center pt-3 pb-0">
-                <div className="w-10 h-1 rounded-full bg-warm-300" />
-              </div>
-              <DrawerHeader className="flex items-center justify-between">
-                <div>
-                  <p className="text-base font-bold text-warm-900">{selected?.member.name}</p>
-                  <p className="text-xs text-warm-400 mt-0.5">{monthLabel}</p>
+              <DrawerHeader className="flex-col gap-0">
+                {/* Ручка */}
+                <div className="flex justify-center pt-1 pb-2 w-full">
+                  <div className="w-10 h-1 rounded-full bg-warm-300" />
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-warm-800 tabular-nums">
-                    {selected?.total.toLocaleString('ru-RU')} ₽
-                  </p>
-                  <p className="text-xs text-warm-400">
-                    {selected?.events ?? 0} {plural(selected?.events ?? 0, SINGER === SINGER ? ['выход', 'выхода', 'выходов'] : ['выход', 'выхода', 'выходов'])}
-                  </p>
+                <div className="flex items-center justify-between w-full">
+                  <div>
+                    <p className="text-base font-bold text-warm-900">{selected?.member.name}</p>
+                    <p className="text-xs text-warm-400 mt-0.5">{monthLabel}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-warm-800 tabular-nums">
+                      {selected?.total.toLocaleString('ru-RU')} ₽
+                    </p>
+                    <p className="text-xs text-warm-400">
+                      {selected?.events ?? 0} {plural(selected?.events ?? 0, ['выход', 'выхода', 'выходов'])}
+                    </p>
+                  </div>
                 </div>
               </DrawerHeader>
               <DrawerBody>
@@ -191,7 +195,7 @@ export default function StatsPage() {
                     <thead>
                       <tr>
                         <th>Дата</th>
-                        <th>Тип</th>
+                        <th className="text-center">Тип</th>
                         <th className="text-right">Сумма</th>
                       </tr>
                     </thead>
@@ -205,7 +209,7 @@ export default function StatsPage() {
                               <td className="text-warm-500 text-xs tabular-nums whitespace-nowrap">
                                 {d} {MONTHS_RU[mo - 1].toLowerCase().slice(0, 3)}
                               </td>
-                              <td className="font-medium text-warm-700 text-xs">{r.eventType}</td>
+                              <td className="text-center font-medium text-warm-700 text-xs">{r.eventType}</td>
                               <td className="text-right tabular-nums font-medium text-warm-800">
                                 {r.basePrice.toLocaleString('ru-RU')}
                                 {r.bonus > 0 && (
@@ -218,7 +222,7 @@ export default function StatsPage() {
                         })}
                     </tbody>
                     <tfoot>
-                      <tr className="bg-warm-50">
+                      <tr className="bg-warm-100">
                         <td colSpan={2} className="font-bold text-warm-900 text-sm">Итого</td>
                         <td className="text-right font-bold text-warm-900 tabular-nums">
                           {selected.total.toLocaleString('ru-RU')} ₽

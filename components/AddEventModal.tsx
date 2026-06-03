@@ -214,52 +214,53 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       placement="bottom"
       scrollBehavior="inside"
       classNames={{
-        base: 'bg-white rounded-t-2xl max-h-[92dvh] shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
-        header: 'border-b border-warm-200 py-3 px-4',
-        body: 'px-4 py-4',
-        footer: 'border-t border-warm-200 bg-white px-4 py-3',
+        base: 'bg-white rounded-t-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
+        header: 'border-b border-warm-200 px-4 pt-2 pb-3 shrink-0',
+        body: 'overflow-y-auto px-4 py-4',
+        footer: 'border-t border-warm-200 bg-white px-4 py-3 shrink-0',
         closeButton: 'hidden',
       }}
     >
       <DrawerContent>
         {(closeDrawer) => (
           <>
-            {/* Ручка */}
-            <div className="flex justify-center pt-3 pb-0">
-              <div className="w-10 h-1 rounded-full bg-warm-300" />
-            </div>
-
-            <DrawerHeader className="flex items-center gap-2">
-              {/* Кнопка «Назад» — только на шаге певчих, не при редактировании */}
-              {step === 'members' && !editingEvent && (
-                <button
-                  onClick={goToType}
-                  className="w-8 h-8 rounded-xl bg-warm-100 text-warm-600 flex items-center justify-center shrink-0 active:bg-warm-200 transition-colors"
-                  aria-label="Назад"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path
-                      fillRule="evenodd" clipRule="evenodd"
-                      d="M15.5695 4.43057C15.8841 4.70014 15.9205 5.17361 15.6509 5.48811L10.0693 12L15.6509 18.5119C15.9205 18.8264 15.8841 19.2999 15.5695 19.5695C15.255 19.839 14.7816 19.8026 14.5120 19.4881L8.51192 12.4881C8.27128 12.2072 8.27128 11.7928 8.51192 11.5119L14.5120 4.51192C14.7816 4.19743 15.255 4.161 15.5695 4.43057Z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                </button>
-              )}
-
-              <div className="flex-1 flex items-center justify-between min-w-0">
-                <span className="text-base font-bold text-warm-900 truncate">
-                  {editingEvent
-                    ? `Редактировать: ${editingEvent.eventType}`
-                    : step === 'type'
-                      ? 'Новый выход'
-                      : resolvedType || 'Певчие'}
-                </span>
-                {step === 'members' && checkedCount > 0 && (
-                  <span className="text-xs text-warm-500 shrink-0 ml-2">
-                    {checkedCount} {plural(checkedCount, SINGER)}
-                  </span>
+            <DrawerHeader className="flex-col gap-0">
+              {/* Ручка */}
+              <div className="flex justify-center pt-1 pb-2 w-full">
+                <div className="w-10 h-1 rounded-full bg-warm-300" />
+              </div>
+              {/* Строка заголовка */}
+              <div className="flex items-center gap-2 w-full">
+                {/* Кнопка «Назад» — только на шаге певчих, не при редактировании */}
+                {step === 'members' && !editingEvent && (
+                  <button
+                    onClick={goToType}
+                    className="w-8 h-8 rounded-xl bg-warm-100 text-warm-600 flex items-center justify-center shrink-0 active:bg-warm-200 transition-colors"
+                    aria-label="Назад"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path
+                        fillRule="evenodd" clipRule="evenodd"
+                        d="M15.5695 4.43057C15.8841 4.70014 15.9205 5.17361 15.6509 5.48811L10.0693 12L15.6509 18.5119C15.9205 18.8264 15.8841 19.2999 15.5695 19.5695C15.255 19.839 14.7816 19.8026 14.5120 19.4881L8.51192 12.4881C8.27128 12.2072 8.27128 11.7928 8.51192 11.5119L14.5120 4.51192C14.7816 4.19743 15.255 4.161 15.5695 4.43057Z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </button>
                 )}
+                <div className="flex-1 flex items-center justify-between min-w-0">
+                  <span className="text-base font-bold text-warm-900 truncate">
+                    {editingEvent
+                      ? `Редактировать: ${editingEvent.eventType}`
+                      : step === 'type'
+                        ? 'Новый выход'
+                        : resolvedType || 'Певчие'}
+                  </span>
+                  {step === 'members' && checkedCount > 0 && (
+                    <span className="text-xs text-warm-500 shrink-0 ml-2">
+                      {checkedCount} {plural(checkedCount, SINGER)}
+                    </span>
+                  )}
+                </div>
               </div>
             </DrawerHeader>
 
@@ -477,7 +478,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                   style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}
                 >
                   {saving && <Spinner size="sm" color="white" />}
-                  Сохранить
+                  {editingEvent ? 'Сохранить' : 'Добавить'}
                 </button>
               )}
             </DrawerFooter>
