@@ -1,9 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Spinner } from '@heroui/react'
+import {
+  Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter,
+  Spinner,
+} from '@heroui/react'
 import type { ChoirEvent, Member } from '@/lib/types'
 import { EVENT_TYPES, DEFAULT_PRICES, pricesToMap } from '@/lib/types'
+import { plural, SINGER } from '@/lib/plural'
 
 interface Props {
   isOpen: boolean
@@ -39,7 +43,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   const resolvedType = eventType === 'Другое' ? customType.trim() : eventType
 
-  // Load members on open
+  // Загрузка певчих при открытии
   useEffect(() => {
     if (!isOpen) return
     setMembersLoading(true)
@@ -51,7 +55,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       })
   }, [isOpen])
 
-  // Init state when modal opens
+  // Инициализация при открытии
   useEffect(() => {
     if (!isOpen) return
     if (editingEvent) {
@@ -74,10 +78,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     }
   }, [isOpen, editingEvent])
 
-  // Build festive rows when members + eventType are ready
+  // Строки праздничного хора
   useEffect(() => {
     if (choirType !== 'festive' || !resolvedType || members.length === 0) return
-
     const existingAtt = editingEvent?.attendances || []
     const newRows: Row[] = members.map((m) => {
       const existing = existingAtt.find((a) => a.memberId === m._id)
@@ -98,7 +101,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     setRows(newRows)
   }, [members, resolvedType, choirType, editingEvent])
 
-  // Build weekday rows from existing event
+  // Строки буднего хора из редактируемого события
   useEffect(() => {
     if (choirType !== 'weekday' || !editingEvent) return
     setWeekdayRows(
@@ -156,22 +159,15 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   async function handleSave() {
     if (!resolvedType) return
     setSaving(true)
-
     const attendances =
       choirType === 'festive'
-        ? rows
-            .filter((r) => r.checked)
-            .map((r) => ({
-              memberId: r.memberId,
-              memberName: r.memberName,
-              basePrice: r.basePrice,
-              bonus: r.bonus,
-            }))
+        ? rows.filter((r) => r.checked).map((r) => ({
+            memberId: r.memberId, memberName: r.memberName,
+            basePrice: r.basePrice, bonus: r.bonus,
+          }))
         : weekdayRows.map((r) => ({
-            memberId: r.memberId,
-            memberName: r.memberName,
-            basePrice: r.basePrice,
-            bonus: r.bonus,
+            memberId: r.memberId, memberName: r.memberName,
+            basePrice: r.basePrice, bonus: r.bonus,
           }))
 
     if (editingEvent) {
@@ -187,48 +183,51 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         body: JSON.stringify({ date, eventType: resolvedType, attendances }),
       })
     }
-
     setSaving(false)
     onSaved()
     onClose()
   }
 
-  if (!isOpen) return null
-
   const checkedCount = choirType === 'festive' ? rows.filter((r) => r.checked).length : weekdayRows.length
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: 'rgba(44,26,14,0.5)' }}>
-      <div
-        className="flex-1"
-        onClick={onClose}
-      />
-      <div
-        className="bg-page rounded-t-2xl flex flex-col"
-        style={{ maxHeight: '90vh' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1">
+    <Drawer
+      isOpen={isOpen}
+      onOpenChange={(open) => { if (!open) onClose() }}
+      placement="bottom"
+      scrollBehavior="inside"
+      classNames={{
+        base: 'bg-page rounded-t-2xl max-h-[92dvh]',
+        header: 'border-b border-warm-200 py-3 px-4',
+        body: 'px-4 py-4',
+        footer: 'border-t border-warm-200 bg-white px-4 py-3',
+        closeButton: 'hidden',
+      }}
+    >
+      <DrawerContent>
+        {(closeDrawer) => (
+        <>
+        {/* Ручка */}
+        <div className="flex justify-center pt-3 pb-0">
           <div className="w-10 h-1 rounded-full bg-warm-300" />
         </div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-warm-200">
-          <h2 className="text-base font-slab font-bold text-warm-900">
+        <DrawerHeader className="flex items-center justify-between">
+          <span className="text-base font-bold text-warm-900">
             {editingEvent ? `Редактировать: ${editingEvent.eventType}` : 'Новый выход'}
-          </h2>
+          </span>
           {checkedCount > 0 && (
-            <span className="text-xs font-slab text-warm-500">{checkedCount} певч.</span>
+            <span className="text-xs text-warm-500">
+              {checkedCount} {plural(checkedCount, SINGER)}
+            </span>
           )}
-        </div>
+        </DrawerHeader>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-4 py-4">
-          {/* Step 1: Event type */}
+        <DrawerBody>
+          {/* Шаг 1: тип выхода */}
           {step === 'type' && (
             <div className="flex flex-col gap-3">
-              <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide">
+              <p className="text-xs font-semibold text-warm-600 uppercase tracking-wide">
                 Тип выхода
               </p>
               <div className="grid grid-cols-2 gap-2">
@@ -238,7 +237,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                     <button
                       key={t}
                       onClick={() => setEventType(t)}
-                      className={`py-3 rounded-xl text-sm font-slab font-semibold border transition-all ${
+                      className={`py-3 rounded-xl text-sm font-semibold border transition-all ${
                         active
                           ? 'text-white border-transparent'
                           : 'bg-white border-warm-200 text-warm-700 active:bg-warm-50'
@@ -262,7 +261,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
             </div>
           )}
 
-          {/* Step 2: Members */}
+          {/* Шаг 2: певчие */}
           {step === 'members' && (
             <>
               {membersLoading ? (
@@ -271,7 +270,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                 </div>
               ) : (
                 <>
-                  {/* FESTIVE: checklist */}
+                  {/* Праздничный хор — чеклист */}
                   {choirType === 'festive' && (
                     <div className="flex flex-col gap-1">
                       {rows.map((row) => (
@@ -304,7 +303,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                             {row.checked && (
                               <div className="flex items-center gap-1.5">
                                 <div className="flex flex-col items-end">
-                                  <span className="text-[10px] text-warm-400 font-slab">цена</span>
+                                  <span className="text-[10px] text-warm-400">цена</span>
                                   <input
                                     type="number"
                                     value={row.basePrice || ''}
@@ -313,7 +312,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   />
                                 </div>
                                 <div className="flex flex-col items-end">
-                                  <span className="text-[10px] text-warm-400 font-slab">+доп</span>
+                                  <span className="text-[10px] text-warm-400">+доп</span>
                                   <input
                                     type="number"
                                     value={row.bonus || ''}
@@ -330,7 +329,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                     </div>
                   )}
 
-                  {/* WEEKDAY: search */}
+                  {/* Будний хор — поиск */}
                   {choirType === 'weekday' && (
                     <div className="flex flex-col gap-3">
                       <div className="relative">
@@ -350,7 +349,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                 className="w-full text-left px-4 py-3 text-sm border-b border-warm-100 last:border-b-0 active:bg-warm-50"
                                 onClick={() => addWeekdayMember(m)}
                               >
-                                <span className="font-slab font-semibold text-warm-900">{m.name}</span>
+                                <span className="font-semibold text-warm-900">{m.name}</span>
                                 <span className="ml-2 text-xs text-warm-400">
                                   {m.role === 'soloist' ? 'Солист' : m.role === 'regent' ? 'Регент' : 'Певчий'}
                                   {' · '}{getPriceForMember(m, resolvedType)} ₽
@@ -367,7 +366,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                             <div key={row.memberId} className="flex items-center gap-2 px-3 py-2.5 border-b border-warm-100 last:border-b-0">
                               <span className="flex-1 text-sm font-medium text-warm-900">{row.memberName}</span>
                               <div className="flex flex-col items-end">
-                                <span className="text-[10px] text-warm-400 font-slab">цена</span>
+                                <span className="text-[10px] text-warm-400">цена</span>
                                 <input
                                   type="number"
                                   value={row.basePrice || ''}
@@ -376,7 +375,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                 />
                               </div>
                               <div className="flex flex-col items-end">
-                                <span className="text-[10px] text-warm-400 font-slab">+доп</span>
+                                <span className="text-[10px] text-warm-400">+доп</span>
                                 <input
                                   type="number"
                                   value={row.bonus || ''}
@@ -401,24 +400,22 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
               )}
             </>
           )}
-        </div>
+        </DrawerBody>
 
-        {/* Footer */}
-        <div
-          className="flex gap-2 px-4 py-3 border-t border-warm-200 bg-white"
+        <DrawerFooter
           style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
         >
           {step === 'members' && !editingEvent && (
             <button
               onClick={() => setStep('type')}
-              className="flex-1 py-3 rounded-xl border border-warm-200 text-warm-700 text-sm font-slab font-semibold active:bg-warm-50"
+              className="flex-1 py-3 rounded-xl border border-warm-200 text-warm-700 text-sm font-semibold active:bg-warm-50"
             >
               ← Назад
             </button>
           )}
           <button
-            onClick={onClose}
-            className="flex-1 py-3 rounded-xl border border-warm-200 text-warm-700 text-sm font-slab font-semibold active:bg-warm-50"
+            onClick={closeDrawer}
+            className="flex-1 py-3 rounded-xl border border-warm-200 text-warm-700 text-sm font-semibold active:bg-warm-50"
           >
             Отмена
           </button>
@@ -427,7 +424,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
             <button
               onClick={() => setStep('members')}
               disabled={!eventType || (eventType === 'Другое' && !customType.trim())}
-              className="flex-1 py-3 rounded-xl text-white text-sm font-slab font-semibold disabled:opacity-40"
+              className="flex-1 py-3 rounded-xl text-white text-sm font-semibold disabled:opacity-40"
               style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}
             >
               Далее →
@@ -436,15 +433,17 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
             <button
               onClick={handleSave}
               disabled={saving || !resolvedType}
-              className="flex-1 py-3 rounded-xl text-white text-sm font-slab font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+              className="flex-1 py-3 rounded-xl text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
               style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}
             >
               {saving && <Spinner size="sm" color="white" />}
               Сохранить
             </button>
           )}
-        </div>
-      </div>
-    </div>
+        </DrawerFooter>
+        </>
+        )}
+      </DrawerContent>
+    </Drawer>
   )
 }
