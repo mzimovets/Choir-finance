@@ -5,6 +5,7 @@ import { Spinner } from '@heroui/react'
 import { useSession } from '@/hooks/useSession'
 import { PageHeader } from '@/components/PageHeader'
 import type { ChoirEvent } from '@/lib/types'
+import { plural, SINGER, EVENT } from '@/lib/plural'
 
 function monthStr(offset = 0) {
   const d = new Date()
@@ -98,8 +99,8 @@ export default function ExportPage() {
             {/* Summary cards */}
             <div className="grid grid-cols-3 gap-3 mb-4">
               {[
-                { value: events.length, label: 'выходов' },
-                { value: uniqueMembers, label: 'певчих' },
+                { value: events.length,   label: plural(events.length, EVENT) },
+                { value: uniqueMembers,   label: plural(uniqueMembers, SINGER) },
                 { value: totalAmount > 0 ? `${(totalAmount / 1000).toFixed(1)}к` : '0', label: 'рублей' },
               ].map(({ value, label }) => (
                 <div key={label} className="warm-card p-3 text-center">

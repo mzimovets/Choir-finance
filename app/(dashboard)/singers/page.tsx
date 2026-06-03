@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Spinner } from '@heroui/react'
 import type { Member, MemberRole } from '@/lib/types'
 import { EVENT_TYPES, DEFAULT_PRICES, pricesToMap, mapToPrices } from '@/lib/types'
+import { plural, PERSON } from '@/lib/plural'
 import { PageHeader } from '@/components/PageHeader'
 import { useSession } from '@/hooks/useSession'
 
@@ -105,7 +106,7 @@ export default function SingersPage() {
     <div className="max-w-lg mx-auto">
       <PageHeader
         title={choirLabel}
-        subtitle={`${members.length} человек`}
+        subtitle={`${members.length} ${plural(members.length, PERSON)}`}
         displayName={session?.displayName}
         choirType={session?.choirType}
         right={

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { ChoirEvent } from '@/lib/types'
+import { plural, SINGER } from '@/lib/plural'
 
 interface Props {
   event: ChoirEvent
@@ -30,7 +31,7 @@ export function EventCard({ event, onEdit, onDelete }: Props) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-slab font-semibold text-warm-900 text-sm">{event.eventType}</p>
-          <p className="text-xs text-warm-400 mt-0.5">{count} певчих</p>
+          <p className="text-xs text-warm-400 mt-0.5">{count} {plural(count, SINGER)}</p>
         </div>
         <p className="text-base font-slab font-bold text-warm-800 shrink-0">
           {total.toLocaleString('ru-RU')} ₽
