@@ -112,32 +112,21 @@ export default function DayPage() {
           value={calendarValue}
           onChange={handleCalendarChange}
           granularity="day"
-          showMonthAndYearPickers
-          calendarProps={{
-            classNames: {
-              base: 'bg-white border border-warm-200 rounded-2xl shadow-sm',
-              headerWrapper: 'bg-white rounded-t-2xl',
-              title: 'font-semibold text-warm-900',
-              gridHeader: 'bg-white',
-              gridHeaderCell: 'text-warm-400 text-xs font-semibold',
-              cell: 'text-warm-800',
-              cellButton: [
-                'rounded-xl font-medium',
-                'data-[selected=true]:bg-gradient-to-r data-[selected=true]:from-[#bd9673] data-[selected=true]:to-[#7d5e42] data-[selected=true]:text-white',
-                'data-[today=true]:text-[#9b7653] data-[today=true]:font-bold',
-                'hover:bg-warm-100',
-              ].join(' '),
-            },
-          }}
+          color="primary"
           classNames={{
             base: 'w-full',
-            inputWrapper: [
-              'bg-white border border-warm-200 rounded-xl shadow-none h-10',
-              'hover:border-[#9b7653] focus-within:border-[#9b7653]',
-              'data-[focus-within=true]:ring-0',
-            ].join(' '),
-            input: 'text-warm-900 font-medium text-sm',
-            selectorButton: 'text-warm-500',
+            inputWrapper: 'bg-white border-warm-200 shadow-none rounded-xl h-11 px-3',
+            segment: 'text-warm-900',
+            selectorButton: 'text-warm-500 mr-1',
+          }}
+          calendarProps={{
+            color: 'primary',
+            classNames: {
+              base: 'shadow-lg rounded-2xl border border-warm-100',
+              title: 'text-warm-900 font-semibold',
+              gridHeaderCell: 'text-warm-400 text-xs',
+              cell: 'text-warm-800',
+            },
           }}
         />
       </div>
