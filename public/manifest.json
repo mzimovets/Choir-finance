@@ -4,8 +4,8 @@
   "description": "Учёт посещений и расчёт зарплаты хора",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#006FEE",
+  "background_color": "#F7F4F1",
+  "theme_color": "#9b7653",
   "orientation": "portrait",
   "icons": [
     {

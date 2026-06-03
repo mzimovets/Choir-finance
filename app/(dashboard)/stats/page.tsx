@@ -1,10 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import {
-  Card, CardBody, Spinner, Button, Chip,
-  Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure,
-} from '@heroui/react'
+import { Spinner } from '@heroui/react'
+import { useSession } from '@/hooks/useSession'
+import { PageHeader } from '@/components/PageHeader'
 import type { ChoirEvent, Member } from '@/lib/types'
 
 function monthStr(offset = 0) {
@@ -26,11 +25,10 @@ interface MemberStat {
 }
 
 export default function StatsPage() {
+  const { session } = useSession()
   const [month, setMonth] = useState(monthStr())
   const [stats, setStats] = useState<MemberStat[]>([])
-  const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(false)
-  const { isOpen, onOpen, onClose } = useDisclosure()
   const [selected, setSelected] = useState<MemberStat | null>(null)
 
   const load = useCallback(async () => {
@@ -41,7 +39,6 @@ export default function StatsPage() {
     ])
     const events: ChoirEvent[] = evRes.ok ? await evRes.json() : []
     const mbs: Member[] = mbRes.ok ? await mbRes.json() : []
-    setMembers(mbs)
 
     const map = new Map<string, MemberStat>()
     mbs.forEach((m) => map.set(m._id, { member: m, events: 0, total: 0, rows: [] }))
@@ -63,105 +60,150 @@ export default function StatsPage() {
 
   useEffect(() => { load() }, [load])
 
-  const [y, m] = month.split('-').map(Number)
-  const monthLabel = `${MONTHS_RU[m - 1]} ${y}`
-
-  function openDetail(s: MemberStat) {
-    setSelected(s)
-    onOpen()
+  function changeMonth(delta: number) {
+    const [y, m] = month.split('-').map(Number)
+    const d = new Date(y, m - 1 + delta, 1)
+    setMonth(d.toISOString().slice(0, 7))
   }
 
+  const [y, mo] = month.split('-').map(Number)
+  const monthLabel = `${MONTHS_RU[mo - 1]} ${y}`
+  const grandTotal = stats.reduce((s, r) => s + r.total, 0)
+
   return (
-    <div className="max-w-lg mx-auto px-4 pt-4">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold">Статистика</h1>
-        <div className="flex items-center gap-1">
-          <Button size="sm" variant="flat" onPress={() => setMonth(monthStr(-1))}>←</Button>
-          <span className="text-sm w-32 text-center font-medium">{monthLabel}</span>
-          <Button size="sm" variant="flat" onPress={() => setMonth(monthStr(1))}>→</Button>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-12"><Spinner /></div>
-      ) : (
-        <div className="flex flex-col gap-2">
-          {stats.map((s) => (
-            <Card
-              key={s.member._id}
-              isPressable
-              onPress={() => openDetail(s)}
-              className="w-full"
+    <div className="max-w-lg mx-auto">
+      <PageHeader
+        title="Статистика"
+        subtitle={monthLabel}
+        displayName={session?.displayName}
+        choirType={session?.choirType}
+        right={
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => changeMonth(-1)}
+              className="w-8 h-8 rounded-lg border border-warm-200 bg-white text-warm-700 text-sm flex items-center justify-center active:bg-warm-50 transition-colors"
             >
-              <CardBody className="flex flex-row items-center gap-3 p-3">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{s.member.name}</p>
-                  <p className="text-xs text-default-400 mt-0.5">{s.events} выходов</p>
-                </div>
-                <p className="text-base font-bold text-primary tabular-nums">
-                  {s.total.toLocaleString('ru-RU')} ₽
-                </p>
-              </CardBody>
-            </Card>
-          ))}
+              ←
+            </button>
+            <button
+              onClick={() => changeMonth(1)}
+              className="w-8 h-8 rounded-lg border border-warm-200 bg-white text-warm-700 text-sm flex items-center justify-center active:bg-warm-50 transition-colors"
+            >
+              →
+            </button>
+          </div>
+        }
+      />
 
-          {stats.length > 0 && (
-            <Card className="mt-2 bg-primary-50">
-              <CardBody className="flex flex-row items-center justify-between p-3">
-                <span className="font-bold text-sm">Итого по хору:</span>
-                <span className="font-bold text-primary tabular-nums">
-                  {stats.reduce((s, r) => s + r.total, 0).toLocaleString('ru-RU')} ₽
-                </span>
-              </CardBody>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* Detail modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="lg" scrollBehavior="inside">
-        <ModalContent>
-          <ModalHeader>
-            <div>
-              <p className="text-base">{selected?.member.name}</p>
-              <p className="text-xs text-default-400 font-normal">{monthLabel}</p>
+      <div className="px-4">
+        {loading ? (
+          <div className="flex justify-center py-12"><Spinner color="warning" /></div>
+        ) : stats.length === 0 ? (
+          <div className="warm-card p-8 text-center">
+            <div className="text-4xl mb-3">📊</div>
+            <p className="font-slab font-semibold text-warm-700">Нет данных</p>
+            <p className="text-sm text-warm-400 mt-1">За {monthLabel} записей не найдено</p>
+          </div>
+        ) : (
+          <>
+            <div className="warm-card overflow-hidden mb-3">
+              <table className="warm-table">
+                <thead>
+                  <tr>
+                    <th>Певчий</th>
+                    <th className="text-right">Выходы</th>
+                    <th className="text-right">Сумма</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.map((s) => (
+                    <tr
+                      key={s.member._id}
+                      onClick={() => setSelected(selected?.member._id === s.member._id ? null : s)}
+                      className="cursor-pointer"
+                    >
+                      <td>
+                        <span className="font-slab font-semibold text-warm-900">{s.member.name}</span>
+                      </td>
+                      <td className="text-right tabular-nums text-warm-600 text-xs">
+                        {s.events}
+                      </td>
+                      <td className="text-right tabular-nums font-slab font-semibold text-warm-800">
+                        {s.total > 0 ? `${s.total.toLocaleString('ru-RU')} ₽` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-warm-50">
+                    <td className="font-slab font-bold text-warm-900 text-sm">Итого</td>
+                    <td />
+                    <td className="text-right font-slab font-bold text-warm-900 tabular-nums">
+                      {grandTotal.toLocaleString('ru-RU')} ₽
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
-          </ModalHeader>
-          <ModalBody>
-            {selected && (
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between text-sm text-default-500 font-medium pb-1 border-b border-divider">
-                  <span>Дата / Тип</span>
-                  <span>Сумма</span>
+
+            {/* Detail panel */}
+            {selected && selected.rows.length > 0 && (
+              <div className="warm-card overflow-hidden mb-3">
+                <div className="px-4 py-3 border-b border-warm-100 flex items-center justify-between">
+                  <p className="font-slab font-bold text-warm-900 text-sm">{selected.member.name}</p>
+                  <button
+                    onClick={() => setSelected(null)}
+                    className="w-6 h-6 rounded-full bg-warm-100 text-warm-500 text-xs flex items-center justify-center"
+                  >
+                    ✕
+                  </button>
                 </div>
-                {selected.rows.sort((a, b) => a.date.localeCompare(b.date)).map((r, i) => {
-                  const [, , d] = r.date.split('-').map(Number)
-                  return (
-                    <div key={i} className="flex items-center justify-between py-1 text-sm border-b border-divider last:border-b-0">
-                      <div>
-                        <span className="text-default-500 mr-2">{d} {MONTHS_RU[m - 1].toLowerCase()}</span>
-                        <Chip size="sm" variant="flat" color="primary">{r.eventType}</Chip>
-                      </div>
-                      <span className="tabular-nums">
-                        {r.basePrice.toLocaleString('ru-RU')}
-                        {r.bonus > 0 && <span className="text-success ml-1">+{r.bonus.toLocaleString('ru-RU')}</span>}
-                        {' '}₽
-                      </span>
-                    </div>
-                  )
-                })}
-                <div className="flex justify-between font-bold pt-2 text-sm">
-                  <span>Итого:</span>
-                  <span className="text-primary tabular-nums">{selected.total.toLocaleString('ru-RU')} ₽</span>
-                </div>
+                <table className="warm-table">
+                  <thead>
+                    <tr>
+                      <th>Дата</th>
+                      <th>Тип</th>
+                      <th className="text-right">Сумма</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...selected.rows]
+                      .sort((a, b) => a.date.localeCompare(b.date))
+                      .map((r, i) => {
+                        const [, , d] = r.date.split('-').map(Number)
+                        return (
+                          <tr key={i}>
+                            <td className="text-warm-500 text-xs tabular-nums">
+                              {d} {MONTHS_RU[mo - 1].toLowerCase().slice(0, 3)}
+                            </td>
+                            <td>
+                              <span className="text-xs font-slab font-medium text-warm-700">{r.eventType}</span>
+                            </td>
+                            <td className="text-right tabular-nums text-sm font-medium text-warm-800">
+                              {r.basePrice.toLocaleString('ru-RU')}
+                              {r.bonus > 0 && (
+                                <span className="text-green-600 ml-1">+{r.bonus.toLocaleString('ru-RU')}</span>
+                              )}
+                              {' '}₽
+                            </td>
+                          </tr>
+                        )
+                      })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-warm-50">
+                      <td colSpan={2} className="font-slab font-bold text-warm-900 text-sm">Итого</td>
+                      <td className="text-right font-slab font-bold text-warm-900 tabular-nums">
+                        {selected.total.toLocaleString('ru-RU')} ₽
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
             )}
-          </ModalBody>
-          <ModalFooter>
-            <Button onPress={onClose}>Закрыть</Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+          </>
+        )}
+      </div>
     </div>
   )
 }

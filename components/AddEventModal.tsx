@@ -1,11 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import {
-  Modal, ModalContent, ModalHeader, ModalBody, ModalFooter,
-  Button, Select, SelectItem, Input, Checkbox, Divider, Chip, Spinner,
-} from '@heroui/react'
-import type { ChoirEvent, Member, Attendance } from '@/lib/types'
+import { useState, useEffect, useRef } from 'react'
+import { Spinner } from '@heroui/react'
+import type { ChoirEvent, Member } from '@/lib/types'
 import { EVENT_TYPES, DEFAULT_PRICES, pricesToMap } from '@/lib/types'
 
 interface Props {
@@ -17,7 +14,7 @@ interface Props {
   onSaved: () => void
 }
 
-interface AttendanceRow {
+interface Row {
   memberId: string
   memberName: string
   basePrice: number
@@ -25,36 +22,38 @@ interface AttendanceRow {
   checked: boolean
 }
 
-const ALL_EVENT_TYPES = [...EVENT_TYPES, 'Другое']
+const ALL_TYPES = [...EVENT_TYPES, 'Другое'] as const
 
 export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, onSaved }: Props) {
   const [step, setStep] = useState<'type' | 'members'>('type')
   const [eventType, setEventType] = useState('')
   const [customType, setCustomType] = useState('')
   const [members, setMembers] = useState<Member[]>([])
-  const [rows, setRows] = useState<AttendanceRow[]>([])
-  const [search, setSearch] = useState('')
-  const [saving, setSaving] = useState(false)
   const [membersLoading, setMembersLoading] = useState(false)
-
-  // Weekday: search results
+  const [rows, setRows] = useState<Row[]>([])
+  const [weekdayRows, setWeekdayRows] = useState<Row[]>([])
+  const [search, setSearch] = useState('')
   const [searchResults, setSearchResults] = useState<Member[]>([])
-  const [weekdayRows, setWeekdayRows] = useState<AttendanceRow[]>([])
+  const [saving, setSaving] = useState(false)
+  const searchRef = useRef<HTMLInputElement>(null)
 
-  const loadMembers = useCallback(async () => {
-    setMembersLoading(true)
-    const res = await fetch('/api/members')
-    if (res.ok) {
-      const data: Member[] = await res.json()
-      setMembers(data)
-    }
-    setMembersLoading(false)
-  }, [])
+  const resolvedType = eventType === 'Другое' ? customType.trim() : eventType
 
+  // Load members on open
   useEffect(() => {
     if (!isOpen) return
-    loadMembers()
+    setMembersLoading(true)
+    fetch('/api/members')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: Member[]) => {
+        setMembers(data)
+        setMembersLoading(false)
+      })
+  }, [isOpen])
 
+  // Init state when modal opens
+  useEffect(() => {
+    if (!isOpen) return
     if (editingEvent) {
       const et = editingEvent.eventType
       if ((EVENT_TYPES as readonly string[]).includes(et)) {
@@ -68,21 +67,26 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       setStep('type')
       setEventType('')
       setCustomType('')
-      setWeekdayRows([])
       setSearch('')
+      setSearchResults([])
+      setWeekdayRows([])
+      setRows([])
     }
-  }, [isOpen, editingEvent, loadMembers])
+  }, [isOpen, editingEvent])
 
-  // Build rows for festive choir when event type and members are ready
+  // Build festive rows when members + eventType are ready
   useEffect(() => {
-    if (choirType !== 'festive' || !eventType || members.length === 0) return
+    if (choirType !== 'festive' || !resolvedType || members.length === 0) return
 
-    const resolvedType = eventType === 'Другое' ? customType : eventType
     const existingAtt = editingEvent?.attendances || []
-
-    const newRows: AttendanceRow[] = members.map((m) => {
+    const newRows: Row[] = members.map((m) => {
       const existing = existingAtt.find((a) => a.memberId === m._id)
-      const basePrice = existing?.basePrice ?? getPriceForMember(m, resolvedType)
+      const priceMap = pricesToMap(m.defaultPrices)
+      const basePrice = existing?.basePrice ?? (
+        priceMap[resolvedType] !== undefined
+          ? priceMap[resolvedType] * m.regentMultiplier
+          : (DEFAULT_PRICES[resolvedType]?.[m.role] ?? 0) * m.regentMultiplier
+      )
       return {
         memberId: m._id,
         memberName: m.name,
@@ -92,28 +96,27 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       }
     })
     setRows(newRows)
-  }, [members, eventType, customType, choirType, editingEvent])
+  }, [members, resolvedType, choirType, editingEvent])
 
-  // Weekday: populate from existing event
+  // Build weekday rows from existing event
   useEffect(() => {
-    if (choirType !== 'weekday' || !editingEvent || members.length === 0) return
-    const att = editingEvent.attendances
-    setWeekdayRows(att.map((a) => ({
-      memberId: a.memberId,
-      memberName: a.memberName,
-      basePrice: a.basePrice,
-      bonus: a.bonus,
-      checked: true,
-    })))
-  }, [choirType, editingEvent, members])
+    if (choirType !== 'weekday' || !editingEvent) return
+    setWeekdayRows(
+      editingEvent.attendances.map((a) => ({
+        memberId: a.memberId,
+        memberName: a.memberName,
+        basePrice: a.basePrice,
+        bonus: a.bonus,
+        checked: true,
+      }))
+    )
+  }, [choirType, editingEvent, isOpen])
 
   function getPriceForMember(m: Member, type: string): number {
     const priceMap = pricesToMap(m.defaultPrices)
-    const custom = priceMap[type]
-    if (custom !== undefined) return custom * m.regentMultiplier
-    const defaults = DEFAULT_PRICES[type]
-    if (defaults) return defaults[m.role] * m.regentMultiplier
-    return 0
+    const p = priceMap[type]
+    if (p !== undefined) return p * m.regentMultiplier
+    return (DEFAULT_PRICES[type]?.[m.role] ?? 0) * m.regentMultiplier
   }
 
   function handleSearch(q: string) {
@@ -124,52 +127,53 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       members
         .filter((m) => m.name.toLowerCase().includes(q2))
         .filter((m) => !weekdayRows.some((r) => r.memberId === m._id))
-        .slice(0, 6)
+        .slice(0, 8)
     )
   }
 
   function addWeekdayMember(m: Member) {
-    const resolvedType = eventType === 'Другое' ? customType : eventType
-    const row: AttendanceRow = {
-      memberId: m._id,
-      memberName: m.name,
-      basePrice: getPriceForMember(m, resolvedType),
-      bonus: 0,
-      checked: true,
-    }
-    setWeekdayRows((prev) => [...prev, row])
+    const price = getPriceForMember(m, resolvedType)
+    setWeekdayRows((prev) => [
+      ...prev,
+      { memberId: m._id, memberName: m.name, basePrice: price, bonus: 0, checked: true },
+    ])
     setSearch('')
     setSearchResults([])
+    searchRef.current?.focus()
   }
 
-  function updateWeekdayRow(idx: number, field: 'basePrice' | 'bonus', val: number) {
-    setWeekdayRows((prev) => prev.map((r, i) => i === idx ? { ...r, [field]: val } : r))
+  function updateRow(idx: number, field: 'basePrice' | 'bonus', val: string) {
+    const num = parseInt(val, 10) || 0
+    setWeekdayRows((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: num } : r)))
   }
 
-  function removeWeekdayRow(idx: number) {
-    setWeekdayRows((prev) => prev.filter((_, i) => i !== idx))
-  }
-
-  function updateFestiveRow(memberId: string, field: keyof AttendanceRow, val: unknown) {
-    setRows((prev) => prev.map((r) => r.memberId === memberId ? { ...r, [field]: val } : r))
+  function updateFestiveRow(id: string, field: 'basePrice' | 'bonus' | 'checked', val: unknown) {
+    setRows((prev) =>
+      prev.map((r) => (r.memberId === id ? { ...r, [field]: val } : r))
+    )
   }
 
   async function handleSave() {
-    const resolvedType = eventType === 'Другое' ? customType.trim() : eventType
     if (!resolvedType) return
-
-    let attendances: Attendance[]
-    if (choirType === 'festive') {
-      attendances = rows
-        .filter((r) => r.checked)
-        .map((r) => ({ memberId: r.memberId, memberName: r.memberName, basePrice: r.basePrice, bonus: r.bonus }))
-    } else {
-      attendances = weekdayRows.map((r) => ({
-        memberId: r.memberId, memberName: r.memberName, basePrice: r.basePrice, bonus: r.bonus,
-      }))
-    }
-
     setSaving(true)
+
+    const attendances =
+      choirType === 'festive'
+        ? rows
+            .filter((r) => r.checked)
+            .map((r) => ({
+              memberId: r.memberId,
+              memberName: r.memberName,
+              basePrice: r.basePrice,
+              bonus: r.bonus,
+            }))
+        : weekdayRows.map((r) => ({
+            memberId: r.memberId,
+            memberName: r.memberName,
+            basePrice: r.basePrice,
+            bonus: r.bonus,
+          }))
+
     if (editingEvent) {
       await fetch(`/api/events/${editingEvent._id}`, {
         method: 'PUT',
@@ -183,215 +187,264 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         body: JSON.stringify({ date, eventType: resolvedType, attendances }),
       })
     }
+
     setSaving(false)
     onSaved()
     onClose()
   }
 
-  const checkedCount = choirType === 'festive'
-    ? rows.filter((r) => r.checked).length
-    : weekdayRows.length
+  if (!isOpen) return null
 
-  const resolvedType = eventType === 'Другое' ? customType : eventType
+  const checkedCount = choirType === 'festive' ? rows.filter((r) => r.checked).length : weekdayRows.length
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      size="full"
-      scrollBehavior="inside"
-      classNames={{ base: 'max-w-lg mx-auto', body: 'pb-4' }}
-    >
-      <ModalContent>
-        <ModalHeader>
-          {editingEvent ? `Редактировать: ${editingEvent.eventType}` : 'Новый выход'}
-        </ModalHeader>
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: 'rgba(44,26,14,0.5)' }}>
+      <div
+        className="flex-1"
+        onClick={onClose}
+      />
+      <div
+        className="bg-page rounded-t-2xl flex flex-col"
+        style={{ maxHeight: '90vh' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-warm-300" />
+        </div>
 
-        <ModalBody>
-          {/* Step 1: choose event type */}
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-warm-200">
+          <h2 className="text-base font-slab font-bold text-warm-900">
+            {editingEvent ? `Редактировать: ${editingEvent.eventType}` : 'Новый выход'}
+          </h2>
+          {checkedCount > 0 && (
+            <span className="text-xs font-slab text-warm-500">{checkedCount} певч.</span>
+          )}
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          {/* Step 1: Event type */}
           {step === 'type' && (
             <div className="flex flex-col gap-3">
-              <p className="text-small text-default-500">Тип выхода</p>
+              <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide">
+                Тип выхода
+              </p>
               <div className="grid grid-cols-2 gap-2">
-                {ALL_EVENT_TYPES.map((t) => (
-                  <Button
-                    key={t}
-                    variant={eventType === t ? 'solid' : 'flat'}
-                    color={eventType === t ? 'primary' : 'default'}
-                    onPress={() => setEventType(t)}
-                    className="h-12"
-                  >
-                    {t}
-                  </Button>
-                ))}
+                {ALL_TYPES.map((t) => {
+                  const active = eventType === t
+                  return (
+                    <button
+                      key={t}
+                      onClick={() => setEventType(t)}
+                      className={`py-3 rounded-xl text-sm font-slab font-semibold border transition-all ${
+                        active
+                          ? 'text-white border-transparent'
+                          : 'bg-white border-warm-200 text-warm-700 active:bg-warm-50'
+                      }`}
+                      style={active ? { background: 'linear-gradient(to right, #bd9673, #7d5e42)' } : {}}
+                    >
+                      {t}
+                    </button>
+                  )
+                })}
               </div>
               {eventType === 'Другое' && (
-                <Input
-                  label="Название выхода"
+                <input
+                  className="warm-input"
+                  placeholder="Введите название выхода"
                   value={customType}
-                  onValueChange={setCustomType}
+                  onChange={(e) => setCustomType(e.target.value)}
                   autoFocus
                 />
               )}
             </div>
           )}
 
-          {/* Step 2: choose members */}
+          {/* Step 2: Members */}
           {step === 'members' && (
             <>
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <Chip color="primary" variant="flat" size="sm">{resolvedType || '—'}</Chip>
+              {membersLoading ? (
+                <div className="flex justify-center py-8">
+                  <Spinner color="warning" />
                 </div>
-                <span className="text-small text-default-500">{checkedCount} чел.</span>
-              </div>
-
-              {membersLoading && <div className="flex justify-center py-8"><Spinner /></div>}
-
-              {/* FESTIVE: checklist */}
-              {!membersLoading && choirType === 'festive' && (
-                <div className="flex flex-col gap-1">
-                  {rows.map((row) => (
-                    <div
-                      key={row.memberId}
-                      className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
-                        row.checked ? 'bg-primary-50' : 'bg-default-50'
-                      }`}
-                    >
-                      <Checkbox
-                        isSelected={row.checked}
-                        onValueChange={(v) => updateFestiveRow(row.memberId, 'checked', v)}
-                        size="md"
-                      />
-                      <span className="flex-1 text-sm truncate">{row.memberName}</span>
-                      {row.checked && (
-                        <div className="flex gap-1 items-center">
-                          <Input
-                            size="sm"
-                            type="number"
-                            value={String(row.basePrice)}
-                            onValueChange={(v) => updateFestiveRow(row.memberId, 'basePrice', Number(v))}
-                            className="w-20"
-                            classNames={{ input: 'text-right text-sm' }}
-                          />
-                          {row.bonus > 0 || row.basePrice > 0 ? (
-                            <Input
-                              size="sm"
-                              type="number"
-                              placeholder="+доп"
-                              value={row.bonus > 0 ? String(row.bonus) : ''}
-                              onValueChange={(v) => updateFestiveRow(row.memberId, 'bonus', Number(v) || 0)}
-                              className="w-20"
-                              classNames={{ input: 'text-right text-sm' }}
-                            />
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="light"
-                              onPress={() => updateFestiveRow(row.memberId, 'bonus', 0)}
-                              className="min-w-0 px-2 text-xs text-default-400"
-                            >
-                              +доп
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* WEEKDAY: search + list */}
-              {!membersLoading && choirType === 'weekday' && (
-                <div className="flex flex-col gap-3">
-                  <div className="relative">
-                    <Input
-                      placeholder="Поиск по фамилии..."
-                      value={search}
-                      onValueChange={handleSearch}
-                      autoComplete="off"
-                    />
-                    {searchResults.length > 0 && (
-                      <div className="absolute z-50 top-full left-0 right-0 bg-white border border-divider rounded-lg shadow-lg mt-1 overflow-hidden">
-                        {searchResults.map((m) => (
-                          <button
-                            key={m._id}
-                            className="w-full text-left px-4 py-2.5 text-sm hover:bg-primary-50 border-b border-divider last:border-b-0"
-                            onClick={() => addWeekdayMember(m)}
-                          >
-                            <span className="font-medium">{m.name}</span>
-                            <span className="ml-2 text-xs text-default-400">
-                              {m.role === 'soloist' ? 'Солист' : m.role === 'regent' ? 'Регент' : 'Певчий'}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {weekdayRows.length > 0 && (
+              ) : (
+                <>
+                  {/* FESTIVE: checklist */}
+                  {choirType === 'festive' && (
                     <div className="flex flex-col gap-1">
-                      {weekdayRows.map((row, idx) => (
-                        <div key={row.memberId} className="flex items-center gap-2 bg-primary-50 p-2 rounded-lg">
-                          <span className="flex-1 text-sm">{row.memberName}</span>
-                          <Input
-                            size="sm"
-                            type="number"
-                            value={String(row.basePrice)}
-                            onValueChange={(v) => updateWeekdayRow(idx, 'basePrice', Number(v))}
-                            className="w-20"
-                            classNames={{ input: 'text-right text-sm' }}
-                          />
-                          <Input
-                            size="sm"
-                            type="number"
-                            placeholder="+доп"
-                            value={row.bonus > 0 ? String(row.bonus) : ''}
-                            onValueChange={(v) => updateWeekdayRow(idx, 'bonus', Number(v) || 0)}
-                            className="w-20"
-                            classNames={{ input: 'text-right text-sm' }}
-                          />
-                          <Button
-                            size="sm"
-                            variant="light"
-                            color="danger"
-                            onPress={() => removeWeekdayRow(idx)}
-                            className="min-w-0 px-2"
-                          >
-                            ✕
-                          </Button>
+                      {rows.map((row) => (
+                        <div
+                          key={row.memberId}
+                          className={`rounded-xl p-2.5 transition-colors ${
+                            row.checked ? 'bg-warm-50 border border-warm-200' : 'bg-white border border-warm-100'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => updateFestiveRow(row.memberId, 'checked', !row.checked)}
+                              className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
+                                row.checked ? 'border-transparent' : 'border-warm-300 bg-white'
+                              }`}
+                              style={row.checked ? { background: 'linear-gradient(135deg, #bd9673, #7d5e42)' } : {}}
+                            >
+                              {row.checked && (
+                                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                  <path d="M1 4L4 7L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              )}
+                            </button>
+                            <span
+                              className="flex-1 text-sm text-warm-900 cursor-pointer"
+                              onClick={() => updateFestiveRow(row.memberId, 'checked', !row.checked)}
+                            >
+                              {row.memberName}
+                            </span>
+                            {row.checked && (
+                              <div className="flex items-center gap-1.5">
+                                <div className="flex flex-col items-end">
+                                  <span className="text-[10px] text-warm-400 font-slab">цена</span>
+                                  <input
+                                    type="number"
+                                    value={row.basePrice || ''}
+                                    onChange={(e) => updateFestiveRow(row.memberId, 'basePrice', parseInt(e.target.value) || 0)}
+                                    className="w-20 text-right bg-white border border-warm-200 rounded-lg px-2 py-1 text-sm font-medium text-warm-900"
+                                  />
+                                </div>
+                                <div className="flex flex-col items-end">
+                                  <span className="text-[10px] text-warm-400 font-slab">+доп</span>
+                                  <input
+                                    type="number"
+                                    value={row.bonus || ''}
+                                    placeholder="0"
+                                    onChange={(e) => updateFestiveRow(row.memberId, 'bonus', parseInt(e.target.value) || 0)}
+                                    className="w-16 text-right bg-white border border-warm-200 rounded-lg px-2 py-1 text-sm text-green-700"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
                   )}
-                </div>
+
+                  {/* WEEKDAY: search */}
+                  {choirType === 'weekday' && (
+                    <div className="flex flex-col gap-3">
+                      <div className="relative">
+                        <input
+                          ref={searchRef}
+                          className="warm-input"
+                          placeholder="Поиск по фамилии..."
+                          value={search}
+                          onChange={(e) => handleSearch(e.target.value)}
+                          autoComplete="off"
+                        />
+                        {searchResults.length > 0 && (
+                          <div className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-hidden">
+                            {searchResults.map((m) => (
+                              <button
+                                key={m._id}
+                                className="w-full text-left px-4 py-3 text-sm border-b border-warm-100 last:border-b-0 active:bg-warm-50"
+                                onClick={() => addWeekdayMember(m)}
+                              >
+                                <span className="font-slab font-semibold text-warm-900">{m.name}</span>
+                                <span className="ml-2 text-xs text-warm-400">
+                                  {m.role === 'soloist' ? 'Солист' : m.role === 'regent' ? 'Регент' : 'Певчий'}
+                                  {' · '}{getPriceForMember(m, resolvedType)} ₽
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {weekdayRows.length > 0 && (
+                        <div className="warm-card overflow-hidden">
+                          {weekdayRows.map((row, idx) => (
+                            <div key={row.memberId} className="flex items-center gap-2 px-3 py-2.5 border-b border-warm-100 last:border-b-0">
+                              <span className="flex-1 text-sm font-medium text-warm-900">{row.memberName}</span>
+                              <div className="flex flex-col items-end">
+                                <span className="text-[10px] text-warm-400 font-slab">цена</span>
+                                <input
+                                  type="number"
+                                  value={row.basePrice || ''}
+                                  onChange={(e) => updateRow(idx, 'basePrice', e.target.value)}
+                                  className="w-20 text-right bg-warm-50 border border-warm-200 rounded-lg px-2 py-1 text-sm font-medium"
+                                />
+                              </div>
+                              <div className="flex flex-col items-end">
+                                <span className="text-[10px] text-warm-400 font-slab">+доп</span>
+                                <input
+                                  type="number"
+                                  value={row.bonus || ''}
+                                  placeholder="0"
+                                  onChange={(e) => updateRow(idx, 'bonus', e.target.value)}
+                                  className="w-16 text-right bg-warm-50 border border-warm-200 rounded-lg px-2 py-1 text-sm text-green-700"
+                                />
+                              </div>
+                              <button
+                                onClick={() => setWeekdayRows((prev) => prev.filter((_, i) => i !== idx))}
+                                className="w-7 h-7 rounded-full bg-red-50 text-red-500 text-sm flex items-center justify-center shrink-0 active:bg-red-100"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
-        </ModalBody>
+        </div>
 
-        <ModalFooter>
-          <Button variant="light" onPress={onClose}>Отмена</Button>
-          {step === 'type' ? (
-            <Button
-              color="primary"
-              isDisabled={!eventType || (eventType === 'Другое' && !customType.trim())}
-              onPress={() => setStep('members')}
+        {/* Footer */}
+        <div
+          className="flex gap-2 px-4 py-3 border-t border-warm-200 bg-white"
+          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+        >
+          {step === 'members' && !editingEvent && (
+            <button
+              onClick={() => setStep('type')}
+              className="flex-1 py-3 rounded-xl border border-warm-200 text-warm-700 text-sm font-slab font-semibold active:bg-warm-50"
             >
-              Далее
-            </Button>
-          ) : (
-            <div className="flex gap-2">
-              {!editingEvent && (
-                <Button variant="flat" onPress={() => setStep('type')}>← Назад</Button>
-              )}
-              <Button color="primary" isLoading={saving} onPress={handleSave}>
-                Сохранить
-              </Button>
-            </div>
+              ← Назад
+            </button>
           )}
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 rounded-xl border border-warm-200 text-warm-700 text-sm font-slab font-semibold active:bg-warm-50"
+          >
+            Отмена
+          </button>
+
+          {step === 'type' ? (
+            <button
+              onClick={() => setStep('members')}
+              disabled={!eventType || (eventType === 'Другое' && !customType.trim())}
+              className="flex-1 py-3 rounded-xl text-white text-sm font-slab font-semibold disabled:opacity-40"
+              style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}
+            >
+              Далее →
+            </button>
+          ) : (
+            <button
+              onClick={handleSave}
+              disabled={saving || !resolvedType}
+              className="flex-1 py-3 rounded-xl text-white text-sm font-slab font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+              style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}
+            >
+              {saving && <Spinner size="sm" color="white" />}
+              Сохранить
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }

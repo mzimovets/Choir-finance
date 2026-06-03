@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardBody, CardHeader, Input, Button } from '@heroui/react'
+import { Spinner } from '@heroui/react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -15,20 +15,17 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       })
-
       if (!res.ok) {
         const data = await res.json()
         setError(data.error || 'Ошибка входа')
         return
       }
-
       router.replace('/day')
     } catch {
       setError('Ошибка подключения')
@@ -38,44 +35,70 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary-50 to-primary-100">
-      <Card className="w-full max-w-sm shadow-lg">
-        <CardHeader className="flex flex-col gap-1 px-6 pt-6 pb-2">
-          <div className="text-2xl font-bold text-primary">Хор</div>
-          <p className="text-small text-default-500">Учёт посещений и зарплата</p>
-        </CardHeader>
-        <CardBody className="px-6 pb-6">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-page">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div
+            className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center text-white text-2xl font-slab font-bold shadow-lg"
+            style={{ background: 'linear-gradient(135deg, #bd9673, #7d5e42)' }}
+          >
+            ♪
+          </div>
+          <h1 className="text-2xl font-slab font-bold gradient-text">Хор — Учёт</h1>
+          <p className="text-sm text-warm-600 mt-1">Учёт посещений и зарплата</p>
+        </div>
+
+        {/* Card */}
+        <div className="warm-card p-6">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <Input
-              label="Логин"
-              value={username}
-              onValueChange={setUsername}
-              autoComplete="username"
-              isRequired
-            />
-            <Input
-              label="Пароль"
-              type="password"
-              value={password}
-              onValueChange={setPassword}
-              autoComplete="current-password"
-              isRequired
-            />
+            <div>
+              <label className="block text-xs font-slab font-semibold text-warm-700 mb-1.5 uppercase tracking-wide">
+                Логин
+              </label>
+              <input
+                className="warm-input"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                required
+                placeholder="Введите логин"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-slab font-semibold text-warm-700 mb-1.5 uppercase tracking-wide">
+                Пароль
+              </label>
+              <input
+                className="warm-input"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+                placeholder="Введите пароль"
+              />
+            </div>
+
             {error && (
-              <p className="text-danger text-small text-center">{error}</p>
+              <p className="text-red-600 text-sm text-center bg-red-50 rounded-lg px-3 py-2">
+                {error}
+              </p>
             )}
-            <Button
+
+            <button
               type="submit"
-              color="primary"
-              isLoading={loading}
-              className="w-full mt-2"
-              size="lg"
+              disabled={loading}
+              className="btn-gradient w-full py-3 text-base mt-1 flex items-center justify-center gap-2"
             >
+              {loading && <Spinner size="sm" color="white" />}
               Войти
-            </Button>
+            </button>
           </form>
-        </CardBody>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

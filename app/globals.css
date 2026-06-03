@@ -2,15 +2,123 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+@font-face {
+  font-family: 'Roboto Slab';
+  src: url('/fonts/RobotoSlab-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
 }
 
-body {
-  @apply bg-default-50;
+:root {
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --gradient: linear-gradient(to right, #bd9673, #7d5e42);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  background-color: #F7F4F1;
+  color: #2c1a0e;
   overscroll-behavior: none;
 }
 
+/* Prevent iOS auto-zoom on input focus */
+input, textarea, select {
+  font-size: 16px !important;
+}
+
+/* Gradient button */
+.btn-gradient {
+  background: var(--gradient);
+  color: white;
+  border-radius: 0.75rem;
+  font-family: 'Roboto Slab', serif;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+.btn-gradient:active { opacity: 0.85; }
+.btn-gradient:disabled { opacity: 0.5; }
+
+/* Gradient text */
+.gradient-text {
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Card */
+.warm-card {
+  background: #ffffff;
+  border: 1px solid #e5d9cc;
+  border-radius: 1rem;
+  box-shadow: 0 1px 4px rgba(124, 80, 40, 0.06);
+}
+
+/* Table */
+.warm-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.warm-table th {
+  background: #fdf8f4;
+  color: #7d5e42;
+  font-family: 'Roboto Slab', serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.625rem 0.875rem;
+  text-align: left;
+  border-bottom: 1px solid #e5d9cc;
+}
+.warm-table td {
+  padding: 0.75rem 0.875rem;
+  border-bottom: 1px solid #f0e8df;
+  font-size: 0.875rem;
+  color: #2c1a0e;
+  vertical-align: middle;
+}
+.warm-table tbody tr:last-child td { border-bottom: none; }
+.warm-table tbody tr:hover { background: #fdf8f4; }
+
+/* Nav bottom */
 .pb-nav {
-  padding-bottom: calc(4rem + var(--safe-bottom));
+  padding-bottom: calc(4.5rem + var(--safe-bottom));
+}
+
+/* Heading font */
+.font-slab {
+  font-family: 'Roboto Slab', serif;
+}
+
+/* Input custom */
+.warm-input {
+  border: 1.5px solid #e5d9cc;
+  border-radius: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  background: #fff;
+  color: #2c1a0e;
+  width: 100%;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.warm-input:focus {
+  border-color: #9b7653;
+}
+.warm-input::placeholder { color: #c4a88a; }
+
+/* Chip role */
+.role-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: 'Roboto Slab', serif;
 }
