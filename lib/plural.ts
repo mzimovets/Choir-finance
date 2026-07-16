@@ -12,6 +12,7 @@ export function plural(n: number, forms: [string, string, string]): string {
 }
 
 // Готовые склонения
-export const SINGER   = ['певчий',  'певчих',   'певчих']   as [string, string, string]
-export const PERSON   = ['человек', 'человека', 'человек']  as [string, string, string]
-export const EVENT    = ['выход',   'выхода',   'выходов']  as [string, string, string]
+export const SINGER      = ['певчий',     'певчих',      'певчих']      as [string, string, string]
+export const PERSON      = ['человек',    'человека',    'человек']     as [string, string, string]
+export const EVENT       = ['выход',      'выхода',      'выходов']     as [string, string, string]
+export const PARTICIPANT = ['участник',   'участника',   'участников']  as [string, string, string]

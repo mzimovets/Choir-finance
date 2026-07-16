@@ -1,7 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
+import PinLock from '@/components/PinLock'
+import PinSetup from '@/components/PinSetup'
+import { hasPin, isPinVerified, markPinVerified, clearPinVerified } from '@/lib/pin'
 
 const NAV = [
   {
@@ -47,7 +51,7 @@ const NAV = [
   },
   {
     href: '/stats',
-    label: 'Статистика',
+    label: 'Итоги',
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -77,65 +81,167 @@ const NAV = [
       </svg>
     ),
   },
+  {
+    href: '/profile',
+    label: 'Профиль',
+    icon: (active: boolean) => (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="g5" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#bd9673" />
+            <stop offset="100%" stopColor="#7d5e42" />
+          </linearGradient>
+        </defs>
+        <path
+          fillRule="evenodd"
+          clipRule="evenodd"
+          d="M12 2.75C9.65279 2.75 7.75 4.65279 7.75 7C7.75 9.34721 9.65279 11.25 12 11.25C14.3472 11.25 16.25 9.34721 16.25 7C16.25 4.65279 14.3472 2.75 12 2.75ZM6.25 7C6.25 3.82436 8.82436 1.25 12 1.25C15.1756 1.25 17.75 3.82436 17.75 7C17.75 10.1756 15.1756 12.75 12 12.75C8.82436 12.75 6.25 10.1756 6.25 7Z"
+          fill={active ? 'url(#g5)' : 'currentColor'}
+        />
+        <path
+          fillRule="evenodd"
+          clipRule="evenodd"
+          d="M12 14.25C9.01331 14.25 6.40718 15.1283 4.56652 16.5501C2.72703 17.9708 1.75 19.8945 1.75 22C1.75 22.4142 2.08579 22.75 2.5 22.75C2.91421 22.75 3.25 22.4142 3.25 22C3.25 20.3555 4.02297 18.7792 5.56098 17.5999C7.09782 16.4217 9.3367 15.75 12 15.75C14.6633 15.75 16.9022 16.4217 18.439 17.5999C19.977 18.7792 20.75 20.3555 20.75 22C20.75 22.4142 21.0858 22.75 21.5 22.75C21.9142 22.75 22.25 22.4142 22.25 22C22.25 19.8945 21.273 17.9708 19.4335 16.5501C17.5928 15.1283 14.9867 14.25 12 14.25Z"
+          fill={active ? 'url(#g5)' : 'currentColor'}
+        />
+      </svg>
+    ),
+  },
 ]
+
+const ITEM_W = 70
+const PAD = 6
+
+type PinState = 'loading' | 'setup' | 'locked' | 'unlocked'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
   const activeIndex = NAV.findIndex(({ href }) => pathname === href)
+
+  const [pinState, setPinState] = useState<PinState>('loading')
+
+  useEffect(() => {
+    if (isPinVerified()) {
+      setPinState('unlocked')
+    } else if (hasPin()) {
+      setPinState('locked')
+    } else {
+      setPinState('setup')
+    }
+  }, [])
+
+  useEffect(() => {
+    const handler = () => {
+      if (!document.hidden && hasPin()) {
+        clearPinVerified()
+        setPinState('locked')
+      }
+    }
+    document.addEventListener('visibilitychange', handler)
+    return () => document.removeEventListener('visibilitychange', handler)
+  }, [])
+
+  const dragStart = useRef<{ x: number; idx: number } | null>(null)
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const wasDragging = useRef(false)
+
+  if (pinState === 'loading') {
+    return <div className="fixed inset-0 bg-[#F7F4F1]" />
+  }
+  if (pinState === 'locked') {
+    return <PinLock onUnlock={() => { markPinVerified(); setPinState('unlocked') }} />
+  }
+  if (pinState === 'setup') {
+    return <PinSetup onDone={() => { markPinVerified(); setPinState('unlocked') }} />
+  }
 
   return (
     <div className="min-h-screen bg-page flex flex-col">
       <main className="flex-1 pb-nav overflow-auto">{children}</main>
 
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 14px)' }}
       >
-        {/* Glass background */}
         <div
-          className="border-t border-white/40"
+          className="relative flex items-center pointer-events-auto"
           style={{
-            background: 'rgba(247, 244, 241, 0.75)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
+            height: 62,
+            paddingInline: PAD,
+            borderRadius: 9999,
+            background: 'rgba(255, 252, 249, 0.58)',
+            backdropFilter: 'blur(28px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+            border: '1px solid rgba(255, 255, 255, 0.6)',
+            boxShadow:
+              '0 8px 32px rgba(0,0,0,0.10), 0 2px 8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.75), inset 0 -1px 0 rgba(0,0,0,0.03)',
           }}
+          onPointerDown={(e) => {
+            dragStart.current = { x: e.clientX, idx: activeIndex }
+            wasDragging.current = false
+          }}
+          onPointerMove={(e) => {
+            if (!dragStart.current) return
+            const delta = e.clientX - dragStart.current.x
+            if (!wasDragging.current && Math.abs(delta) > 6) {
+              wasDragging.current = true
+              ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+            }
+            if (wasDragging.current) {
+              const newIdx = Math.round(dragStart.current.idx + delta / ITEM_W)
+              const clamped = Math.max(0, Math.min(NAV.length - 1, newIdx))
+              if (clamped !== (dragIdx ?? activeIndex)) setDragIdx(clamped)
+            }
+          }}
+          onPointerUp={() => {
+            if (wasDragging.current && dragIdx !== null && dragIdx !== activeIndex) {
+              router.push(NAV[dragIdx].href)
+            }
+            dragStart.current = null
+            setDragIdx(null)
+            wasDragging.current = false
+          }}
+          onPointerCancel={() => { dragStart.current = null; setDragIdx(null); wasDragging.current = false }}
         >
-          <div className="relative grid grid-cols-4 h-[4.5rem] max-w-lg mx-auto">
+          {activeIndex >= 0 && (
+            <div
+              className="absolute top-1/2 -translate-y-1/2 pointer-events-none"
+              style={{
+                width: ITEM_W - 8,
+                height: 46,
+                borderRadius: 9999,
+                left: PAD + (dragIdx ?? activeIndex) * ITEM_W + 4,
+                transition: dragIdx !== null ? 'none' : 'left 0.38s cubic-bezier(0.34, 1.4, 0.64, 1)',
+                background: 'rgba(189, 150, 115, 0.18)',
+                border: '1px solid rgba(189, 150, 115, 0.38)',
+                boxShadow:
+                  '0 2px 12px rgba(124, 80, 40, 0.14), inset 0 1px 0 rgba(255,255,255,0.6)',
+              }}
+            />
+          )}
 
-            {/* Liquid glass sliding pill — точно по центру каждой колонки */}
-            {activeIndex >= 0 && (
-              <div
-                className="absolute top-1/2 -translate-y-1/2 h-12 rounded-2xl pointer-events-none"
-                style={{
-                  width: '20%',
-                  left: `calc(${activeIndex} * 25% + 2.5%)`,
-                  transition: 'left 0.35s cubic-bezier(0.34, 1.4, 0.64, 1)',
-                  background: 'rgba(189, 150, 115, 0.18)',
-                  backdropFilter: 'blur(16px)',
-                  WebkitBackdropFilter: 'blur(16px)',
-                  border: '1px solid rgba(189, 150, 115, 0.35)',
-                  boxShadow: '0 2px 12px rgba(124, 80, 40, 0.12), inset 0 1px 0 rgba(255,255,255,0.5)',
+          {NAV.map(({ href, label, icon }, i) => {
+            const active = pathname === href
+            const visualActive = (dragIdx ?? activeIndex) === i
+            return (
+              <Link
+                key={href}
+                href={href}
+                draggable={false}
+                className={`relative flex flex-col items-center justify-center gap-0.5 text-[10px] transition-colors duration-200 select-none ${
+                  visualActive ? 'font-semibold' : 'text-warm-400 font-medium'
+                }`}
+                style={{ width: ITEM_W, height: 54, color: visualActive ? '#9b7653' : undefined }}
+                onClick={(e) => {
+                  if (wasDragging.current) e.preventDefault()
                 }}
-              />
-            )}
-
-            {NAV.map(({ href, label, icon }) => {
-              const active = pathname === href
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`relative flex flex-col items-center justify-center gap-1 text-[11px] transition-colors duration-200 ${
-                    active ? 'font-semibold' : 'text-warm-400 font-medium'
-                  }`}
-                  style={active ? { color: '#9b7653' } : {}}
-                >
-                  {icon(active)}
-                  <span>{label}</span>
-                </Link>
-              )
-            })}
-          </div>
+              >
+                {icon(active)}
+                <span>{label}</span>
+              </Link>
+            )
+          })}
         </div>
       </nav>
     </div>

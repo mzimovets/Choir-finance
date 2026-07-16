@@ -11,10 +11,26 @@ export function splitName(fullName: string): { lastName: string; firstName: stri
 }
 
 /**
- * Короткий формат: "Иванов И." — используется в таблицах, Excel, событиях.
+ * Короткий формат: "Иванов И." или "Иванов И.А." (если есть отчество).
+ * patronymicInitial — отдельный инициал отчества (1 буква). Если не передан,
+ * третья часть имени (если есть) используется автоматически.
  */
-export function shortName(fullName: string): string {
-  const { lastName, firstName } = splitName(fullName)
+export function shortName(fullName: string, patronymicInitial?: string): string {
+  const parts = (fullName || '').trim().split(/\s+/)
+  const lastName   = parts[0] || ''
+  const firstName  = parts[1] || ''
+  const thirdPart  = parts[2] || ''
   if (!firstName) return lastName
-  return `${lastName} ${firstName[0]}.`
+  const patr = (patronymicInitial || thirdPart || '').trim()
+  if (!patr) return `${lastName} ${firstName[0]}.`
+  return `${lastName} ${firstName[0]}.${patr[0].toUpperCase()}.`
+}
+
+/**
+ * Строит memberName для хранения в Attendance:
+ * "Зимовец Максим" + patronymic "А" → "Зимовец Максим А"
+ */
+export function buildMemberName(name: string, patronymic?: string): string {
+  if (!patronymic?.trim()) return name
+  return `${name} ${patronymic.trim()[0].toUpperCase()}`
 }

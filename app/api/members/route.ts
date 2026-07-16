@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { db, dbFind, dbInsert } from '@/lib/db'
 import { mapToPrices } from '@/lib/types'
+import { logAction } from '@/lib/audit'
 import type { Member } from '@/lib/types'
 
 export async function GET() {
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest) {
 
   const doc = {
     name: body.name,
+    ...(body.patronymic ? { patronymic: String(body.patronymic).trim()[0]?.toUpperCase() } : {}),
     choirType: session.choirType,
     role: body.role || 'singer',
     defaultPrices: Array.isArray(body.defaultPrices)
@@ -33,5 +35,6 @@ export async function POST(req: NextRequest) {
   }
 
   const member = await dbInsert<Member>(db.members, doc)
+  await logAction('create_member', `Добавлен певчий «${body.name}»`)
   return Response.json(member, { status: 201 })
 }

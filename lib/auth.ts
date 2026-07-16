@@ -2,9 +2,8 @@ import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import type { User } from './types'
 
-const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'chorus-finance-secret-key-change-in-prod'
-)
+if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET environment variable is not set')
+const SECRET = new TextEncoder().encode(process.env.JWT_SECRET)
 const COOKIE_NAME = 'cf_session'
 
 export async function signToken(payload: { userId: string; choirType: string }) {

@@ -17,6 +17,8 @@ declare global {
     users: Datastore
     members: Datastore
     events: Datastore
+    eventTypes: Datastore
+    auditLog: Datastore
   } | undefined
 }
 
@@ -26,6 +28,8 @@ function getDb() {
       users: createStore('users.db'),
       members: createStore('members.db'),
       events: createStore('events.db'),
+      eventTypes: createStore('event-types.db'),
+      auditLog: createStore('audit-log.db'),
     }
   }
   return global.__db
@@ -68,5 +72,12 @@ export function dbRemove(store: Datastore, query: Doc): Promise<void> {
   return new Promise((res, rej) =>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     store.remove(query, {}, (err: any) => (err ? rej(err) : res()))
+  )
+}
+
+export function dbRemoveMany(store: Datastore, query: Doc): Promise<number> {
+  return new Promise((res, rej) =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    store.remove(query, { multi: true }, (err: any, n: number) => (err ? rej(err) : res(n)))
   )
 }

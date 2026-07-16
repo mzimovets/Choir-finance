@@ -1,8 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import type { ChoirEvent } from '@/lib/types'
 import { plural, SINGER } from '@/lib/plural'
+import { shortName } from '@/lib/nameFormat'
 
 interface Props {
   event: ChoirEvent
@@ -28,11 +31,7 @@ function IconArrow({ expanded }: { expanded: boolean }) {
 function IconPen() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-      <path
-        fillRule="evenodd" clipRule="evenodd"
-        d="M14.7566 2.62145C16.5852 0.792851 19.55 0.792851 21.3786 2.62145C23.2072 4.45005 23.2072 7.41479 21.3786 9.24339L11.8933 18.7287C11.3514 19.2706 11.0323 19.5897 10.6774 19.8665C10.2592 20.1927 9.80655 20.4725 9.32766 20.7007C8.92136 20.8943 8.49334 21.037 7.76623 21.2793L4.43511 22.3897L3.63303 22.6571C2.98247 22.8739 2.26522 22.7046 1.78032 22.2197C1.29542 21.7348 1.1261 21.0175 1.34296 20.367L2.72068 16.2338C2.96303 15.5067 3.10568 15.0787 3.29932 14.6724C3.52755 14.1935 3.80727 13.7409 4.13354 13.3226C4.41035 12.9677 4.72939 12.6487 5.27137 12.1067L14.7566 2.62145ZM4.40051 20.8201L7.24203 19.8729C8.03314 19.6092 8.36927 19.4958 8.68233 19.3466C9.06287 19.1653 9.42252 18.943 9.75492 18.6837C10.0284 18.4704 10.2801 18.2205 10.8698 17.6308L18.4393 10.0614C17.6506 9.78321 16.6346 9.26763 15.6835 8.31651C14.7324 7.36538 14.2168 6.34939 13.9387 5.56075L6.36917 13.1302C5.77951 13.7199 5.52959 13.9716 5.3163 14.2451C5.05704 14.5775 4.83476 14.9371 4.65341 15.3177C4.50421 15.6307 4.3908 15.9669 4.12709 16.758L3.17992 19.5995L4.40051 20.8201ZM15.1554 4.34404C15.1896 4.519 15.2474 4.75684 15.3438 5.03487C15.561 5.66083 15.9712 6.48288 16.7442 7.25585C17.5171 8.02881 18.3392 8.43903 18.9651 8.6562C19.2432 8.75266 19.481 8.81046 19.656 8.84466L20.3179 8.18272C21.5607 6.93991 21.5607 4.92492 20.3179 3.68211C19.0751 2.4393 17.0601 2.4393 15.8173 3.68211L15.1554 4.34404Z"
-        fill="currentColor"
-      />
+      <path fillRule="evenodd" clipRule="evenodd" d="M14.7566 2.62145C16.5852 0.792851 19.55 0.792851 21.3786 2.62145C23.2072 4.45005 23.2072 7.41479 21.3786 9.24339L11.8933 18.7287C11.3514 19.2706 11.0323 19.5897 10.6774 19.8665C10.2592 20.1927 9.80655 20.4725 9.32766 20.7007C8.92136 20.8943 8.49334 21.037 7.76623 21.2793L4.43511 22.3897L3.63303 22.6571C2.98247 22.8739 2.26522 22.7046 1.78032 22.2197C1.29542 21.7348 1.1261 21.0175 1.34296 20.367L2.72068 16.2338C2.96303 15.5067 3.10568 15.0787 3.29932 14.6724C3.52755 14.1935 3.80727 13.7409 4.13354 13.3226C4.41035 12.9677 4.72939 12.6487 5.27137 12.1067L14.7566 2.62145ZM4.40051 20.8201L7.24203 19.8729C8.03314 19.6092 8.36927 19.4958 8.68233 19.3466C9.06287 19.1653 9.42252 18.943 9.75492 18.6837C10.0284 18.4704 10.2801 18.2205 10.8698 17.6308L18.4393 10.0614C17.6506 9.78321 16.6346 9.26763 15.6835 8.31651C14.7324 7.36538 14.2168 6.34939 13.9387 5.56075L6.36917 13.1302C5.77951 13.7199 5.52959 13.9716 5.3163 14.2451C5.05704 14.5775 4.83476 14.9371 4.65341 15.3177C4.50421 15.6307 4.3908 15.9669 4.12709 16.758L3.17992 19.5995L4.40051 20.8201ZM15.1554 4.34404C15.1896 4.519 15.2474 4.75684 15.3438 5.03487C15.561 5.66083 15.9712 6.48288 16.7442 7.25585C17.5171 8.02881 18.3392 8.43903 18.9651 8.6562C19.2432 8.75266 19.481 8.81046 19.656 8.84466L20.3179 8.18272C21.5607 6.93991 21.5607 4.92492 20.3179 3.68211C19.0751 2.4393 17.0601 2.4393 15.8173 3.68211L15.1554 4.34404Z" fill="currentColor" />
     </svg>
   )
 }
@@ -49,36 +48,115 @@ function IconTrash() {
   )
 }
 
+function IconGrip() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <circle cx="9" cy="7" r="1.5" fill="currentColor"/>
+      <circle cx="15" cy="7" r="1.5" fill="currentColor"/>
+      <circle cx="9" cy="12" r="1.5" fill="currentColor"/>
+      <circle cx="15" cy="12" r="1.5" fill="currentColor"/>
+      <circle cx="9" cy="17" r="1.5" fill="currentColor"/>
+      <circle cx="15" cy="17" r="1.5" fill="currentColor"/>
+    </svg>
+  )
+}
+
+function AttRow({ name, price, bonus, fine, badge }: {
+  name: string; price: number; bonus: number; fine?: number; badge?: React.ReactNode
+}) {
+  return (
+    <div className="flex items-center justify-between px-4 py-2 border-b border-warm-50 last:border-b-0">
+      <div className="flex items-center gap-2">
+        {badge}
+        <span className="text-sm text-warm-800">{shortName(name)}</span>
+      </div>
+      <span className="text-sm font-medium text-warm-700 tabular-nums">
+        {price.toLocaleString('ru-RU')}
+        {bonus > 0 && <span className="text-green-600 ml-1">+{bonus.toLocaleString('ru-RU')}</span>}
+        {(fine ?? 0) > 0 && <span className="text-red-500 ml-1">−{fine!.toLocaleString('ru-RU')}</span>}
+        {' '}₽
+      </span>
+    </div>
+  )
+}
+
+function SectionLabel({ label }: { label: string }) {
+  return (
+    <div className="px-4 py-1 bg-warm-50 border-b border-warm-100">
+      <span className="text-[10px] font-slab font-bold text-warm-400 uppercase tracking-widest">{label}</span>
+    </div>
+  )
+}
+
 export function EventCard({ event, onEdit, onDelete }: Props) {
   const [expanded, setExpanded] = useState(false)
 
-  const total = event.attendances.reduce((s, a) => s + (a.basePrice || 0) + (a.bonus || 0), 0)
-  const count = event.attendances.length
+  const {
+    attributes, listeners, setNodeRef,
+    transform, transition, isDragging,
+  } = useSortable({ id: event._id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.6 : 1,
+  }
+
+  const isWeekday = event.choirType === 'weekday'
+  const regent   = isWeekday ? event.attendances.find(a => a.isRegent) : undefined
+  const reader   = isWeekday ? event.attendances.find(a => a.isReader) : undefined
+  const singers  = isWeekday
+    ? event.attendances.filter(a => !a.isRegent && !a.isReader)
+    : event.attendances
+
+  const total = event.attendances.reduce((s, a) => s + (a.basePrice || 0) + (a.bonus || 0) - (a.fine || 0), 0)
+
+  // Подпись: "N певчих" (включая регента) + опционально " · чтец"
+  const singerCount = singers.length + (regent ? 1 : 0)
+  let subtitle = `${singerCount} ${plural(singerCount, SINGER)}`
+  if (reader) subtitle += ' · чтец'
+
+  // Цифра в значке — общее кол-во участников
+  const badgeNum = event.attendances.length
+
+  const hasGroups = isWeekday && (regent || reader)
 
   return (
-    <div className="warm-card overflow-hidden">
+    <div ref={setNodeRef} style={style} className="warm-card overflow-hidden">
       {/* Header row */}
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center gap-3 p-3.5 text-left active:bg-warm-50 transition-colors"
-      >
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-slab font-bold shrink-0"
-          style={{ background: 'linear-gradient(135deg, #bd9673, #7d5e42)' }}
+      <div className="flex items-center gap-2 p-3.5">
+        <button
+          {...attributes} {...listeners}
+          className="text-warm-300 hover:text-warm-400 cursor-grab active:cursor-grabbing touch-none shrink-0"
+          tabIndex={-1}
+          aria-label="Перетащить"
         >
-          {count}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-slab font-semibold text-warm-900 text-sm">{event.eventType}</p>
-          <p className="text-xs text-warm-400 mt-0.5">{count} {plural(count, SINGER)}</p>
-        </div>
-        <p className="text-base font-slab font-bold text-warm-800 shrink-0">
-          {total.toLocaleString('ru-RU')} ₽
-        </p>
-        <span className="text-warm-400 shrink-0 ml-1">
-          <IconArrow expanded={expanded} />
-        </span>
-      </button>
+          <IconGrip />
+        </button>
+
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="flex-1 flex items-center gap-3 text-left min-w-0"
+        >
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-slab font-bold shrink-0"
+            style={{ background: 'linear-gradient(135deg, #bd9673, #7d5e42)' }}
+          >
+            {badgeNum}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-slab font-semibold text-warm-900 text-sm">{event.eventType}</p>
+            <p className="text-xs text-warm-400 mt-0.5">{subtitle}</p>
+          </div>
+          <p className="text-base font-slab font-bold text-warm-800 shrink-0">
+            {total.toLocaleString('ru-RU')} ₽
+          </p>
+          <span className="text-warm-400 shrink-0 ml-1">
+            <IconArrow expanded={expanded} />
+          </span>
+        </button>
+      </div>
 
       {/* Actions */}
       <div className="flex border-t border-warm-100">
@@ -99,23 +177,57 @@ export function EventCard({ event, onEdit, onDelete }: Props) {
       </div>
 
       {/* Expanded list */}
-      {expanded && count > 0 && (
+      {expanded && event.attendances.length > 0 && (
         <div className="border-t border-warm-100">
-          {event.attendances.map((a, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between px-4 py-2 border-b border-warm-50 last:border-b-0"
-            >
-              <span className="text-sm text-warm-800">{a.memberName}</span>
-              <span className="text-sm font-medium text-warm-700 tabular-nums">
-                {a.basePrice.toLocaleString('ru-RU')}
-                {a.bonus > 0 && (
-                  <span className="text-green-600 ml-1">+{a.bonus.toLocaleString('ru-RU')}</span>
-                )}
-                {' '}₽
-              </span>
-            </div>
-          ))}
+
+          {/* Регент */}
+          {regent && (
+            <>
+              <SectionLabel label="Регент" />
+              <AttRow
+                name={regent.memberName}
+                price={regent.basePrice}
+                bonus={regent.bonus}
+                fine={regent.fine}
+                badge={
+                  <div
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0"
+                    style={{ background: 'linear-gradient(135deg, #bd9673, #7d5e42)' }}
+                  >Р</div>
+                }
+              />
+            </>
+          )}
+
+          {/* Чтец */}
+          {reader && (
+            <>
+              <SectionLabel label="Чтец" />
+              <AttRow
+                name={reader.memberName}
+                price={reader.basePrice}
+                bonus={reader.bonus}
+                fine={reader.fine}
+                badge={
+                  <div
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0"
+                    style={{ background: 'linear-gradient(135deg, #7b9fd4, #4a6fa5)' }}
+                  >Ч</div>
+                }
+              />
+            </>
+          )}
+
+          {/* Певчие */}
+          {singers.length > 0 && (
+            <>
+              {hasGroups && <SectionLabel label="Певчие" />}
+              {singers.map((a, i) => (
+                <AttRow key={i} name={a.memberName} price={a.basePrice} bonus={a.bonus} fine={a.fine} />
+              ))}
+            </>
+          )}
+
         </div>
       )}
     </div>

@@ -19,16 +19,32 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Убрать синее выделение (outline / focus ring) со всех элементов */
+*:focus { outline: none; }
+*:focus-visible { outline: none; box-shadow: none; }
+[data-slot="wrapper"]:focus,
+[data-slot="base"]:focus { outline: none; }
+
 html, body {
   background-color: #F7F4F1;
   color: #2c1a0e;
   overscroll-behavior: none;
   font-family: 'Roboto Slab', serif;
+  /* Запретить выделение и копирование текста */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Разрешить выделение внутри инпутов */
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Prevent iOS auto-zoom on input focus */
 input, textarea, select {
   font-size: 16px !important;
+  touch-action: manipulation;
 }
 
 /* Убрать стрелки у number-инпута */
@@ -94,11 +110,17 @@ input[type="number"] {
   vertical-align: middle;
 }
 .warm-table tbody tr:last-child td { border-bottom: none; }
-.warm-table tbody tr:hover { background: #fdf8f4; }
+.warm-table tbody tr:not(.no-hover):hover { background: #fdf8f4; }
+/* Строки "Итого" / разделители — чуть насыщеннее, не сливаются с hover */
+.warm-table tr.table-total { background: #c9a87c; }
+.warm-table tr.table-total td { background: #c9a87c; color: #fff8f0; }
+/* Общее итого */
+.warm-table tr.table-total-grand { background: #a07850; }
+.warm-table tr.table-total-grand td { background: #a07850; color: #ffffff; }
 
-/* Nav bottom */
+/* Nav bottom — floating pill: 14px gap + 62px pill + 12px breathing room */
 .pb-nav {
-  padding-bottom: calc(4.5rem + var(--safe-bottom));
+  padding-bottom: calc(5.5rem + var(--safe-bottom));
 }
 
 /* Heading font */
@@ -134,6 +156,14 @@ input[type="number"] {
 }
 .anim-slide-right { animation: slideFromRight 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
 .anim-slide-left  { animation: slideFromLeft  0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+
+/* PIN shake animation */
+@keyframes pin-shake {
+  0%, 100% { transform: translateX(0); }
+  18%, 54% { transform: translateX(-10px); }
+  36%, 72% { transform: translateX(10px); }
+}
+.animate-pin-shake { animation: pin-shake 0.45s ease-in-out; }
 
 /* Chip role */
 .role-chip {

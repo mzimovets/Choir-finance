@@ -1,0 +1,47 @@
+{
+  "changelists": [
+    {
+      "name": "Default",
+      "files": [
+        "app/(dashboard)/export/page.tsx",
+        "tsconfig.tsbuildinfo",
+        ".vscode/changelists.json",
+        "app/(dashboard)/day/page.tsx",
+        "app/(dashboard)/layout.tsx",
+        "app/(dashboard)/singers/page.tsx",
+        "app/(dashboard)/stats/page.tsx",
+        "app/globals.css",
+        "components/AddEventModal.tsx",
+        "components/EventCard.tsx",
+        "components/PageHeader.tsx",
+        "package-lock.json",
+        "package.json",
+        "components/IconEmpty.tsx",
+        "app/(auth)/login/page.tsx",
+        "app/api/auth/me/route.ts",
+        "app/api/events/[id]/route.ts",
+        "app/api/events/route.ts",
+        "app/api/export/route.ts",
+        "app/api/members/[id]/route.ts",
+        "app/api/members/route.ts",
+        "lib/db.ts",
+        "lib/types.ts",
+        "middleware.ts",
+        "app/api/audit-log/route.ts",
+        "app/api/auth/select-choir/route.ts",
+        "app/api/auth/switch-choir/route.ts",
+        "app/api/auth/verify/route.ts",
+        "app/api/event-types/[id]/route.ts",
+        "app/api/event-types/reorder/route.ts",
+        "app/api/event-types/route.ts",
+        "components/AuditLogModal.tsx",
+        "components/DrawerHandle.tsx",
+        "components/EventTypesDrawer.tsx",
+        "lib/audit.ts",
+        "lib/nameFormat.ts",
+        "lib/plural.ts"
+      ]
+    }
+  ],
+  "active": "Default"
+}
