@@ -24,7 +24,7 @@ export async function PUT(req: NextRequest) {
   const session = await getSession()
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { currentPassword, newUsername, newPassword } = await req.json()
+  const { currentPassword, newUsername, newPassword, newDisplayName } = await req.json()
 
   const user = await dbFindOne<User>(db.users, { _id: session.userId })
   if (!user) return Response.json({ error: 'Not found' }, { status: 404 })
@@ -33,13 +33,14 @@ export async function PUT(req: NextRequest) {
     return Response.json({ error: 'Неверный текущий пароль' }, { status: 400 })
   }
 
-  const update: Record<string, string> = {}
-  if (newUsername?.trim()) update.username = newUsername.trim()
-  if (newPassword) update.passwordHash = bcrypt.hashSync(newPassword, 10)
-
   if (newPassword && newPassword.length < 8) {
     return Response.json({ error: 'Пароль должен быть не короче 8 символов' }, { status: 400 })
   }
+
+  const update: Record<string, string> = {}
+  if (newUsername?.trim()) update.username = newUsername.trim()
+  if (newPassword) update.passwordHash = bcrypt.hashSync(newPassword, 10)
+  if (newDisplayName?.trim()) update.displayName = newDisplayName.trim()
 
   if (Object.keys(update).length === 0) {
     return Response.json({ error: 'Нечего обновлять' }, { status: 400 })

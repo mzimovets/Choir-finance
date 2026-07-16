@@ -9,10 +9,12 @@ type PinMode = null | 'verify' | 'new-pin'
 
 export default function ProfilePage() {
   const [storedUsername, setStoredUsername] = useState('')
+  const [storedDisplayName, setStoredDisplayName] = useState('')
   const [editingCreds, setEditingCreds] = useState(false)
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newUsername, setNewUsername] = useState('')
+  const [newDisplayName, setNewDisplayName] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [credMsg, setCredMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -25,12 +27,13 @@ export default function ProfilePage() {
     setPinExists(hasPin())
     fetch('/api/auth/me')
       .then((r) => r.json())
-      .then((d) => setStoredUsername(d.username ?? ''))
+      .then((d) => { setStoredUsername(d.username ?? ''); setStoredDisplayName(d.displayName ?? '') })
       .catch(() => null)
   }, [])
 
   function openCredEdit() {
     setNewUsername(storedUsername)
+    setNewDisplayName(storedDisplayName)
     setNewPassword('')
     setConfirmPassword('')
     setCurrentPassword('')
@@ -61,12 +64,14 @@ export default function ProfilePage() {
         body: JSON.stringify({
           currentPassword,
           newUsername: newUsername.trim() !== storedUsername ? newUsername.trim() : undefined,
+          newDisplayName: newDisplayName.trim() !== storedDisplayName ? newDisplayName.trim() : undefined,
           newPassword: newPassword || undefined,
         }),
       })
       const data = await res.json()
       if (res.ok) {
         setStoredUsername(newUsername.trim() || storedUsername)
+        setStoredDisplayName(newDisplayName.trim() || storedDisplayName)
         setCredMsg({ ok: true, text: 'Сохранено' })
         setTimeout(() => setEditingCreds(false), 900)
       } else {
@@ -112,7 +117,10 @@ export default function ProfilePage() {
 
         {!editingCreds ? (
           <div className="flex items-center justify-between">
-            <span className="text-[15px] font-slab text-[#2c1a0e]">{storedUsername || '—'}</span>
+            <div>
+              {storedDisplayName && <p className="text-[15px] font-slab text-[#2c1a0e]">{storedDisplayName}</p>}
+              <p className="text-[13px] font-slab text-[#9b7653]">{storedUsername || '—'}</p>
+            </div>
             <button
               onClick={openCredEdit}
               className="text-[13px] font-slab font-semibold text-[#9b7653] px-3 py-1.5 rounded-lg border border-[#e5d9cc] active:bg-[#f7f0e8]"
@@ -122,6 +130,17 @@ export default function ProfilePage() {
           </div>
         ) : (
           <div className="space-y-3">
+            <div>
+              <label className="block text-xs text-[#9b7653] mb-1 font-slab">Имя</label>
+              <input
+                className="warm-input"
+                placeholder="Отображаемое имя"
+                value={newDisplayName}
+                onChange={(e) => setNewDisplayName(e.target.value)}
+                autoComplete="name"
+              />
+            </div>
+
             <div>
               <label className="block text-xs text-[#9b7653] mb-1 font-slab">Логин</label>
               <input
