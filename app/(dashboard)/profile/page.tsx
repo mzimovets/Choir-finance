@@ -178,25 +178,6 @@ export default function ProfilePage() {
           </div>
         ) : (
           <div className="space-y-3">
-            <PasswordInput
-              label="Текущий пароль"
-              placeholder="Введите текущий пароль"
-              value={currentPassword}
-              onChange={setCurrentPassword}
-              autoComplete="current-password"
-            />
-
-            <div>
-              <label className="block text-xs text-[#9b7653] mb-1 font-slab">Имя</label>
-              <input
-                className="warm-input"
-                placeholder="Отображаемое имя"
-                value={newDisplayName}
-                onChange={(e) => setNewDisplayName(e.target.value)}
-                autoComplete="name"
-              />
-            </div>
-
             <div>
               <label className="block text-xs text-[#9b7653] mb-1 font-slab">Логин</label>
               <input
@@ -210,17 +191,13 @@ export default function ProfilePage() {
               />
             </div>
 
-            <div>
-              <label className="block text-xs text-[#9b7653] mb-1 font-slab">Email (для сброса пароля)</label>
-              <input
-                className="warm-input"
-                type="email"
-                placeholder="your@email.com"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                autoComplete="email"
-              />
-            </div>
+            <PasswordInput
+              label="Текущий пароль"
+              placeholder="Введите текущий пароль"
+              value={currentPassword}
+              onChange={setCurrentPassword}
+              autoComplete="current-password"
+            />
 
             <PasswordInput
               label="Новый пароль"
@@ -239,6 +216,29 @@ export default function ProfilePage() {
                 autoComplete="new-password"
               />
             )}
+
+            <div>
+              <label className="block text-xs text-[#9b7653] mb-1 font-slab">Имя</label>
+              <input
+                className="warm-input"
+                placeholder="Отображаемое имя"
+                value={newDisplayName}
+                onChange={(e) => setNewDisplayName(e.target.value)}
+                autoComplete="name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-[#9b7653] mb-1 font-slab">Email (для сброса пароля)</label>
+              <input
+                className="warm-input"
+                type="email"
+                placeholder="your@email.com"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                autoComplete="email"
+              />
+            </div>
 
             {credMsg && (
               <p className={`text-sm font-slab ${credMsg.ok ? 'text-green-600' : 'text-red-400'}`}>
