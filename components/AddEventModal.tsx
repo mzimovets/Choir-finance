@@ -8,7 +8,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import type { ChoirEvent, Member, EventTypeDoc } from '@/lib/types'
 import { pricesToMap } from '@/lib/types'
 import { plural, SINGER, PARTICIPANT } from '@/lib/plural'
-import { buildMemberName } from '@/lib/nameFormat'
+import { buildMemberName, shortName } from '@/lib/nameFormat'
 
 interface Props {
   isOpen: boolean
@@ -625,7 +625,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                             <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide mb-2">Регент</p>
                             {festiveRegent.memberId ? (
                               <div className="flex items-center gap-2 bg-warm-50 border border-warm-200 rounded-xl px-3 py-2.5">
-                                <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{festiveRegent.memberName}</span>
+                                <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(festiveRegent.memberName)}</span>
                                 <PriceInputs
                                   basePrice={festiveRegent.basePrice} bonus={festiveRegent.bonus} fine={festiveRegent.fine}
                                   onBasePrice={(v) => setFestiveRegent((r) => ({ ...r, basePrice: parseInt(v) || 0 }))}
@@ -702,7 +702,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                     row.checked ? 'text-warm-900' : 'text-warm-600'
                                   }`}
                                 >
-                                  {row.memberName}
+                                  {shortName(row.memberName)}
                                 </span>
                                 {row.checked && (
                                   <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -752,7 +752,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                             <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide mb-2">Регент</p>
                             {regent.memberId ? (
                               <div className="flex items-center gap-2 bg-warm-50 border border-warm-200 rounded-xl px-3 py-2.5">
-                                <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{regent.memberName}</span>
+                                <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(regent.memberName)}</span>
                                 <PriceInputs
                                   basePrice={regent.basePrice} bonus={regent.bonus} fine={regent.fine}
                                   onBasePrice={(v) => setRegent((r) => ({ ...r, basePrice: parseInt(v) || 0 }))}
@@ -797,7 +797,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                             <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide mb-2">Чтец</p>
                             {reader.memberId ? (
                               <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
-                                <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{reader.memberName}</span>
+                                <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(reader.memberName)}</span>
                                 <PriceInputs
                                   basePrice={reader.basePrice} bonus={reader.bonus} fine={reader.fine}
                                   onBasePrice={(v) => setReader((r) => ({ ...r, basePrice: parseInt(v) || 0 }))}
@@ -848,7 +848,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                 <div key={row.key}>
                                   {row.memberId ? (
                                     <div className="flex items-center gap-2 bg-white border border-warm-200 rounded-xl px-3 py-2.5">
-                                      <span className="flex-1 text-sm text-warm-900 font-medium">{row.memberName}</span>
+                                      <span className="flex-1 text-sm text-warm-900 font-medium">{shortName(row.memberName)}</span>
                                       <div className="flex items-center gap-1.5">
                                         <div className="flex flex-col items-end">
                                           <span className="text-[10px] text-warm-400">цена</span>
