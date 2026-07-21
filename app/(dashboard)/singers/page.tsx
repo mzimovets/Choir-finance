@@ -122,11 +122,17 @@ export default function SingersPage() {
   async function handleSave() {
     if (!name.trim()) return
     setSaving(true)
+    // Сохраняем только личные отклонения от тарифов типов выходов.
+    // Если цена совпадает с тарифом — не храним, тогда изменение тарифа применится автоматически.
+    const defaults = buildDefaultPrices(role, eventTypeDocs)
+    const overrides = Object.fromEntries(
+      Object.entries(prices).filter(([t, p]) => p !== (defaults[t] ?? 0))
+    )
     const body = {
       name: name.trim(),
       patronymic: patronymic.trim(),
       role,
-      defaultPrices: mapToPrices(prices),
+      defaultPrices: mapToPrices(overrides),
       regentMultiplier: 1,
       disabledEventTypes,
     }
@@ -399,6 +405,8 @@ export default function SingersPage() {
                       <div className="warm-card overflow-hidden">
                         {priceEventTypes.map((t, i) => {
                           const isDisabled = disabledEventTypes.includes(t)
+                          const defaultPrice = eventTypeDocs.find((d) => d.name === t)?.prices[role] ?? 0
+                          const isOverride = (prices[t] ?? 0) !== defaultPrice
                           return (
                             <div
                               key={t}
@@ -422,13 +430,22 @@ export default function SingersPage() {
                               <span className={`flex-1 text-sm font-slab font-medium ${isDisabled ? 'text-warm-400 line-through' : 'text-warm-800'}`}>
                                 {t}
                               </span>
-                              <input
-                                type="number"
-                                value={prices[t] ?? 0}
-                                onChange={(e) => setPrices((prev) => ({ ...prev, [t]: parseInt(e.target.value) || 0 }))}
-                                disabled={isDisabled}
-                                className="w-24 text-right bg-warm-50 border border-warm-200 rounded-lg px-2 py-1 text-sm font-medium text-warm-900 disabled:cursor-not-allowed"
-                              />
+                              <div className="flex flex-col items-end gap-0.5">
+                                {isOverride && (
+                                  <span className="text-[10px] text-[#9b7653] leading-none">личная</span>
+                                )}
+                                <input
+                                  type="number"
+                                  value={prices[t] ?? 0}
+                                  onChange={(e) => setPrices((prev) => ({ ...prev, [t]: parseInt(e.target.value) || 0 }))}
+                                  disabled={isDisabled}
+                                  className={`w-24 text-right rounded-lg px-2 py-1 text-sm font-medium text-warm-900 disabled:cursor-not-allowed ${
+                                    isOverride
+                                      ? 'bg-amber-50 border border-amber-300'
+                                      : 'bg-warm-50 border border-warm-200'
+                                  }`}
+                                />
+                              </div>
                             </div>
                           )
                         })}
