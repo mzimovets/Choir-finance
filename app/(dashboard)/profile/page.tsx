@@ -23,10 +23,10 @@ function EyeIcon({ open }: { open: boolean }) {
 }
 
 function PasswordInput({
-  label, placeholder, value, onChange, autoComplete,
+  label, placeholder, value, onChange, autoComplete, autoFocus,
 }: {
   label: string; placeholder: string; value: string
-  onChange: (v: string) => void; autoComplete: string
+  onChange: (v: string) => void; autoComplete: string; autoFocus?: boolean
 }) {
   const [show, setShow] = useState(false)
   return (
@@ -40,6 +40,7 @@ function PasswordInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           autoComplete={autoComplete}
+          autoFocus={autoFocus}
         />
         <button
           type="button"
@@ -87,7 +88,7 @@ export default function ProfilePage() {
     setNewUsername(storedUsername)
     setNewPassword('')
     setConfirmPassword('')
-    setCurrentPassword('')
+    setCurrentPassword(localStorage.getItem('cf_pw_hint') || '')
     setCredMsg(null)
     setEditingCreds(true)
   }
@@ -178,7 +179,7 @@ export default function ProfilePage() {
             PIN-код
           </p>
           <button
-            onClick={() => { setPinPassword(''); setPinPasswordError(''); setPinPasswordOpen(true) }}
+            onClick={() => { setPinPassword(localStorage.getItem('cf_pw_hint') || ''); setPinPasswordError(''); setPinPasswordOpen(true) }}
             className="w-full btn-gradient py-3 text-[15px] rounded-xl"
           >
             {pinExists ? 'Изменить PIN-код' : 'Установить PIN-код'}
@@ -199,6 +200,7 @@ export default function ProfilePage() {
                         value={pinPassword}
                         onChange={setPinPassword}
                         autoComplete="current-password"
+                        autoFocus
                       />
                       {pinPasswordError && (
                         <p className="text-sm text-red-400 mt-2 font-slab">{pinPasswordError}</p>
@@ -271,6 +273,7 @@ export default function ProfilePage() {
               value={currentPassword}
               onChange={setCurrentPassword}
               autoComplete="current-password"
+              autoFocus
             />
 
             <PasswordInput

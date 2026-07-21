@@ -12,7 +12,7 @@ export async function logAction(action: AuditAction, description: string) {
     await dbInsert<AuditEntry>(db.auditLog, {
       timestamp: new Date().toISOString(),
       userId: session.userId,
-      displayName: user?.displayName || 'Неизвестно',
+      displayName: user?.username || 'Неизвестно',
       choirType: session.choirType,
       action,
       description,

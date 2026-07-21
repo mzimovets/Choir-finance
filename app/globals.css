@@ -16,11 +16,6 @@
   --keyboard-height: 0px;
 }
 
-/* Поднимать HeroUI Modal/Drawer над клавиатурой */
-[data-slot="wrapper"] {
-  transform: translateY(calc(-1 * var(--keyboard-height)));
-  transition: transform 0.25s ease-out;
-}
 
 * {
   -webkit-tap-highlight-color: transparent;

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter,
 } from '@heroui/react'
+import { InlineNumpad } from '@/components/InlineNumpad'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -143,6 +144,7 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
   const [form, setForm] = useState<FormState>(emptyForm())
   const [deleteTarget, setDeleteTarget] = useState<EventTypeDoc | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [activeNumpad, setActiveNumpad] = useState<'singer' | 'soloist' | 'regent' | 'reader' | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -253,7 +255,7 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
                 )}
               </DrawerHeader>
 
-              <DrawerBody>
+              <DrawerBody style={showForm ? { overflowY: 'auto', WebkitOverflowScrolling: 'touch' } : {}}>
                 {showForm ? (
                   <div className="flex flex-col gap-4 px-4 py-4">
                     <div>
@@ -261,27 +263,48 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
                       <input className="warm-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Например: Венчание" />
                     </div>
                     <div>
-                      <label className="block text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide mb-2">Цены по умолчанию, ₽</label>
+                      <label className="block text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide mb-2">Оплата за выход, ₽</label>
                       <div className="warm-card overflow-hidden">
                         {ROLES.map((r, i) => {
                           const disabled = form.disabledRoles.includes(r.key as MemberRole)
+                          const isActive = activeNumpad === r.key
+                          const val = parseInt(form[r.key] || '0', 10)
                           return (
-                            <div key={r.key} className={`flex items-center gap-3 px-3 py-2.5 ${i < ROLES.length - 1 ? 'border-b border-warm-100' : ''} ${disabled ? 'opacity-40' : ''}`}>
+                            <div
+                              key={r.key}
+                              className={`flex items-center gap-3 px-3 py-2.5 ${i < ROLES.length - 1 ? 'border-b border-warm-100' : ''} ${disabled ? 'opacity-40' : ''}`}
+                            >
                               <button type="button" onClick={() => setForm((f) => ({ ...f, disabledRoles: toggleRole(f.disabledRoles, r.key as MemberRole) }))}
                                 className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${disabled ? 'bg-red-100 text-red-500' : 'bg-warm-100 text-warm-400 active:bg-warm-200'}`}>
                                 <IconClipboardRemove />
                               </button>
                               <span className={`flex-1 text-sm font-slab font-medium ${disabled ? 'text-warm-400 line-through' : 'text-warm-800'}`}>{r.label}</span>
-                              <input type="number" value={form[r.key]} onChange={(e) => setForm((f) => ({ ...f, [r.key]: e.target.value }))} disabled={disabled}
-                                onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
-                                className="w-24 text-right bg-warm-50 border border-warm-200 rounded-lg px-2 py-1 text-sm font-medium text-warm-900 disabled:cursor-not-allowed" />
+                              <button
+                                type="button"
+                                disabled={disabled}
+                                onClick={() => !disabled && setActiveNumpad(isActive ? null : r.key as typeof activeNumpad)}
+                                className={`text-sm font-semibold font-slab px-3 py-1 rounded-lg border transition-colors ${isActive ? 'border-[#bd9673] bg-white text-warm-900' : 'border-warm-200 bg-warm-50 text-warm-900'} disabled:cursor-not-allowed`}
+                              >
+                                {val.toLocaleString('ru-RU')} ₽
+                              </button>
                             </div>
                           )
                         })}
                       </div>
                     </div>
+                    {activeNumpad && (
+                      <div style={{ margin: '0 -16px -16px' }}>
+                        <InlineNumpad
+                          role={ROLES.find(r => r.key === activeNumpad)?.label ?? ''}
+                          value={form[activeNumpad]}
+                          onChange={(v) => setForm(f => ({ ...f, [activeNumpad]: v }))}
+                          onClose={() => setActiveNumpad(null)}
+                        />
+                      </div>
+                    )}
                   </div>
-                ) : loading ? (
+                ) : null}
+                {!showForm && (loading ? (
                   <div className="flex justify-center py-12"><LoadingSpinner size="lg" color="#9b7653" /></div>
                 ) : (
                   <div style={{ overflowY: 'auto', maxHeight: 'calc(65dvh - 120px)', WebkitOverflowScrolling: 'touch' }} className="mx-3 mt-3 mb-4">
@@ -307,7 +330,7 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
                       {types.length === 0 && <p className="text-center text-warm-400 py-8 text-sm">Нет типов — добавьте первый</p>}
                     </div>
                   </div>
-                )}
+                ))}
               </DrawerBody>
 
               <DrawerFooter style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>

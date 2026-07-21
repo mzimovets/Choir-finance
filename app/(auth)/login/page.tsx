@@ -78,6 +78,8 @@ export default function LoginPage() {
       }
       setVerifyToken(data.verifyToken)
       setDisplayName(data.displayName)
+      // Сохраняем для автозаполнения поля "Текущий пароль" в профиле
+      localStorage.setItem('cf_pw_hint', password)
       const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
       if (!isMobile) {
         setStep('choir')
