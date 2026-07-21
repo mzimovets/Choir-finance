@@ -56,12 +56,10 @@ function PasswordInput({
 
 export default function ProfilePage() {
   const [storedUsername, setStoredUsername] = useState('')
-  const [storedDisplayName, setStoredDisplayName] = useState('')
   const [editingCreds, setEditingCreds] = useState(false)
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newUsername, setNewUsername] = useState('')
-  const [newDisplayName, setNewDisplayName] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [credMsg, setCredMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -74,13 +72,12 @@ export default function ProfilePage() {
     setPinExists(hasPin())
     fetch('/api/auth/me')
       .then((r) => r.json())
-      .then((d) => { setStoredUsername(d.username ?? ''); setStoredDisplayName(d.displayName ?? '') })
+      .then((d) => { setStoredUsername(d.username ?? '') })
       .catch(() => null)
   }, [])
 
   function openCredEdit() {
     setNewUsername(storedUsername)
-    setNewDisplayName(storedDisplayName)
     setNewPassword('')
     setConfirmPassword('')
     setCurrentPassword('')
@@ -111,7 +108,7 @@ export default function ProfilePage() {
         body: JSON.stringify({
           currentPassword,
           newUsername: newUsername.trim() !== storedUsername ? newUsername.trim() : undefined,
-          newDisplayName: newDisplayName.trim() !== storedDisplayName ? newDisplayName.trim() : undefined,
+
 
           newPassword: newPassword || undefined,
         }),
@@ -119,7 +116,6 @@ export default function ProfilePage() {
       const data = await res.json()
       if (res.ok) {
         setStoredUsername(newUsername.trim() || storedUsername)
-        setStoredDisplayName(newDisplayName.trim() || storedDisplayName)
 
         setCredMsg({ ok: true, text: 'Сохранено' })
         setTimeout(() => setEditingCreds(false), 900)
@@ -163,8 +159,7 @@ export default function ProfilePage() {
         {!editingCreds ? (
           <div className="flex items-center justify-between">
             <div>
-              {storedDisplayName && <p className="text-[15px] font-slab text-[#2c1a0e]">{storedDisplayName}</p>}
-              <p className="text-[13px] font-slab text-[#9b7653]">{storedUsername || '—'}</p>
+              <p className="text-[15px] font-slab text-[#2c1a0e]">{storedUsername || '—'}</p>
             </div>
             <button
               onClick={openCredEdit}
