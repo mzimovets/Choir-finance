@@ -273,6 +273,7 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
                               </button>
                               <span className={`flex-1 text-sm font-slab font-medium ${disabled ? 'text-warm-400 line-through' : 'text-warm-800'}`}>{r.label}</span>
                               <input type="number" value={form[r.key]} onChange={(e) => setForm((f) => ({ ...f, [r.key]: e.target.value }))} disabled={disabled}
+                                onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
                                 className="w-24 text-right bg-warm-50 border border-warm-200 rounded-lg px-2 py-1 text-sm font-medium text-warm-900 disabled:cursor-not-allowed" />
                             </div>
                           )
