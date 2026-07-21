@@ -10,7 +10,7 @@ import { invalidateSession } from '@/hooks/useSession'
 interface Props {
   title: string
   subtitle?: string
-  displayName?: string
+  username?: string
   choirType?: string
   right?: React.ReactNode
   left?: React.ReactNode
@@ -18,7 +18,7 @@ interface Props {
   titleCenter?: boolean
 }
 
-export function PageHeader({ title, subtitle, displayName, choirType, right, left, titleCenter }: Props) {
+export function PageHeader({ title, subtitle, username, choirType, right, left, titleCenter }: Props) {
   const router = useRouter()
   const [showMenu, setShowMenu] = useState(false)
   const [showEventTypes, setShowEventTypes] = useState(false)
@@ -29,9 +29,7 @@ export function PageHeader({ title, subtitle, displayName, choirType, right, lef
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
 
-  const initials = displayName
-    ? displayName.split(' ').filter(Boolean).map((w) => w[0]).slice(0, 2).join('').toUpperCase()
-    : '?'
+  const initials = username ? username.slice(0, 2).toUpperCase() : '?'
 
   const choirLabel = choirType === 'festive' ? 'Праздничный хор' : 'Будний хор'
 
@@ -59,7 +57,7 @@ export function PageHeader({ title, subtitle, displayName, choirType, right, lef
     }
   }
 
-  const avatarBlock = displayName != null && (
+  const avatarBlock = username != null && (
     <div className="relative">
       <button
         onClick={() => setShowMenu((v) => !v)}
@@ -79,7 +77,7 @@ export function PageHeader({ title, subtitle, displayName, choirType, right, lef
           <div className="absolute right-0 top-11 z-50 warm-card min-w-[190px] py-2 shadow-lg">
             <div className="px-3 py-2 border-b border-warm-100">
               <p className="text-xs font-slab font-semibold text-warm-800 truncate">
-                {displayName || 'Профиль'}
+                {username || 'Профиль'}
               </p>
               <p className="text-xs text-warm-500">{choirLabel}</p>
             </div>

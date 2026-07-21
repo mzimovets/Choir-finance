@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 interface SessionData {
   userId: string
   choirType: 'festive' | 'weekday'
-  displayName: string
+  username: string
 }
 
 let cached: SessionData | null = null

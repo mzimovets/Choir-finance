@@ -251,7 +251,7 @@ export default function DayPage() {
       <PageHeader
         title={formatDayMonth(date)}
         subtitle={formatWeekday(date)}
-        displayName={session ? (session.displayName || '') : undefined}
+        username={session ? (session.username || '') : undefined}
         choirType={session?.choirType}
         titleCenter
         left={
