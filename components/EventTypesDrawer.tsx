@@ -162,9 +162,9 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
     if (isOpen) load()
   }, [isOpen, load])
 
-  function openNew() { setEditingId(null); setForm(emptyForm()); setShowForm(true) }
-  function openEdit(t: EventTypeDoc) { setEditingId(t._id); setForm(typeToForm(t)); setShowForm(true) }
-  function closeForm() { setShowForm(false); setEditingId(null) }
+  function openNew() { setEditingId(null); setForm(emptyForm()); setActiveNumpad(null); setShowForm(true) }
+  function openEdit(t: EventTypeDoc) { setEditingId(t._id); setForm(typeToForm(t)); setActiveNumpad(null); setShowForm(true) }
+  function closeForm() { setShowForm(false); setEditingId(null); setActiveNumpad(null) }
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -227,7 +227,7 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
         onOpenChange={(open) => { if (!open) { closeForm(); onClose() } }}
         placement="bottom"
         classNames={{
-          base: 'bg-white rounded-t-2xl shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
+          base: 'relative bg-white rounded-t-2xl shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
           header: 'bg-white border-b border-warm-200 px-4 pt-2 pb-3',
           body: 'px-0 py-0',
           footer: 'bg-white border-t border-warm-200 px-4 py-3',
@@ -292,16 +292,6 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
                         })}
                       </div>
                     </div>
-                    {activeNumpad && (
-                      <div style={{ margin: '0 -16px -16px' }}>
-                        <InlineNumpad
-                          role={ROLES.find(r => r.key === activeNumpad)?.label ?? ''}
-                          value={form[activeNumpad]}
-                          onChange={(v) => setForm(f => ({ ...f, [activeNumpad]: v }))}
-                          onClose={() => setActiveNumpad(null)}
-                        />
-                      </div>
-                    )}
                   </div>
                 ) : null}
                 {!showForm && (loading ? (
@@ -345,6 +335,17 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
                   <button onClick={openNew} className="w-full py-3 rounded-xl text-white text-sm font-semibold" style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}>+ Добавить тип</button>
                 )}
               </DrawerFooter>
+
+              {showForm && activeNumpad && (
+                <div className="absolute bottom-0 left-0 right-0 z-50">
+                  <InlineNumpad
+                    role={ROLES.find(r => r.key === activeNumpad)?.label ?? ''}
+                    value={form[activeNumpad]}
+                    onChange={(v) => setForm(f => ({ ...f, [activeNumpad]: v }))}
+                    onClose={() => setActiveNumpad(null)}
+                  />
+                </div>
+              )}
             </>
           )}
         </DrawerContent>

@@ -569,7 +569,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       placement="bottom"
       scrollBehavior="inside"
       classNames={{
-        base: 'bg-white rounded-t-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
+        base: 'relative bg-white rounded-t-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
         header: 'border-b border-warm-200 px-4 pt-2 pb-3 shrink-0',
         body: 'overflow-y-auto px-4 py-4',
         footer: 'border-t border-warm-200 bg-white px-4 py-3 shrink-0',
@@ -935,7 +935,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
             </DrawerBody>
 
             {activeNumpad && step === 'members' && (
-              <div className="shrink-0">
+              <div className="absolute bottom-0 left-0 right-0 z-50">
                 <InlineNumpad
                   role={activeNumpad.label}
                   value={String(numpadValue())}

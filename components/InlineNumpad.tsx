@@ -31,6 +31,7 @@ export function InlineNumpad({ role, value, onChange, onClose }: Props) {
     <div style={{
       background: '#f7f4f1',
       borderTop: '1px solid #e5d9cc',
+      boxShadow: '0 -8px 24px rgba(0,0,0,0.12)',
     }}>
       <div style={{ padding: '10px 14px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#9b7653', textTransform: 'uppercase', letterSpacing: '.07em', fontFamily: "'Roboto Slab', serif" }}>
@@ -42,7 +43,7 @@ export function InlineNumpad({ role, value, onChange, onClose }: Props) {
         </span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, padding: '0 10px 12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, padding: '0 10px', paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }}>
         {keys.map(d => (
           <button
             key={d}

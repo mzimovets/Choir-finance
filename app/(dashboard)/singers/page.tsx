@@ -95,6 +95,7 @@ export default function SingersPage() {
     setRole('singer')
     setPrices(buildDefaultPrices('singer', eventTypeDocs))
     setDisabledEventTypes([])
+    setActiveNumpad(null)
     setDrawerOpen(true)
   }
 
@@ -106,6 +107,7 @@ export default function SingersPage() {
     const stored = pricesToMap(m.defaultPrices)
     setPrices({ ...buildDefaultPrices(m.role, eventTypeDocs), ...stored })
     setDisabledEventTypes(m.disabledEventTypes ?? [])
+    setActiveNumpad(null)
     setDrawerOpen(true)
   }
 
@@ -275,7 +277,7 @@ export default function SingersPage() {
         placement="bottom"
         scrollBehavior="inside"
         classNames={{
-          base: 'bg-white rounded-t-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
+          base: 'relative bg-white rounded-t-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
           header: 'border-b border-warm-200 px-4 pt-2 pb-3 shrink-0',
           body: 'overflow-y-auto px-4 py-4',
           footer: 'border-t border-warm-200 bg-white px-4 py-3 shrink-0',
@@ -404,57 +406,45 @@ export default function SingersPage() {
                     {priceEventTypes.length === 0 ? (
                       <p className="text-sm text-warm-400 text-center py-4">Загрузка...</p>
                     ) : (
-                      <div className="flex flex-col gap-3">
-                        <div className="warm-card overflow-hidden">
-                          {priceEventTypes.map((t, i) => {
-                            const isDisabled = disabledEventTypes.includes(t)
-                            const defaultPrice = eventTypeDocs.find((d) => d.name === t)?.prices[role] ?? 0
-                            const isOverride = (prices[t] ?? 0) !== defaultPrice
-                            return (
-                              <div
-                                key={t}
-                                className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${i < priceEventTypes.length - 1 ? 'border-b border-warm-100' : ''} ${isDisabled ? 'opacity-40' : ''}`}
-                              >
-                                {/* Кнопка отключения (только для чтеца) */}
-                                {role === 'reader' && (
-                                  <button
-                                    type="button"
-                                    title={isDisabled ? 'Включить этот тип выхода' : 'Отключить этот тип выхода для чтеца'}
-                                    onClick={() => toggleDisabledEventType(t)}
-                                    className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                                      isDisabled
-                                        ? 'bg-red-100 text-red-500'
-                                        : 'bg-warm-100 text-warm-400 active:bg-warm-200'
-                                    }`}
-                                  >
-                                    <IconClipboardRemove />
-                                  </button>
-                                )}
-                                <span className={`flex-1 text-sm font-slab font-medium ${isDisabled ? 'text-warm-400 line-through' : 'text-warm-800'}`}>
-                                  {t}
-                                </span>
+                      <div className="warm-card overflow-hidden">
+                        {priceEventTypes.map((t, i) => {
+                          const isDisabled = disabledEventTypes.includes(t)
+                          const defaultPrice = eventTypeDocs.find((d) => d.name === t)?.prices[role] ?? 0
+                          const isOverride = (prices[t] ?? 0) !== defaultPrice
+                          return (
+                            <div
+                              key={t}
+                              className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${i < priceEventTypes.length - 1 ? 'border-b border-warm-100' : ''} ${isDisabled ? 'opacity-40' : ''}`}
+                            >
+                              {/* Кнопка отключения (только для чтеца) */}
+                              {role === 'reader' && (
                                 <button
                                   type="button"
-                                  disabled={isDisabled}
-                                  onClick={() => !isDisabled && setActiveNumpad(activeNumpad === t ? null : t)}
-                                  className={`text-sm font-semibold font-slab px-3 py-1 rounded-lg border transition-colors ${activeNumpad === t ? 'border-[#bd9673] bg-white text-warm-900' : 'border-warm-200 bg-warm-50 text-warm-900'} ${isOverride ? 'border-b-orange-400' : ''} disabled:cursor-not-allowed`}
+                                  title={isDisabled ? 'Включить этот тип выхода' : 'Отключить этот тип выхода для чтеца'}
+                                  onClick={() => toggleDisabledEventType(t)}
+                                  className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                                    isDisabled
+                                      ? 'bg-red-100 text-red-500'
+                                      : 'bg-warm-100 text-warm-400 active:bg-warm-200'
+                                  }`}
                                 >
-                                  {(prices[t] ?? 0).toLocaleString('ru-RU')} ₽
+                                  <IconClipboardRemove />
                                 </button>
-                              </div>
-                            )
-                          })}
-                        </div>
-                        {activeNumpad && (
-                          <div style={{ margin: '0 -16px' }}>
-                            <InlineNumpad
-                              role={activeNumpad}
-                              value={String(prices[activeNumpad] ?? 0)}
-                              onChange={(v) => setPrices(p => ({ ...p, [activeNumpad]: parseInt(v.replace(/\D/g, '')) || 0 }))}
-                              onClose={() => setActiveNumpad(null)}
-                            />
-                          </div>
-                        )}
+                              )}
+                              <span className={`flex-1 text-sm font-slab font-medium ${isDisabled ? 'text-warm-400 line-through' : 'text-warm-800'}`}>
+                                {t}
+                              </span>
+                              <button
+                                type="button"
+                                disabled={isDisabled}
+                                onClick={() => !isDisabled && setActiveNumpad(activeNumpad === t ? null : t)}
+                                className={`text-sm font-semibold font-slab px-3 py-1 rounded-lg border transition-colors ${activeNumpad === t ? 'border-[#bd9673] bg-white text-warm-900' : 'border-warm-200 bg-warm-50 text-warm-900'} ${isOverride ? 'border-b-orange-400' : ''} disabled:cursor-not-allowed`}
+                              >
+                                {(prices[t] ?? 0).toLocaleString('ru-RU')} ₽
+                              </button>
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -478,6 +468,17 @@ export default function SingersPage() {
                   Сохранить
                 </button>
               </DrawerFooter>
+
+              {activeNumpad && (
+                <div className="absolute bottom-0 left-0 right-0 z-50">
+                  <InlineNumpad
+                    role={activeNumpad}
+                    value={String(prices[activeNumpad] ?? 0)}
+                    onChange={(v) => setPrices(p => ({ ...p, [activeNumpad]: parseInt(v.replace(/\D/g, '')) || 0 }))}
+                    onClose={() => setActiveNumpad(null)}
+                  />
+                </div>
+              )}
             </>
           )}
         </DrawerContent>
