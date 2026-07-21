@@ -92,11 +92,23 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   function getPriceForMember(m: Member, type: string, slotRole?: string): number {
     const priceMap = pricesToMap(m.defaultPrices)
     const personal = priceMap[type]
-    const etDoc = eventTypeDocs.find((et) => et.name === type)
+    const etDoc = eventTypeDocs.find((et) => et.name === type && et.choirType === choirType)
     const role = slotRole ?? m.role
     const etPrice = (etDoc?.prices as Record<string, number> | undefined)?.[role] ?? 0
     if (personal !== undefined && personal > 0) return personal
     return etPrice
+  }
+
+  /** Отображает имя в формате "Фамилия И." или "Фамилия И. О." */
+  function memberDisplayName(name: string, patronymic?: string): string {
+    const parts = name.trim().split(/\s+/)
+    const lastName = parts[0] || ''
+    const firstWord = parts[1] || ''
+    if (!firstWord || firstWord.endsWith('.')) {
+      return patronymic?.trim() ? `${name} ${patronymic.trim()[0].toUpperCase()}.` : name
+    }
+    const pi = patronymic?.trim() ? ` ${patronymic.trim()[0].toUpperCase()}.` : ''
+    return `${lastName} ${firstWord[0]}.${pi}`
   }
 
   /** Скрыт ли участник для данного типа выхода (отключён в профиле или роль отключена в типе) */
@@ -645,7 +657,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                         className="w-full text-left px-4 py-3 text-sm border-b border-warm-100 last:border-b-0 active:bg-warm-50 flex items-center gap-2"
                                         onClick={() => selectFestiveRegent(m)}
                                       >
-                                        <span className="font-semibold text-warm-900 flex-1">{m.name}{m.patronymic ? ` ${m.patronymic}.` : ''}</span>
+                                        <span className="font-semibold text-warm-900 flex-1">{memberDisplayName(m.name, m.patronymic)}</span>
                                         {m.role === 'regent' && <span className="text-xs text-warm-400 shrink-0">Регент</span>}
                                       </button>
                                     ))}
@@ -772,7 +784,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                         className="w-full text-left px-4 py-3 text-sm border-b border-warm-100 last:border-b-0 active:bg-warm-50 flex items-center gap-2"
                                         onClick={() => selectRegent(m)}
                                       >
-                                        <span className="font-semibold text-warm-900 flex-1">{m.name}{m.patronymic ? ` ${m.patronymic}.` : ''}</span>
+                                        <span className="font-semibold text-warm-900 flex-1">{memberDisplayName(m.name, m.patronymic)}</span>
                                         {m.role === 'regent' && <span className="text-xs text-warm-400 shrink-0">Регент</span>}
                                         {m.role === 'reader' && <span className="text-xs text-warm-400 shrink-0">Чтец</span>}
                                       </button>
@@ -820,7 +832,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                         className="w-full text-left px-4 py-3 text-sm border-b border-warm-100 last:border-b-0 active:bg-warm-50 flex items-center gap-2"
                                         onClick={() => selectReader(m)}
                                       >
-                                        <span className="font-semibold text-warm-900 flex-1">{m.name}{m.patronymic ? ` ${m.patronymic}.` : ''}</span>
+                                        <span className="font-semibold text-warm-900 flex-1">{memberDisplayName(m.name, m.patronymic)}</span>
                                         {m.role === 'reader' && <span className="text-xs text-warm-400 shrink-0">Чтец</span>}
                                         <span className="text-xs text-warm-400 shrink-0">{getPriceForMember(m, resolvedType, 'reader')} ₽</span>
                                       </button>
@@ -915,7 +927,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                               className="w-full text-left px-4 py-3 text-sm border-b border-warm-100 last:border-b-0 active:bg-warm-50 flex items-center gap-2"
                                               onClick={() => selectSingerMember(row.key, m)}
                                             >
-                                              <span className="font-semibold text-warm-900 flex-1">{m.name}{m.patronymic ? ` ${m.patronymic}.` : ''}</span>
+                                              <span className="font-semibold text-warm-900 flex-1">{memberDisplayName(m.name, m.patronymic)}</span>
                                               {m.role === 'reader' && <span className="text-xs text-warm-400 shrink-0">Чтец</span>}
                                               <span className="text-xs text-warm-400 shrink-0">{getPriceForMember(m, resolvedType, 'singer')} ₽</span>
                                             </button>

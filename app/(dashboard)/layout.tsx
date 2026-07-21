@@ -122,6 +122,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [pinState, setPinState] = useState<PinState>('loading')
 
   useEffect(() => {
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+    if (!isMobile) { setPinState('unlocked'); return }
     if (isPinVerified()) {
       setPinState('unlocked')
     } else if (hasPin()) {
@@ -132,6 +134,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [])
 
   useEffect(() => {
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+    if (!isMobile) return
     const handler = () => {
       if (!document.hidden && hasPin()) {
         clearPinVerified()
