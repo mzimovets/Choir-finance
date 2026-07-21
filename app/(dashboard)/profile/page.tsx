@@ -67,8 +67,10 @@ export default function ProfilePage() {
 
   const [pinMode, setPinMode] = useState<PinMode>(null)
   const [pinExists, setPinExists] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
+    setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0)
     setPinExists(hasPin())
     fetch('/api/auth/me')
       .then((r) => r.json())
@@ -140,15 +142,17 @@ export default function ProfilePage() {
     <div className="px-4 pt-8 pb-4 max-w-md mx-auto">
       <h1 className="text-xl font-bold font-slab text-[#2c1a0e] mb-6">Профиль</h1>
 
-      {/* PIN section */}
-      <div className="warm-card p-4 mb-4">
-        <p className="text-[13px] font-semibold text-[#7d5e42] uppercase tracking-wide font-slab mb-3">
-          PIN-код
-        </p>
-        <button onClick={() => setPinMode('new-pin')} className="w-full btn-gradient py-3 text-[15px] rounded-xl">
-          {pinExists ? 'Изменить PIN-код' : 'Установить PIN-код'}
-        </button>
-      </div>
+      {/* PIN section — только на мобильных/планшетах */}
+      {isMobile && (
+        <div className="warm-card p-4 mb-4">
+          <p className="text-[13px] font-semibold text-[#7d5e42] uppercase tracking-wide font-slab mb-3">
+            PIN-код
+          </p>
+          <button onClick={() => setPinMode('new-pin')} className="w-full btn-gradient py-3 text-[15px] rounded-xl">
+            {pinExists ? 'Изменить PIN-код' : 'Установить PIN-код'}
+          </button>
+        </div>
+      )}
 
       {/* Account section */}
       <div className="warm-card p-4">

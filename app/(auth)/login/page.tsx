@@ -59,7 +59,12 @@ export default function LoginPage() {
       }
       setVerifyToken(data.verifyToken)
       setDisplayName(data.displayName)
-      setStep(hasPin() ? 'pin-lock' : 'pin-setup')
+      const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      if (!isMobile) {
+        setStep('choir')
+      } else {
+        setStep(hasPin() ? 'pin-lock' : 'pin-setup')
+      }
     } catch {
       setError('Ошибка подключения')
     } finally {
