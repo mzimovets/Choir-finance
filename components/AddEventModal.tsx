@@ -87,6 +87,19 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   type PriceField = 'basePrice' | 'bonus' | 'fine'
   const [activeNumpad, setActiveNumpad] = useState<{ id: string; field: PriceField; label: string } | null>(null)
 
+  // Закрыть нампад, если его цель больше не редактируется (сняли галочку, удалили, очистили слот)
+  useEffect(() => {
+    if (!activeNumpad) return
+    const { id } = activeNumpad
+    let visible = false
+    if (id === 'festiveRegent') visible = !!festiveRegent.memberId
+    else if (id === 'regent') visible = !!regent.memberId
+    else if (id === 'reader') visible = !!reader.memberId
+    else if (id.startsWith('f:')) visible = festiveRows.find((r) => r.memberId === id.slice(2))?.checked ?? false
+    else if (id.startsWith('w:')) visible = !!weekdayRows.find((r) => r.key === id.slice(2))?.memberId
+    if (!visible) setActiveNumpad(null)
+  }, [activeNumpad, festiveRegent, regent, reader, festiveRows, weekdayRows])
+
   const resolvedType = eventType === 'Другое' ? customType.trim() : eventType
 
   /* ── Утилиты ── */
