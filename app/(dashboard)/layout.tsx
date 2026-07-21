@@ -120,6 +120,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const activeIndex = NAV.findIndex(({ href }) => pathname === href)
 
   const [pinState, setPinState] = useState<PinState>('loading')
+  const [usernameInitials, setUsernameInitials] = useState('')
+
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.json()).then(d => {
+      const u: string = d.username ?? ''
+      setUsernameInitials(u.slice(0, 2).toUpperCase())
+    }).catch(() => null)
+  }, [])
 
   useEffect(() => {
     const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
@@ -250,7 +258,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   if (wasDragging.current) e.preventDefault()
                 }}
               >
-                {icon(active)}
+                {href === '/profile' && usernameInitials ? (
+                  <div
+                    className="w-[22px] h-[22px] rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0"
+                    style={{ background: visualActive ? 'linear-gradient(135deg, #bd9673, #7d5e42)' : '#c4a88a' }}
+                  >
+                    {usernameInitials}
+                  </div>
+                ) : icon(active)}
                 <span>{label}</span>
               </Link>
             )

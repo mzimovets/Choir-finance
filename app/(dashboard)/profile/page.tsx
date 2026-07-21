@@ -179,17 +179,6 @@ export default function ProfilePage() {
             <input type="text" name="username" value={newUsername} onChange={() => {}} autoComplete="username" className="sr-only" tabIndex={-1} readOnly />
 
             <div>
-              <label className="block text-xs text-[#9b7653] mb-1 font-slab">Имя</label>
-              <input
-                className="warm-input"
-                placeholder="Отображаемое имя"
-                value={newDisplayName}
-                onChange={(e) => setNewDisplayName(e.target.value)}
-                autoComplete="name"
-              />
-            </div>
-
-            <div>
               <label className="block text-xs text-[#9b7653] mb-1 font-slab">Логин</label>
               <input
                 className="warm-input"
