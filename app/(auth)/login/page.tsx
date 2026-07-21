@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import PinLock from '@/components/PinLock'
@@ -31,6 +31,7 @@ export default function LoginPage() {
   const passwordRef = useRef<HTMLInputElement>(null)
 
   const [step, setStep] = useState<Step>('credentials')
+  const [restoring, setRestoring] = useState(true)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -39,6 +40,24 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [selectingChoir, setSelectingChoir] = useState<'festive' | 'weekday' | null>(null)
+
+  // Автовосстановление сессии из localStorage (для PWA где cookie очищается при закрытии)
+  useEffect(() => {
+    const saved = localStorage.getItem('cf_session_backup')
+    if (!saved) { setRestoring(false); return }
+    fetch('/api/auth/restore', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: saved }),
+    }).then((r) => {
+      if (r.ok) {
+        router.replace('/day')
+      } else {
+        localStorage.removeItem('cf_session_backup')
+        setRestoring(false)
+      }
+    }).catch(() => setRestoring(false))
+  }, [])
 
 
   // Шаг 1: проверка логина/пароля
@@ -87,6 +106,10 @@ export default function LoginPage() {
         setStep('credentials')
         return
       }
+      const data = await res.json()
+      if (data.sessionToken) {
+        localStorage.setItem('cf_session_backup', data.sessionToken)
+      }
       router.replace('/day')
     } catch {
       setError('Ошибка подключения')
@@ -95,6 +118,14 @@ export default function LoginPage() {
     }
   }
 
+
+  if (restoring) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="lg" color="#9b7653" />
+      </div>
+    )
+  }
 
   if (step === 'pin-lock') {
     return (

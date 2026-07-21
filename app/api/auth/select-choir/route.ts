@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
 import { db, dbFindOne } from '@/lib/db'
-import { setSession } from '@/lib/auth'
+import { setSession, signToken } from '@/lib/auth'
 import type { User } from '@/lib/types'
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!)
@@ -32,5 +32,6 @@ export async function POST(req: NextRequest) {
   }
 
   await setSession({ ...user, choirType })
-  return Response.json({ ok: true, choirType })
+  const sessionToken = await signToken({ userId: user._id, choirType })
+  return Response.json({ ok: true, choirType, sessionToken })
 }

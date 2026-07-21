@@ -168,6 +168,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onForgotPin={async () => {
           clearPin()
           await fetch('/api/auth/logout', { method: 'POST' })
+          localStorage.removeItem('cf_session_backup')
           router.replace('/login')
         }}
       />

@@ -36,6 +36,7 @@ export function PageHeader({ title, subtitle, username, choirType, right, left, 
   async function handleLogout() {
     setLoggingOut(true)
     await fetch('/api/auth/logout', { method: 'POST' })
+    localStorage.removeItem('cf_session_backup')
     invalidateSession()
     router.replace('/login')
   }
