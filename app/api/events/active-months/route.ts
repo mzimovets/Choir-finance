@@ -17,5 +17,5 @@ export async function GET(req: NextRequest) {
   })
 
   const months = [...new Set(events.map((e) => e.date.slice(0, 7)))].sort()
-  return Response.json(months)
+  return Response.json(months, { headers: { 'Cache-Control': 'no-store' } })
 }

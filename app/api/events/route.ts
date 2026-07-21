@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     if (oa !== ob) return oa - ob
     return a.createdAt.localeCompare(b.createdAt)
   })
-  return Response.json(events)
+  return Response.json(events, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 export async function POST(req: NextRequest) {
