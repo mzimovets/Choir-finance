@@ -37,10 +37,10 @@ function IconClipboardRemove() {
   )
 }
 
-/** Возвращает цены по умолчанию: для праздничного хора — из DEFAULT_PRICES; для буднего — нули */
-function buildDefaultPrices(role: MemberRole, eventTypeNames: string[]): Record<string, number> {
+/** Возвращает цены по умолчанию из документов типов выходов (база данных) */
+function buildDefaultPrices(role: MemberRole, docs: EventTypeDoc[]): Record<string, number> {
   const out: Record<string, number> = {}
-  eventTypeNames.forEach((t) => { out[t] = DEFAULT_PRICES[t]?.[role] ?? 0 })
+  docs.forEach((d) => { out[d.name] = d.prices[role] ?? 0 })
   return out
 }
 
@@ -90,7 +90,7 @@ export default function SingersPage() {
     setName('')
     setPatronymic('')
     setRole('singer')
-    setPrices(buildDefaultPrices('singer', priceEventTypes))
+    setPrices(buildDefaultPrices('singer', eventTypeDocs))
     setDisabledEventTypes([])
     setDrawerOpen(true)
   }
@@ -101,14 +101,14 @@ export default function SingersPage() {
     setPatronymic(m.patronymic || '')
     setRole(m.role)
     const stored = pricesToMap(m.defaultPrices)
-    setPrices({ ...buildDefaultPrices(m.role, priceEventTypes), ...stored })
+    setPrices({ ...buildDefaultPrices(m.role, eventTypeDocs), ...stored })
     setDisabledEventTypes(m.disabledEventTypes ?? [])
     setDrawerOpen(true)
   }
 
   function handleRoleChange(r: MemberRole) {
     setRole(r)
-    setPrices(buildDefaultPrices(r, priceEventTypes))
+    setPrices(buildDefaultPrices(r, eventTypeDocs))
     setDisabledEventTypes([])
   }
 
@@ -347,7 +347,7 @@ export default function SingersPage() {
                       <button
                         type="button"
                         title="Сбросить к тарифам по умолчанию"
-                        onClick={() => setPrices(buildDefaultPrices(role, priceEventTypes))}
+                        onClick={() => setPrices(buildDefaultPrices(role, eventTypeDocs))}
                         className="text-warm-400 hover:text-warm-600 active:scale-90 transition-all p-0.5"
                       >
                         <IconResetPrices />
