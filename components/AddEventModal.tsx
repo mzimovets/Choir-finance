@@ -625,10 +625,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                             <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide mb-2">Регент</p>
                             {festiveRegent.memberId ? (
                               <div className="flex items-center gap-2 bg-warm-50 border border-warm-200 rounded-xl px-3 py-2.5">
-                                <div
-                                  className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-white text-[10px] font-bold"
-                                  style={{ background: 'linear-gradient(135deg, #bd9673, #7d5e42)' }}
-                                >Р</div>
                                 <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{festiveRegent.memberName}</span>
                                 <PriceInputs
                                   basePrice={festiveRegent.basePrice} bonus={festiveRegent.bonus} fine={festiveRegent.fine}
@@ -751,10 +747,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                             <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide mb-2">Регент</p>
                             {regent.memberId ? (
                               <div className="flex items-center gap-2 bg-warm-50 border border-warm-200 rounded-xl px-3 py-2.5">
-                                <div
-                                  className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-white text-[10px] font-bold"
-                                  style={{ background: 'linear-gradient(135deg, #bd9673, #7d5e42)' }}
-                                >Р</div>
                                 <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{regent.memberName}</span>
                                 <PriceInputs
                                   basePrice={regent.basePrice} bonus={regent.bonus} fine={regent.fine}
@@ -800,10 +792,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                             <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide mb-2">Чтец</p>
                             {reader.memberId ? (
                               <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
-                                <div
-                                  className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-white text-[10px] font-bold"
-                                  style={{ background: 'linear-gradient(135deg, #7b9fd4, #4a6fa5)' }}
-                                >Ч</div>
                                 <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{reader.memberName}</span>
                                 <PriceInputs
                                   basePrice={reader.basePrice} bonus={reader.bonus} fine={reader.fine}
