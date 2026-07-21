@@ -315,7 +315,18 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }, [members, resolvedType, choirType, editingEvent, eventTypeDocs])
 
   function updateFestiveRow(id: string, field: 'basePrice' | 'bonus' | 'fine' | 'checked', val: unknown) {
-    if (field === 'checked') setEmptyError(false)
+    if (field === 'checked') {
+      setEmptyError(false)
+      // При снятии галочки — сбросить цены певчего к тарифу по умолчанию
+      if (val === false) {
+        const member = members.find((m) => m._id === id)
+        const defaultPrice = member ? getPriceForMember(member, resolvedType) : 0
+        setFestiveRows((prev) => prev.map((r) =>
+          r.memberId === id ? { ...r, checked: false, basePrice: defaultPrice, bonus: 0, fine: 0 } : r
+        ))
+        return
+      }
+    }
     setFestiveRows((prev) => prev.map((r) => (r.memberId === id ? { ...r, [field]: val } : r)))
   }
 
