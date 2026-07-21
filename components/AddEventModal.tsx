@@ -5,6 +5,7 @@ import {
   Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter,
 } from '@heroui/react'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { InlineNumpad } from '@/components/InlineNumpad'
 import type { ChoirEvent, Member, EventTypeDoc } from '@/lib/types'
 import { pricesToMap } from '@/lib/types'
 import { plural, SINGER, PARTICIPANT } from '@/lib/plural'
@@ -82,6 +83,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   const [reader, setReader] = useState<SlotState>(emptySlot())
   const [weekdayRows, setWeekdayRows] = useState<WeekdayRow[]>([])
 
+  // Активное поле нампада: id слота/строки + поле (цена/доплата/штраф)
+  type PriceField = 'basePrice' | 'bonus' | 'fine'
+  const [activeNumpad, setActiveNumpad] = useState<{ id: string; field: PriceField; label: string } | null>(null)
+
   const resolvedType = eventType === 'Другое' ? customType.trim() : eventType
 
   /* ── Утилиты ── */
@@ -141,6 +146,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     setAnimDir('left')
     setStepKey((k) => k + 1)
     setStep('type')
+    setActiveNumpad(null)
   }
 
   /* ── Скролл к активному инпуту при появлении клавиатуры ── */
@@ -158,6 +164,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   /* ── Загрузка данных + инициализация формы ── */
   useEffect(() => {
     if (!isOpen) return
+    setActiveNumpad(null)
     setMembersLoading(true)
     setTypesLoading(true)
 
@@ -491,45 +498,66 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     ? (festiveRegent.memberId ? 1 : 0) + festiveRows.filter((r) => r.checked).length
     : (regent.memberId ? 1 : 0) + (reader.memberId ? 1 : 0) + weekdayRows.filter((r) => r.memberId).length
 
+  /* ─── Нампад: чтение и запись значения активного поля ─── */
+  const FIELD_LABELS: Record<PriceField, string> = { basePrice: 'цена', bonus: 'доплата', fine: 'штраф' }
+
+  function numpadValue(): number {
+    if (!activeNumpad) return 0
+    const { id, field } = activeNumpad
+    if (id === 'festiveRegent') return festiveRegent[field]
+    if (id === 'regent') return regent[field]
+    if (id === 'reader') return reader[field]
+    if (id.startsWith('f:')) return festiveRows.find((r) => r.memberId === id.slice(2))?.[field] ?? 0
+    if (id.startsWith('w:')) return weekdayRows.find((r) => r.key === id.slice(2))?.[field] ?? 0
+    return 0
+  }
+
+  function applyNumpad(v: number) {
+    if (!activeNumpad) return
+    const { id, field } = activeNumpad
+    if (id === 'festiveRegent') setFestiveRegent((r) => ({ ...r, [field]: v }))
+    else if (id === 'regent') setRegent((r) => ({ ...r, [field]: v }))
+    else if (id === 'reader') setReader((r) => ({ ...r, [field]: v }))
+    else if (id.startsWith('f:')) updateFestiveRow(id.slice(2), field, v)
+    else if (id.startsWith('w:')) updateSingerRowField(id.slice(2), field, String(v))
+  }
+
   /* ─── JSX переиспользуемые части ─── */
-  function PriceInputs({
-    basePrice, bonus, fine,
-    onBasePrice, onBonus, onFine,
-  }: {
-    basePrice: number; bonus: number; fine: number
-    onBasePrice: (v: string) => void; onBonus: (v: string) => void; onFine: (v: string) => void
+  function PriceButton({ id, field, name, value, tone }: {
+    id: string; field: PriceField; name: string; value: number; tone: 'base' | 'bonus' | 'fine'
+  }) {
+    const isActive = activeNumpad?.id === id && activeNumpad?.field === field
+    const labelText = field === 'basePrice' ? 'цена' : field === 'bonus' ? '+доп' : '−штраф'
+    const toneClass =
+      tone === 'fine' ? 'bg-red-50 border-red-200 text-red-600'
+      : tone === 'bonus' ? 'bg-white border-warm-200 text-green-700'
+      : 'bg-white border-warm-200 text-warm-900'
+    return (
+      <div className="flex flex-col items-end">
+        <span className={`text-[10px] ${tone === 'fine' ? 'text-red-400' : 'text-warm-400'}`}>{labelText}</span>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            setActiveNumpad(isActive ? null : { id, field, label: `${name} · ${FIELD_LABELS[field]}` })
+          }}
+          className={`text-right rounded-lg px-2 py-1 text-sm font-medium border transition-all ${toneClass} ${isActive ? 'ring-2 ring-[#bd9673] border-[#bd9673]' : ''}`}
+          style={{ minWidth: tone === 'base' ? 72 : 56 }}
+        >
+          {value.toLocaleString('ru-RU')}
+        </button>
+      </div>
+    )
+  }
+
+  function PriceInputs({ id, name, basePrice, bonus, fine }: {
+    id: string; name: string; basePrice: number; bonus: number; fine: number
   }) {
     return (
       <div className="flex items-center gap-1.5">
-        <div className="flex flex-col items-end">
-          <span className="text-[10px] text-warm-400">цена</span>
-          <input
-            type="number"
-            value={basePrice || ''}
-            onChange={(e) => onBasePrice(e.target.value)}
-            className="w-20 text-right bg-white border border-warm-200 rounded-lg px-2 py-1 text-sm font-medium text-warm-900"
-          />
-        </div>
-        <div className="flex flex-col items-end">
-          <span className="text-[10px] text-warm-400">+доп</span>
-          <input
-            type="number"
-            value={bonus || ''}
-            placeholder="0"
-            onChange={(e) => onBonus(e.target.value)}
-            className="w-16 text-right bg-white border border-warm-200 rounded-lg px-2 py-1 text-sm text-green-700"
-          />
-        </div>
-        <div className="flex flex-col items-end">
-          <span className="text-[10px] text-red-400">−штраф</span>
-          <input
-            type="number"
-            value={fine || ''}
-            placeholder="0"
-            onChange={(e) => onFine(e.target.value)}
-            className="w-16 text-right bg-red-50 border border-red-200 rounded-lg px-2 py-1 text-sm text-red-600"
-          />
-        </div>
+        <PriceButton id={id} field="basePrice" name={name} value={basePrice} tone="base" />
+        <PriceButton id={id} field="bonus" name={name} value={bonus} tone="bonus" />
+        <PriceButton id={id} field="fine" name={name} value={fine} tone="fine" />
       </div>
     )
   }
@@ -639,10 +667,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                               <div className="flex items-center gap-2 bg-warm-50 border border-warm-200 rounded-xl px-3 py-2.5">
                                 <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(festiveRegent.memberName)}</span>
                                 <PriceInputs
+                                  id="festiveRegent" name={shortName(festiveRegent.memberName)}
                                   basePrice={festiveRegent.basePrice} bonus={festiveRegent.bonus} fine={festiveRegent.fine}
-                                  onBasePrice={(v) => setFestiveRegent((r) => ({ ...r, basePrice: parseInt(v) || 0 }))}
-                                  onBonus={(v) => setFestiveRegent((r) => ({ ...r, bonus: parseInt(v) || 0 }))}
-                                  onFine={(v) => setFestiveRegent((r) => ({ ...r, fine: parseInt(v) || 0 }))}
                                 />
                                 <button onClick={() => setFestiveRegent(emptySlot())} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
@@ -717,36 +743,11 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   {shortName(row.memberName)}
                                 </span>
                                 {row.checked && (
-                                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                                    <div className="flex flex-col items-end">
-                                      <span className="text-[10px] text-warm-400">цена</span>
-                                      <input
-                                        type="number"
-                                        value={row.basePrice || ''}
-                                        onChange={(e) => updateFestiveRow(row.memberId, 'basePrice', parseInt(e.target.value) || 0)}
-                                        className="w-20 text-right bg-white border border-warm-200 rounded-lg px-2 py-1 text-sm font-medium text-warm-900"
-                                      />
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                      <span className="text-[10px] text-warm-400">+доп</span>
-                                      <input
-                                        type="number"
-                                        value={row.bonus || ''}
-                                        placeholder="0"
-                                        onChange={(e) => updateFestiveRow(row.memberId, 'bonus', parseInt(e.target.value) || 0)}
-                                        className="w-16 text-right bg-white border border-warm-200 rounded-lg px-2 py-1 text-sm text-green-700"
-                                      />
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                      <span className="text-[10px] text-red-400">−штраф</span>
-                                      <input
-                                        type="number"
-                                        value={row.fine || ''}
-                                        placeholder="0"
-                                        onChange={(e) => updateFestiveRow(row.memberId, 'fine', parseInt(e.target.value) || 0)}
-                                        className="w-16 text-right bg-red-50 border border-red-200 rounded-lg px-2 py-1 text-sm text-red-600"
-                                      />
-                                    </div>
+                                  <div onClick={(e) => e.stopPropagation()}>
+                                    <PriceInputs
+                                      id={`f:${row.memberId}`} name={shortName(row.memberName)}
+                                      basePrice={row.basePrice} bonus={row.bonus} fine={row.fine}
+                                    />
                                   </div>
                                 )}
                               </div>
@@ -766,10 +767,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                               <div className="flex items-center gap-2 bg-warm-50 border border-warm-200 rounded-xl px-3 py-2.5">
                                 <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(regent.memberName)}</span>
                                 <PriceInputs
+                                  id="regent" name={shortName(regent.memberName)}
                                   basePrice={regent.basePrice} bonus={regent.bonus} fine={regent.fine}
-                                  onBasePrice={(v) => setRegent((r) => ({ ...r, basePrice: parseInt(v) || 0 }))}
-                                  onBonus={(v) => setRegent((r) => ({ ...r, bonus: parseInt(v) || 0 }))}
-                                  onFine={(v) => setRegent((r) => ({ ...r, fine: parseInt(v) || 0 }))}
                                 />
                                 <button onClick={clearRegent} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
@@ -811,10 +810,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                               <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
                                 <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(reader.memberName)}</span>
                                 <PriceInputs
+                                  id="reader" name={shortName(reader.memberName)}
                                   basePrice={reader.basePrice} bonus={reader.bonus} fine={reader.fine}
-                                  onBasePrice={(v) => setReader((r) => ({ ...r, basePrice: parseInt(v) || 0 }))}
-                                  onBonus={(v) => setReader((r) => ({ ...r, bonus: parseInt(v) || 0 }))}
-                                  onFine={(v) => setReader((r) => ({ ...r, fine: parseInt(v) || 0 }))}
                                 />
                                 <button onClick={clearReader} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
@@ -861,37 +858,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   {row.memberId ? (
                                     <div className="flex items-center gap-2 bg-white border border-warm-200 rounded-xl px-3 py-2.5">
                                       <span className="flex-1 text-sm text-warm-900 font-medium">{shortName(row.memberName)}</span>
-                                      <div className="flex items-center gap-1.5">
-                                        <div className="flex flex-col items-end">
-                                          <span className="text-[10px] text-warm-400">цена</span>
-                                          <input
-                                            type="number"
-                                            value={row.basePrice || ''}
-                                            onChange={(e) => updateSingerRowField(row.key, 'basePrice', e.target.value)}
-                                            className="w-20 text-right bg-warm-50 border border-warm-200 rounded-lg px-2 py-1 text-sm font-medium"
-                                          />
-                                        </div>
-                                        <div className="flex flex-col items-end">
-                                          <span className="text-[10px] text-warm-400">+доп</span>
-                                          <input
-                                            type="number"
-                                            value={row.bonus || ''}
-                                            placeholder="0"
-                                            onChange={(e) => updateSingerRowField(row.key, 'bonus', e.target.value)}
-                                            className="w-16 text-right bg-warm-50 border border-warm-200 rounded-lg px-2 py-1 text-sm text-green-700"
-                                          />
-                                        </div>
-                                        <div className="flex flex-col items-end">
-                                          <span className="text-[10px] text-red-400">−штраф</span>
-                                          <input
-                                            type="number"
-                                            value={row.fine || ''}
-                                            placeholder="0"
-                                            onChange={(e) => updateSingerRowField(row.key, 'fine', e.target.value)}
-                                            className="w-16 text-right bg-red-50 border border-red-200 rounded-lg px-2 py-1 text-sm text-red-600"
-                                          />
-                                        </div>
-                                      </div>
+                                      <PriceInputs
+                                        id={`w:${row.key}`} name={shortName(row.memberName)}
+                                        basePrice={row.basePrice} bonus={row.bonus} fine={row.fine}
+                                      />
                                       <button
                                         onClick={() => removeSingerRow(row.key)}
                                         className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100"
@@ -963,6 +933,17 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                 )}
               </div>
             </DrawerBody>
+
+            {activeNumpad && step === 'members' && (
+              <div className="shrink-0">
+                <InlineNumpad
+                  role={activeNumpad.label}
+                  value={String(numpadValue())}
+                  onChange={(v) => applyNumpad(parseInt(v.replace(/\D/g, '')) || 0)}
+                  onClose={() => setActiveNumpad(null)}
+                />
+              </div>
+            )}
 
             <DrawerFooter style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
               {emptyError && step === 'members' && (
