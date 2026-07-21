@@ -430,22 +430,15 @@ export default function SingersPage() {
                               <span className={`flex-1 text-sm font-slab font-medium ${isDisabled ? 'text-warm-400 line-through' : 'text-warm-800'}`}>
                                 {t}
                               </span>
-                              <div className="flex flex-col items-end gap-0.5">
-                                {isOverride && (
-                                  <span className="text-[10px] text-[#9b7653] leading-none">личная</span>
-                                )}
-                                <input
-                                  type="number"
-                                  value={prices[t] ?? 0}
-                                  onChange={(e) => setPrices((prev) => ({ ...prev, [t]: parseInt(e.target.value) || 0 }))}
-                                  disabled={isDisabled}
-                                  className={`w-24 text-right rounded-lg px-2 py-1 text-sm font-medium text-warm-900 disabled:cursor-not-allowed ${
-                                    isOverride
-                                      ? 'bg-amber-50 border border-amber-300'
-                                      : 'bg-warm-50 border border-warm-200'
-                                  }`}
-                                />
-                              </div>
+                              <input
+                                type="number"
+                                value={prices[t] ?? 0}
+                                onChange={(e) => setPrices((prev) => ({ ...prev, [t]: parseInt(e.target.value) || 0 }))}
+                                disabled={isDisabled}
+                                className={`w-24 text-right px-2 py-1 text-sm font-medium text-warm-900 disabled:cursor-not-allowed bg-transparent border-0 border-b-2 rounded-none outline-none ${
+                                  isOverride ? 'border-b-orange-400' : 'border-b-warm-200'
+                                }`}
+                              />
                             </div>
                           )
                         })}

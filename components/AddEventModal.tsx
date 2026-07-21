@@ -143,6 +143,18 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     setStep('type')
   }
 
+  /* ── Скролл к активному инпуту при появлении клавиатуры ── */
+  useEffect(() => {
+    if (!isOpen) return
+    const vv = window.visualViewport
+    if (!vv) return
+    function onResize() {
+      document.activeElement?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+    vv.addEventListener('resize', onResize)
+    return () => vv.removeEventListener('resize', onResize)
+  }, [isOpen])
+
   /* ── Загрузка данных + инициализация формы ── */
   useEffect(() => {
     if (!isOpen) return

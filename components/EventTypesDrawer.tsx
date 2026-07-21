@@ -258,7 +258,7 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
                   <div className="flex flex-col gap-4 px-4 py-4">
                     <div>
                       <label className="block text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide mb-1.5">Название</label>
-                      <input className="warm-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Например: Венчание" autoFocus />
+                      <input className="warm-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Например: Венчание" />
                     </div>
                     <div>
                       <label className="block text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide mb-2">Цены по умолчанию, ₽</label>
