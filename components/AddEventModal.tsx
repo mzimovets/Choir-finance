@@ -252,7 +252,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     const newRows: FestiveRow[] = sorted
       .filter((m) => !isMemberDisabled(m, resolvedType))  // исключить отключённых
       .map((m) => {
-        const mName = buildMemberName(m.name, m.patronymic)
+        const mName = memberDisplayName(m.name, m.patronymic)
         // Регент в праздничном хоре берётся из отдельного слота, не из общего списка
         const isRegentAtt = existingAtt.find((a) => a.memberId === m._id && a.isRegent)
         if (isRegentAtt) return null
@@ -334,7 +334,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   function selectRegent(m: Member) {
     const price = getPriceForMember(m, resolvedType, 'regent')
-    setRegent({ memberId: m._id, memberName: buildMemberName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [] })
+    setRegent({ memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [] })
   }
 
   function clearRegent() { setRegent(emptySlot()) }
@@ -347,7 +347,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   function selectFestiveRegent(m: Member) {
     const price = getPriceForMember(m, resolvedType)
-    setFestiveRegent({ memberId: m._id, memberName: buildMemberName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [] })
+    setFestiveRegent({ memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [] })
   }
 
   /* ── Чтец ── */
@@ -359,7 +359,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   function selectReader(m: Member) {
     const price = getPriceForMember(m, resolvedType, 'reader')   // слот = чтец
-    setReader({ memberId: m._id, memberName: buildMemberName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [] })
+    setReader({ memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [] })
   }
 
   function clearReader() { setReader(emptySlot()) }
@@ -408,7 +408,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     setEmptyError(false)
     setWeekdayRows((prev) =>
       prev.map((r) => r.key === key
-        ? { ...r, memberId: m._id, memberName: buildMemberName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [] }
+        ? { ...r, memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [] }
         : r
       )
     )
