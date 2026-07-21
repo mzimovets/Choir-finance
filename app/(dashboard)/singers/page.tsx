@@ -65,6 +65,7 @@ export default function SingersPage() {
   const [prices, setPrices] = useState<Record<string, number>>({})
   const [disabledEventTypes, setDisabledEventTypes] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   // Список типов выходов для редактора цен — из БД для обоих хоров, константа как запасной вариант
   const priceEventTypes: string[] = eventTypeDocs.length > 0
@@ -340,19 +341,58 @@ export default function SingersPage() {
 
                   {/* Цены */}
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide">
-                        Оплата за выход, ₽
-                      </label>
-                      <button
-                        type="button"
-                        title="Сбросить к тарифам по умолчанию"
-                        onClick={() => setPrices(buildDefaultPrices(role, eventTypeDocs))}
-                        className="text-warm-400 hover:text-warm-600 active:scale-90 transition-all p-0.5"
-                      >
-                        <IconResetPrices />
-                      </button>
-                    </div>
+                    {(() => {
+                      const defaults = buildDefaultPrices(role, eventTypeDocs)
+                      const hasDiff = eventTypeDocs.some((d) => (prices[d.name] ?? 0) !== (defaults[d.name] ?? 0))
+                      return (
+                        <>
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <label className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide">
+                              Оплата за выход, ₽
+                            </label>
+                            {hasDiff && (
+                              <button
+                                type="button"
+                                title="Сбросить к тарифам по умолчанию"
+                                onClick={() => setShowResetConfirm(true)}
+                                className="text-warm-400 hover:text-warm-600 active:scale-90 transition-all p-0.5"
+                              >
+                                <IconResetPrices />
+                              </button>
+                            )}
+                          </div>
+                          {showResetConfirm && (
+                            <>
+                              <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setShowResetConfirm(false)} />
+                              <div className="fixed inset-0 z-50 flex items-center justify-center px-5">
+                                <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl overflow-hidden">
+                                  <div className="px-5 pt-6 pb-5 text-center">
+                                    <h2 className="text-base font-slab font-bold text-warm-900 mb-2">Сбросить цены?</h2>
+                                    <p className="text-sm text-warm-500 leading-relaxed">
+                                      Личные цены будут заменены тарифами из типов выходов.
+                                    </p>
+                                  </div>
+                                  <div className="flex border-t border-warm-100">
+                                    <button
+                                      onClick={() => setShowResetConfirm(false)}
+                                      className="flex-1 py-3.5 text-sm font-slab font-semibold text-warm-700 active:bg-warm-50 border-r border-warm-100"
+                                    >
+                                      Отмена
+                                    </button>
+                                    <button
+                                      onClick={() => { setPrices(defaults); setShowResetConfirm(false) }}
+                                      className="flex-1 py-3.5 text-sm font-slab font-semibold text-[#9b7653] active:bg-warm-50"
+                                    >
+                                      Сбросить
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </>
+                      )
+                    })()}
                     {priceEventTypes.length === 0 ? (
                       <p className="text-sm text-warm-400 text-center py-4">Загрузка...</p>
                     ) : (
