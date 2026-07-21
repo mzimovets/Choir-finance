@@ -174,7 +174,21 @@ export default function ProfilePage() {
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); handleCredSave() }} autoComplete="on">
+            {/* Скрытое поле логина помогает браузеру правильно автозаполнить текущий пароль */}
+            <input type="text" name="username" value={newUsername} onChange={() => {}} autoComplete="username" className="sr-only" tabIndex={-1} readOnly />
+
+            <div>
+              <label className="block text-xs text-[#9b7653] mb-1 font-slab">Имя</label>
+              <input
+                className="warm-input"
+                placeholder="Отображаемое имя"
+                value={newDisplayName}
+                onChange={(e) => setNewDisplayName(e.target.value)}
+                autoComplete="name"
+              />
+            </div>
+
             <div>
               <label className="block text-xs text-[#9b7653] mb-1 font-slab">Логин</label>
               <input
@@ -214,18 +228,6 @@ export default function ProfilePage() {
               />
             )}
 
-            <div>
-              <label className="block text-xs text-[#9b7653] mb-1 font-slab">Имя</label>
-              <input
-                className="warm-input"
-                placeholder="Отображаемое имя"
-                value={newDisplayName}
-                onChange={(e) => setNewDisplayName(e.target.value)}
-                autoComplete="name"
-              />
-            </div>
-
-
             {credMsg && (
               <p className={`text-sm font-slab ${credMsg.ok ? 'text-green-600' : 'text-red-400'}`}>
                 {credMsg.text}
@@ -234,20 +236,21 @@ export default function ProfilePage() {
 
             <div className="flex gap-2 pt-1">
               <button
+                type="button"
                 onClick={cancelCredEdit}
                 className="flex-1 py-3 text-[15px] font-slab font-semibold text-[#9b7653] rounded-xl border border-[#e5d9cc] active:bg-[#f7f0e8]"
               >
                 Отмена
               </button>
               <button
-                onClick={handleCredSave}
+                type="submit"
                 disabled={credSaving}
                 className="flex-1 btn-gradient py-3 text-[15px] rounded-xl"
               >
                 {credSaving ? 'Сохранение…' : 'Сохранить'}
               </button>
             </div>
-          </div>
+          </form>
         )}
       </div>
     </div>
