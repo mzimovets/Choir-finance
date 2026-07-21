@@ -189,12 +189,6 @@ export function EventCard({ event, onEdit, onDelete }: Props) {
                 price={regent.basePrice}
                 bonus={regent.bonus}
                 fine={regent.fine}
-                badge={
-                  <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0"
-                    style={{ background: 'linear-gradient(135deg, #bd9673, #7d5e42)' }}
-                  >Р</div>
-                }
               />
             </>
           )}
@@ -208,12 +202,6 @@ export function EventCard({ event, onEdit, onDelete }: Props) {
                 price={reader.basePrice}
                 bonus={reader.bonus}
                 fine={reader.fine}
-                badge={
-                  <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0"
-                    style={{ background: 'linear-gradient(135deg, #7b9fd4, #4a6fa5)' }}
-                  >Ч</div>
-                }
               />
             </>
           )}
