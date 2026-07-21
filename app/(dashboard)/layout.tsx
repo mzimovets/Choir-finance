@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import PinLock from '@/components/PinLock'
 import PinSetup from '@/components/PinSetup'
-import { hasPin, isPinVerified, markPinVerified, clearPinVerified } from '@/lib/pin'
+import { hasPin, isPinVerified, markPinVerified, clearPinVerified, clearPin } from '@/lib/pin'
 
 const NAV = [
   {
@@ -154,7 +154,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return <div className="fixed inset-0 bg-[#F7F4F1]" />
   }
   if (pinState === 'locked') {
-    return <PinLock onUnlock={() => { markPinVerified(); setPinState('unlocked') }} />
+    return (
+      <PinLock
+        onUnlock={() => { markPinVerified(); setPinState('unlocked') }}
+        onForgotPin={async () => {
+          clearPin()
+          await fetch('/api/auth/logout', { method: 'POST' })
+          router.replace('/login')
+        }}
+      />
+    )
   }
   if (pinState === 'setup') {
     return <PinSetup onDone={() => { markPinVerified(); setPinState('unlocked') }} />

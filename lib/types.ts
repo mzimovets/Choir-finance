@@ -7,6 +7,7 @@ export interface User {
   passwordHash: string
   choirType: ChoirType
   displayName: string
+  email?: string
 }
 
 export interface PriceEntry {

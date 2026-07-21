@@ -13,6 +13,7 @@ const ROWS = [
 interface Props {
   onUnlock: () => void
   onCancel?: () => void
+  onForgotPin?: () => void
 }
 
 function IconBack() {
@@ -24,7 +25,7 @@ function IconBack() {
   )
 }
 
-export default function PinLock({ onUnlock, onCancel }: Props) {
+export default function PinLock({ onUnlock, onCancel, onForgotPin }: Props) {
   const [digits, setDigits] = useState<string[]>([])
   const [shaking, setShaking] = useState(false)
   const [showError, setShowError] = useState(false)
@@ -118,6 +119,15 @@ export default function PinLock({ onUnlock, onCancel }: Props) {
           </div>
         ))}
       </div>
+
+      {onForgotPin && (
+        <button
+          onClick={onForgotPin}
+          className="mt-8 text-[14px] font-slab text-[#9b7653] opacity-70 active:opacity-100"
+        >
+          Забыли PIN-код?
+        </button>
+      )}
     </div>
   )
 }

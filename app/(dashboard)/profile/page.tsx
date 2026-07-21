@@ -57,11 +57,13 @@ function PasswordInput({
 export default function ProfilePage() {
   const [storedUsername, setStoredUsername] = useState('')
   const [storedDisplayName, setStoredDisplayName] = useState('')
+  const [storedEmail, setStoredEmail] = useState('')
   const [editingCreds, setEditingCreds] = useState(false)
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newUsername, setNewUsername] = useState('')
   const [newDisplayName, setNewDisplayName] = useState('')
+  const [newEmail, setNewEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [credMsg, setCredMsg] = useState<{ ok: boolean; text: string } | null>(null)
@@ -74,13 +76,14 @@ export default function ProfilePage() {
     setPinExists(hasPin())
     fetch('/api/auth/me')
       .then((r) => r.json())
-      .then((d) => { setStoredUsername(d.username ?? ''); setStoredDisplayName(d.displayName ?? '') })
+      .then((d) => { setStoredUsername(d.username ?? ''); setStoredDisplayName(d.displayName ?? ''); setStoredEmail(d.email ?? '') })
       .catch(() => null)
   }, [])
 
   function openCredEdit() {
     setNewUsername(storedUsername)
     setNewDisplayName(storedDisplayName)
+    setNewEmail(storedEmail)
     setNewPassword('')
     setConfirmPassword('')
     setCurrentPassword('')
@@ -112,6 +115,7 @@ export default function ProfilePage() {
           currentPassword,
           newUsername: newUsername.trim() !== storedUsername ? newUsername.trim() : undefined,
           newDisplayName: newDisplayName.trim() !== storedDisplayName ? newDisplayName.trim() : undefined,
+          newEmail: newEmail.trim() !== storedEmail ? newEmail.trim() : undefined,
           newPassword: newPassword || undefined,
         }),
       })
@@ -119,6 +123,7 @@ export default function ProfilePage() {
       if (res.ok) {
         setStoredUsername(newUsername.trim() || storedUsername)
         setStoredDisplayName(newDisplayName.trim() || storedDisplayName)
+        setStoredEmail(newEmail.trim() || storedEmail)
         setCredMsg({ ok: true, text: 'Сохранено' })
         setTimeout(() => setEditingCreds(false), 900)
       } else {
@@ -202,6 +207,18 @@ export default function ProfilePage() {
                 autoComplete="username"
                 autoCapitalize="none"
                 autoCorrect="off"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-[#9b7653] mb-1 font-slab">Email (для сброса пароля)</label>
+              <input
+                className="warm-input"
+                type="email"
+                placeholder="your@email.com"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                autoComplete="email"
               />
             </div>
 

@@ -17,6 +17,7 @@ export async function GET() {
     choirType: session.choirType,
     displayName: user.displayName,
     username: user.username,
+    email: user.email ?? '',
   })
 }
 
@@ -24,7 +25,7 @@ export async function PUT(req: NextRequest) {
   const session = await getSession()
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { currentPassword, newUsername, newPassword, newDisplayName } = await req.json()
+  const { currentPassword, newUsername, newPassword, newDisplayName, newEmail } = await req.json()
 
   const user = await dbFindOne<User>(db.users, { _id: session.userId })
   if (!user) return Response.json({ error: 'Not found' }, { status: 404 })
@@ -41,6 +42,7 @@ export async function PUT(req: NextRequest) {
   if (newUsername?.trim()) update.username = newUsername.trim()
   if (newPassword) update.passwordHash = bcrypt.hashSync(newPassword, 10)
   if (newDisplayName?.trim()) update.displayName = newDisplayName.trim()
+  if (newEmail?.trim()) update.email = newEmail.trim().toLowerCase()
 
   if (Object.keys(update).length === 0) {
     return Response.json({ error: 'Нечего обновлять' }, { status: 400 })
