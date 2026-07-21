@@ -665,16 +665,20 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
                           <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide mb-1">Певчие</p>
 
-                          {festiveRows.map((row) => (
+                          {festiveRows.map((row) => {
+                            const isRegent = row.memberId === festiveRegent.memberId && !!festiveRegent.memberId
+                            return (
                             <div
                               key={row.memberId}
-                              onClick={() => updateFestiveRow(row.memberId, 'checked', !row.checked)}
-                              className={`rounded-2xl transition-all cursor-pointer ${
-                                row.checked
-                                  ? 'border-2 border-warm-300'
-                                  : 'border border-warm-100 bg-white'
+                              onClick={() => !isRegent && updateFestiveRow(row.memberId, 'checked', !row.checked)}
+                              className={`rounded-2xl transition-all ${
+                                isRegent
+                                  ? 'border border-warm-100 bg-warm-50 opacity-40 cursor-not-allowed'
+                                  : row.checked
+                                    ? 'border-2 border-warm-300 cursor-pointer'
+                                    : 'border border-warm-100 bg-white cursor-pointer'
                               }`}
-                              style={row.checked ? { background: 'linear-gradient(135deg, #fdf4ec, #fbeadc)' } : {}}
+                              style={!isRegent && row.checked ? { background: 'linear-gradient(135deg, #fdf4ec, #fbeadc)' } : {}}
                             >
                               <div className="flex items-center gap-3 px-3 py-2.5">
                                 {/* Круглая галочка */}
@@ -735,7 +739,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                 )}
                               </div>
                             </div>
-                          ))}
+                            )
+                          })}
                         </div>
 
                       ) : (
