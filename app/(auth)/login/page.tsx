@@ -194,7 +194,7 @@ export default function LoginPage() {
             <div className="flex flex-col gap-4">
               <div className="text-center pb-1">
                 <p className="text-sm text-warm-500">Добро пожаловать,</p>
-                <p className="text-base font-slab font-bold text-warm-900 mt-0.5">{displayName || username}</p>
+                <p className="text-base font-slab font-bold text-warm-900 mt-0.5">{username}</p>
               </div>
               <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide text-center">
                 Войти в
