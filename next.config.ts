@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['@seald-io/nedb', 'nodemailer'],
+  serverExternalPackages: ['@seald-io/nedb'],
   async headers() {
     return [
       {

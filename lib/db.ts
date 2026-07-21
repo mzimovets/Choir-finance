@@ -19,7 +19,6 @@ declare global {
     events: Datastore
     eventTypes: Datastore
     auditLog: Datastore
-    resetTokens: Datastore
   } | undefined
 }
 
@@ -31,7 +30,6 @@ function getDb() {
       events: createStore('events.db'),
       eventTypes: createStore('event-types.db'),
       auditLog: createStore('audit-log.db'),
-      resetTokens: createStore('reset-tokens.db'),
     }
   }
   return global.__db

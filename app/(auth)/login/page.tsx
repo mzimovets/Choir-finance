@@ -24,7 +24,7 @@ function IconEyeClosed() {
   )
 }
 
-type Step = 'credentials' | 'pin-lock' | 'pin-setup' | 'choir' | 'forgot-password'
+type Step = 'credentials' | 'pin-lock' | 'pin-setup' | 'choir'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -39,8 +39,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [selectingChoir, setSelectingChoir] = useState<'festive' | 'weekday' | null>(null)
-  const [forgotEmail, setForgotEmail] = useState('')
-  const [forgotMsg, setForgotMsg] = useState<{ ok: boolean; text: string } | null>(null)
+
 
   // Шаг 1: проверка логина/пароля
   async function handleVerify(e: React.FormEvent) {
@@ -91,64 +90,6 @@ export default function LoginPage() {
     }
   }
 
-  async function handleForgotPassword(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setForgotMsg(null)
-    try {
-      await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: forgotEmail }),
-      })
-      setForgotMsg({ ok: true, text: 'Если этот email зарегистрирован, письмо со ссылкой уже отправлено' })
-    } catch {
-      setForgotMsg({ ok: false, text: 'Ошибка подключения' })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (step === 'forgot-password') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-page">
-        <div className="w-full max-w-lg">
-          <div className="warm-card p-6">
-            <form onSubmit={handleForgotPassword} className="flex flex-col gap-4">
-              <p className="text-center text-xl font-slab font-bold text-warm-900">Восстановление пароля</p>
-              <p className="text-sm text-warm-500 text-center">Введите email, привязанный к аккаунту — пришлём ссылку для сброса пароля</p>
-              <div>
-                <label className="block text-xs font-slab font-semibold text-warm-700 mb-1.5 uppercase tracking-wide">
-                  Email
-                </label>
-                <input
-                  className="warm-input"
-                  type="email"
-                  value={forgotEmail}
-                  onChange={(e) => setForgotEmail(e.target.value)}
-                  autoComplete="email"
-                  required
-                  placeholder="your@email.com"
-                />
-              </div>
-              {forgotMsg && (
-                <p className={`text-sm text-center rounded-lg px-3 py-2 ${forgotMsg.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
-                  {forgotMsg.text}
-                </p>
-              )}
-              <button type="submit" disabled={loading} className="btn-gradient w-full py-3 text-base">
-                {loading ? 'Отправка…' : 'Отправить ссылку'}
-              </button>
-              <button type="button" onClick={() => { setStep('credentials'); setForgotMsg(null) }}
-                className="text-sm font-slab text-warm-500 text-center">
-                ← Вернуться ко входу
-              </button>
-            </form>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   if (step === 'pin-lock') {
     return (
@@ -242,13 +183,6 @@ export default function LoginPage() {
                 Продолжить
               </button>
 
-              <button
-                type="button"
-                onClick={() => { setStep('forgot-password'); setForgotMsg(null); setError('') }}
-                className="text-sm font-slab text-warm-400 text-center w-full"
-              >
-                Забыли пароль?
-              </button>
             </form>
           ) : (
             /* ── Шаг 2: выбор хора ── */
