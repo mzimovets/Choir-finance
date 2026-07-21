@@ -482,25 +482,15 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   /* ─── JSX переиспользуемые части ─── */
   function PriceInputs({
     basePrice, bonus, fine,
-    onBasePrice, onBonus, onFine, onReset,
+    onBasePrice, onBonus, onFine,
   }: {
     basePrice: number; bonus: number; fine: number
     onBasePrice: (v: string) => void; onBonus: (v: string) => void; onFine: (v: string) => void
-    onReset?: () => void
   }) {
     return (
       <div className="flex items-center gap-1.5">
         <div className="flex flex-col items-end">
-          {onReset ? (
-            <button
-              type="button"
-              onClick={onReset}
-              title="По умолчанию"
-              className="text-[10px] text-warm-400 hover:text-warm-600 active:scale-90 transition-all leading-none mb-0.5"
-            >↺</button>
-          ) : (
-            <span className="text-[10px] text-warm-400">цена</span>
-          )}
+          <span className="text-[10px] text-warm-400">цена</span>
           <input
             type="number"
             value={basePrice || ''}
@@ -641,10 +631,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   onBasePrice={(v) => setFestiveRegent((r) => ({ ...r, basePrice: parseInt(v) || 0 }))}
                                   onBonus={(v) => setFestiveRegent((r) => ({ ...r, bonus: parseInt(v) || 0 }))}
                                   onFine={(v) => setFestiveRegent((r) => ({ ...r, fine: parseInt(v) || 0 }))}
-                                  onReset={() => setFestiveRegent((r) => {
-                                    const m = members.find((x) => x._id === r.memberId)
-                                    return m ? { ...r, basePrice: getPriceForMember(m, resolvedType, 'regent') } : r
-                                  })}
                                 />
                                 <button onClick={() => setFestiveRegent(emptySlot())} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
@@ -721,15 +707,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                 {row.checked && (
                                   <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                                     <div className="flex flex-col items-end">
-                                      <button
-                                        type="button"
-                                        title="По умолчанию"
-                                        onClick={() => {
-                                          const m = members.find((x) => x._id === row.memberId)
-                                          if (m) updateFestiveRow(row.memberId, 'basePrice', getPriceForMember(m, resolvedType))
-                                        }}
-                                        className="text-[10px] text-warm-400 hover:text-warm-600 active:scale-90 transition-all leading-none mb-0.5"
-                                      >↺</button>
+                                      <span className="text-[10px] text-warm-400">цена</span>
                                       <input
                                         type="number"
                                         value={row.basePrice || ''}
@@ -780,10 +758,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   onBasePrice={(v) => setRegent((r) => ({ ...r, basePrice: parseInt(v) || 0 }))}
                                   onBonus={(v) => setRegent((r) => ({ ...r, bonus: parseInt(v) || 0 }))}
                                   onFine={(v) => setRegent((r) => ({ ...r, fine: parseInt(v) || 0 }))}
-                                  onReset={() => setRegent((r) => {
-                                    const m = members.find((x) => x._id === r.memberId)
-                                    return m ? { ...r, basePrice: getPriceForMember(m, resolvedType, 'regent') } : r
-                                  })}
                                 />
                                 <button onClick={clearRegent} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
@@ -829,10 +803,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   onBasePrice={(v) => setReader((r) => ({ ...r, basePrice: parseInt(v) || 0 }))}
                                   onBonus={(v) => setReader((r) => ({ ...r, bonus: parseInt(v) || 0 }))}
                                   onFine={(v) => setReader((r) => ({ ...r, fine: parseInt(v) || 0 }))}
-                                  onReset={() => setReader((r) => {
-                                    const m = members.find((x) => x._id === r.memberId)
-                                    return m ? { ...r, basePrice: getPriceForMember(m, resolvedType, 'reader') } : r
-                                  })}
                                 />
                                 <button onClick={clearReader} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
@@ -881,15 +851,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                       <span className="flex-1 text-sm text-warm-900 font-medium">{shortName(row.memberName)}</span>
                                       <div className="flex items-center gap-1.5">
                                         <div className="flex flex-col items-end">
-                                          <button
-                                            type="button"
-                                            title="По умолчанию"
-                                            onClick={() => {
-                                              const m = members.find((x) => x._id === row.memberId)
-                                              if (m) updateSingerRowField(row.key, 'basePrice', String(getPriceForMember(m, resolvedType, 'singer')))
-                                            }}
-                                            className="text-[10px] text-warm-400 hover:text-warm-600 active:scale-90 transition-all leading-none mb-0.5"
-                                          >↺</button>
+                                          <span className="text-[10px] text-warm-400">цена</span>
                                           <input
                                             type="number"
                                             value={row.basePrice || ''}
