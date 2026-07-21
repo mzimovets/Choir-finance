@@ -1,11 +1,58 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { clearPin, hasPin } from '@/lib/pin'
+import { hasPin } from '@/lib/pin'
 import PinLock from '@/components/PinLock'
 import PinSetup from '@/components/PinSetup'
 
 type PinMode = null | 'verify' | 'new-pin'
+
+function EyeIcon({ open }: { open: boolean }) {
+  return open ? (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+  ) : (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+      <line x1="1" y1="1" x2="23" y2="23"/>
+    </svg>
+  )
+}
+
+function PasswordInput({
+  label, placeholder, value, onChange, autoComplete,
+}: {
+  label: string; placeholder: string; value: string
+  onChange: (v: string) => void; autoComplete: string
+}) {
+  const [show, setShow] = useState(false)
+  return (
+    <div>
+      <label className="block text-xs text-[#9b7653] mb-1 font-slab">{label}</label>
+      <div className="relative">
+        <input
+          className="warm-input pr-10"
+          type={show ? 'text' : 'password'}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          autoComplete={autoComplete}
+        />
+        <button
+          type="button"
+          onClick={() => setShow(v => !v)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9b7653] opacity-60 active:opacity-100"
+          tabIndex={-1}
+        >
+          <EyeIcon open={show} />
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function ProfilePage() {
   const [storedUsername, setStoredUsername] = useState('')
@@ -84,10 +131,6 @@ export default function ProfilePage() {
     }
   }
 
-  function startPinChange() {
-    setPinMode('new-pin')
-  }
-
   if (pinMode === 'verify') {
     return <PinLock onUnlock={() => setPinMode('new-pin')} onCancel={() => setPinMode(null)} />
   }
@@ -104,7 +147,7 @@ export default function ProfilePage() {
         <p className="text-[13px] font-semibold text-[#7d5e42] uppercase tracking-wide font-slab mb-3">
           PIN-код
         </p>
-        <button onClick={startPinChange} className="w-full btn-gradient py-3 text-[15px] rounded-xl">
+        <button onClick={() => setPinMode('new-pin')} className="w-full btn-gradient py-3 text-[15px] rounded-xl">
           {pinExists ? 'Изменить PIN-код' : 'Установить PIN-код'}
         </button>
       </div>
@@ -130,6 +173,14 @@ export default function ProfilePage() {
           </div>
         ) : (
           <div className="space-y-3">
+            <PasswordInput
+              label="Текущий пароль"
+              placeholder="Введите текущий пароль"
+              value={currentPassword}
+              onChange={setCurrentPassword}
+              autoComplete="current-password"
+            />
+
             <div>
               <label className="block text-xs text-[#9b7653] mb-1 font-slab">Имя</label>
               <input
@@ -154,43 +205,23 @@ export default function ProfilePage() {
               />
             </div>
 
-            <div>
-              <label className="block text-xs text-[#9b7653] mb-1 font-slab">Новый пароль</label>
-              <input
-                className="warm-input"
-                type="password"
-                placeholder="Оставьте пустым, чтобы не менять"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                autoComplete="new-password"
-              />
-            </div>
+            <PasswordInput
+              label="Новый пароль"
+              placeholder="Оставьте пустым, чтобы не менять"
+              value={newPassword}
+              onChange={setNewPassword}
+              autoComplete="new-password"
+            />
 
             {newPassword && (
-              <div>
-                <label className="block text-xs text-[#9b7653] mb-1 font-slab">Подтвердите новый пароль</label>
-                <input
-                  className="warm-input"
-                  type="password"
-                  placeholder="Повторите новый пароль"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs text-[#9b7653] mb-1 font-slab">Текущий пароль</label>
-              <input
-                className="warm-input"
-                type="password"
-                placeholder="Для подтверждения изменений"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                autoComplete="current-password"
+              <PasswordInput
+                label="Подтвердите новый пароль"
+                placeholder="Повторите новый пароль"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                autoComplete="new-password"
               />
-            </div>
+            )}
 
             {credMsg && (
               <p className={`text-sm font-slab ${credMsg.ok ? 'text-green-600' : 'text-red-400'}`}>
