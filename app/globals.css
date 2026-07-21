@@ -13,6 +13,13 @@
 :root {
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --gradient: linear-gradient(to right, #bd9673, #7d5e42);
+  --keyboard-height: 0px;
+}
+
+/* Поднимать HeroUI Modal/Drawer над клавиатурой */
+[data-slot="wrapper"] {
+  transform: translateY(calc(-1 * var(--keyboard-height)));
+  transition: transform 0.25s ease-out;
 }
 
 * {

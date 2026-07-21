@@ -129,6 +129,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }).catch(() => null)
   }, [])
 
+  // Глобальная переменная --keyboard-height для поднятия модалок над клавиатурой
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    function update() {
+      const kh = Math.max(0, window.innerHeight - vv!.height - vv!.offsetTop)
+      document.documentElement.style.setProperty('--keyboard-height', `${kh}px`)
+    }
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [])
+
   useEffect(() => {
     const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
     if (!isMobile) { setPinState('unlocked'); return }
