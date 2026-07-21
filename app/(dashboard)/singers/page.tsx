@@ -342,7 +342,7 @@ export default function SingersPage() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide">
-                        Личные тарифы, ₽
+                        Оплата за выход, ₽
                       </label>
                       <button
                         type="button"
