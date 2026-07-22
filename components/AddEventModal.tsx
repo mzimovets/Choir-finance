@@ -709,7 +709,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   autoComplete="off"
                                 />
                                 {festiveRegent.results.length > 0 && (
-                                  <div className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-hidden">
+                                  <div className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56">
                                     {festiveRegent.results.map((m) => (
                                       <button
                                         key={m._id}
@@ -810,7 +810,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   autoComplete="off"
                                 />
                                 {regent.results.length > 0 && (
-                                  <div className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-hidden">
+                                  <div className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56">
                                     {regent.results.map((m) => (
                                       <button
                                         key={m._id}
@@ -852,7 +852,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   autoComplete="off"
                                 />
                                 {reader.results.length > 0 && (
-                                  <div className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-hidden">
+                                  <div className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56">
                                     {reader.results.map((m) => (
                                       <button
                                         key={m._id}
@@ -920,7 +920,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                         </button>
                                       </div>
                                       {row.results.length > 0 && (
-                                        <div className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-hidden" style={{ right: '44px' }}>
+                                        <div className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56" style={{ right: '44px' }}>
                                           {row.results.map((m) => (
                                             <button
                                               key={m._id}

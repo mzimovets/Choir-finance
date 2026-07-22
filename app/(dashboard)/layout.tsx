@@ -129,6 +129,57 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }).catch(() => null)
   }, [])
 
+  /*
+    Держим активный инпут в видимой части при открытой клавиатуре.
+
+    Обёртка модалки уже сжимается до видимой области (см. globals.css), но если
+    содержимое длинное, инпут может оказаться прокручен за её пределы. Скроллим
+    его в верхнюю треть контейнера — так остаётся место под выпадающий список
+    подсказок, который рисуется под инпутом.
+  */
+  useEffect(() => {
+    function scrollActiveIntoView() {
+      const el = document.activeElement
+      if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement)) return
+
+      // Ближайший реально прокручиваемый родитель (тело Drawer / страница)
+      let sc: HTMLElement | null = el.parentElement
+      while (sc && sc !== document.body) {
+        const oy = getComputedStyle(sc).overflowY
+        if ((oy === 'auto' || oy === 'scroll') && sc.scrollHeight > sc.clientHeight) break
+        sc = sc.parentElement
+      }
+
+      if (!sc || sc === document.body) {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        return
+      }
+
+      const er = el.getBoundingClientRect()
+      const cr = sc.getBoundingClientRect()
+      const target = cr.top + cr.height / 3
+      const delta = er.top - target
+      if (Math.abs(delta) > 8) sc.scrollBy({ top: delta, behavior: 'smooth' })
+    }
+
+    // Клавиатура открылась/сменила высоту — верстка уже перестроилась
+    const vv = window.visualViewport
+    vv?.addEventListener('resize', scrollActiveIntoView)
+
+    // Переход между инпутами при уже открытой клавиатуре — resize не придёт
+    function onFocusIn(e: FocusEvent) {
+      const el = e.target
+      if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement)) return
+      setTimeout(scrollActiveIntoView, 320)
+    }
+    document.addEventListener('focusin', onFocusIn)
+
+    return () => {
+      vv?.removeEventListener('resize', scrollActiveIntoView)
+      document.removeEventListener('focusin', onFocusIn)
+    }
+  }, [])
+
 
   useEffect(() => {
     const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0
