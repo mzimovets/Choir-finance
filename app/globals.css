@@ -27,12 +27,14 @@
   обёртки он сам поднимается над клавиатурой.
 */
 [data-slot="wrapper"] {
-  height: var(--visual-viewport-height, 100dvh);
+  /* --vv-top компенсирует прокрутку страницы, которую iOS делает под клавиатуру */
+  top: var(--vv-top, 0px);
+  height: var(--vv-height, var(--visual-viewport-height, 100dvh));
 }
 
 /* Панель не должна вылезать за видимую область — иначе часть уедет под клавиатуру */
 [data-slot="wrapper"] > [data-slot="base"] {
-  max-height: var(--visual-viewport-height, 100dvh);
+  max-height: var(--vv-height, var(--visual-viewport-height, 100dvh));
 }
 
 

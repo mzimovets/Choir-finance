@@ -130,6 +130,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [])
 
   /*
+    Привязываем модалки к видимой области экрана.
+
+    iOS при открытии клавиатуры не только сжимает видимую область, но и
+    прокручивает саму страницу вверх. Элементы position:fixed привязаны к
+    странице, поэтому уезжают за верхний край — визуально «улетают».
+    Компенсируем обе части: высоту (--vv-height) и сдвиг (--vv-top).
+  */
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const root = document.documentElement
+    function sync() {
+      root.style.setProperty('--vv-height', `${vv!.height}px`)
+      root.style.setProperty('--vv-top', `${vv!.offsetTop}px`)
+    }
+    sync()
+    vv.addEventListener('resize', sync)
+    vv.addEventListener('scroll', sync)
+    return () => {
+      vv.removeEventListener('resize', sync)
+      vv.removeEventListener('scroll', sync)
+    }
+  }, [])
+
+  /*
     Держим активный инпут в видимой части при открытой клавиатуре.
 
     Обёртка модалки уже сжимается до видимой области (см. globals.css), но если
