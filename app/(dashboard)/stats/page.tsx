@@ -64,7 +64,7 @@ function roundRectPath(
 }
 
 async function downloadMemberPng(
-  stat: { member: { name: string; patronymic?: string }; events: number; total: number; rows: { date: string; eventType: string; basePrice: number; bonus: number }[] },
+  stat: { member: { name: string; patronymic?: string }; events: number; total: number; rows: { date: string; eventType: string; basePrice: number; bonus: number; fine: number }[] },
   monthLabel: string,
   memberShortName: string,
 ) {
@@ -172,17 +172,13 @@ async function downloadMemberPng(
     ctx.fillStyle = "#2c1a0e"
     ctx.fillText(r.eventType, EDGE + (W - EDGE * 2) * 0.68, cy2)
 
-    // Sum
-    const sum = r.basePrice + r.bonus
+    // Sum — итоговая сумма, цвет по совокупному эффекту доплат и штрафов
+    const adj = r.bonus - r.fine
+    const sum = r.basePrice + adj
     ctx.textAlign = "right"
     ctx.font = `700 13px "Roboto Slab", Georgia, serif`
-    ctx.fillStyle = "#2c1a0e"
+    ctx.fillStyle = adj > 0 ? "#3d9e4f" : adj < 0 ? "#d9534f" : "#2c1a0e"
     ctx.fillText(`${sum.toLocaleString("ru-RU")} ₽`, W - EDGE - IP, cy2)
-    if (r.bonus > 0) {
-      ctx.font = `400 11px "Roboto Slab", Georgia, serif`
-      ctx.fillStyle = "#3d9e4f"
-      ctx.fillText(`+${r.bonus.toLocaleString("ru-RU")}`, W - EDGE - IP - ctx.measureText(`${sum.toLocaleString("ru-RU")} ₽  `).width, cy2)
-    }
   })
 
   // Separator before total
@@ -222,7 +218,7 @@ interface MemberStat {
   member: Member;
   events: number;
   total: number;
-  rows: { date: string; eventType: string; basePrice: number; bonus: number }[];
+  rows: { date: string; eventType: string; basePrice: number; bonus: number; fine: number }[];
 }
 
 export default function StatsPage() {
@@ -256,12 +252,13 @@ export default function StatsPage() {
         if (!map.has(a.memberId)) return;
         const s = map.get(a.memberId)!;
         s.events++;
-        s.total += a.basePrice + a.bonus;
+        s.total += a.basePrice + a.bonus - (a.fine ?? 0);
         s.rows.push({
           date: ev.date,
           eventType: ev.eventType,
           basePrice: a.basePrice,
           bonus: a.bonus,
+          fine: a.fine ?? 0,
         });
       });
     });
@@ -489,7 +486,7 @@ export default function StatsPage() {
                             const lines = [...selected.rows]
                               .sort((a, b) => a.date.localeCompare(b.date))
                               .map((r) => {
-                                const sum = r.basePrice + r.bonus
+                                const sum = r.basePrice + r.bonus - r.fine
                                 return `${formatRowDate(r.date)} — ${r.eventType}: ${sum.toLocaleString("ru-RU")} ₽`
                               })
                             const text = [
@@ -590,14 +587,21 @@ export default function StatsPage() {
                               <td className="text-center font-medium text-warm-700 text-xs">
                                 {r.eventType}
                               </td>
-                              <td className="text-right tabular-nums font-medium text-warm-800">
-                                {r.basePrice.toLocaleString("ru-RU")}
-                                {r.bonus > 0 && (
-                                  <span className="text-green-600 ml-1">
-                                    +{r.bonus.toLocaleString("ru-RU")}
-                                  </span>
-                                )}{" "}
-                                ₽
+                              <td
+                                className={`text-right tabular-nums font-medium ${
+                                  r.bonus - r.fine > 0
+                                    ? "text-green-600"
+                                    : r.bonus - r.fine < 0
+                                      ? "text-red-500"
+                                      : "text-warm-800"
+                                }`}
+                                title={
+                                  r.bonus || r.fine
+                                    ? `${r.basePrice.toLocaleString("ru-RU")}${r.bonus > 0 ? ` +${r.bonus.toLocaleString("ru-RU")}` : ""}${r.fine > 0 ? ` −${r.fine.toLocaleString("ru-RU")}` : ""}`
+                                    : undefined
+                                }
+                              >
+                                {(r.basePrice + r.bonus - r.fine).toLocaleString("ru-RU")} ₽
                               </td>
                             </tr>
                           );

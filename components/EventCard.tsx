@@ -64,17 +64,22 @@ function IconGrip() {
 function AttRow({ name, price, bonus, fine, badge }: {
   name: string; price: number; bonus: number; fine?: number; badge?: React.ReactNode
 }) {
+  // Итоговая сумма к выплате; цвет — по совокупному эффекту доплат и штрафов
+  const adj = (bonus || 0) - (fine || 0)
+  const total = price + adj
+  const tone = adj > 0 ? 'text-green-600' : adj < 0 ? 'text-red-500' : 'text-warm-700'
+  const hint = adj !== 0
+    ? `${price.toLocaleString('ru-RU')}${bonus > 0 ? ` +${bonus.toLocaleString('ru-RU')}` : ''}${(fine ?? 0) > 0 ? ` −${fine!.toLocaleString('ru-RU')}` : ''}`
+    : undefined
+
   return (
     <div className="flex items-center justify-between px-4 py-2 border-b border-warm-50 last:border-b-0">
       <div className="flex items-center gap-2">
         {badge}
         <span className="text-sm text-warm-800">{shortName(name)}</span>
       </div>
-      <span className="text-sm font-medium text-warm-700 tabular-nums">
-        {price.toLocaleString('ru-RU')}
-        {bonus > 0 && <span className="text-green-600 ml-1">+{bonus.toLocaleString('ru-RU')}</span>}
-        {(fine ?? 0) > 0 && <span className="text-red-500 ml-1">−{fine!.toLocaleString('ru-RU')}</span>}
-        {' '}₽
+      <span className={`text-sm font-medium tabular-nums ${tone}`} title={hint}>
+        {total.toLocaleString('ru-RU')} ₽
       </span>
     </div>
   )

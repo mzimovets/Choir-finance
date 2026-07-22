@@ -1154,7 +1154,7 @@ export default function ExportPage() {
                             </td>
                             {sortedEvents.map((ev, idx) => {
                               const att = ev.attendances.find(a => a.memberId === mb._id);
-                              const val = att ? att.basePrice + att.bonus : null;
+                              const val = att ? att.basePrice + att.bonus - (att.fine || 0) : null;
                               let cumIdx = 0, isGroupEnd = false;
                               for (const g of dateGroups) { cumIdx += g.count; if (idx === cumIdx - 1) { isGroupEnd = true; break; } if (idx < cumIdx) break; }
                               return (
