@@ -157,34 +157,44 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   /*
     Держим активный инпут в видимой части при открытой клавиатуре.
 
-    Обёртка модалки уже сжимается до видимой области (см. globals.css), но если
-    содержимое длинное, инпут может оказаться прокручен за её пределы. Скроллим
-    его в верхнюю треть контейнера — так остаётся место под выпадающий список
-    подсказок, который рисуется под инпутом.
+    Обёртка модалки уже сжимается до видимой области (см. globals.css), поэтому
+    двигаем что-либо нужно только если инпут реально не помещается. Прокручиваем
+    минимально необходимое и никогда не трогаем страницу внутри модалки — иначе
+    iOS уносит вверх всё окно и из-под него вылезает нижнее меню.
   */
   useEffect(() => {
     function scrollActiveIntoView() {
       const el = document.activeElement
       if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement)) return
 
-      // Ближайший реально прокручиваемый родитель (тело Drawer / страница)
+      const wrapper = el.closest('[data-slot="wrapper"]') as HTMLElement | null
+      const stop = wrapper ?? document.body
+
+      // Ближайший реально прокручиваемый родитель, не выходя за пределы модалки
       let sc: HTMLElement | null = el.parentElement
-      while (sc && sc !== document.body) {
+      while (sc && sc !== stop) {
         const oy = getComputedStyle(sc).overflowY
-        if ((oy === 'auto' || oy === 'scroll') && sc.scrollHeight > sc.clientHeight) break
+        if ((oy === 'auto' || oy === 'scroll') && sc.scrollHeight > sc.clientHeight + 1) break
         sc = sc.parentElement
       }
 
-      if (!sc || sc === document.body) {
-        el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      if (!sc || sc === stop) {
+        // Внутри модалки страницу не двигаем: окно уже подогнано под видимую область
+        if (!wrapper) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
         return
       }
 
       const er = el.getBoundingClientRect()
       const cr = sc.getBoundingClientRect()
-      const target = cr.top + cr.height / 3
-      const delta = er.top - target
-      if (Math.abs(delta) > 8) sc.scrollBy({ top: delta, behavior: 'smooth' })
+      const margin = 12
+      // Немного места под инпутом — чтобы поместился выпадающий список подсказок
+      const room = Math.min(180, cr.height * 0.4)
+
+      let delta = 0
+      if (er.bottom + room > cr.bottom) delta = er.bottom + room - cr.bottom
+      // Верх важнее: если из-за места под список инпут ушёл бы за верхний край — прижимаем к верху
+      if (er.top - delta < cr.top + margin) delta = er.top - cr.top - margin
+      if (Math.abs(delta) > 4) sc.scrollBy({ top: delta, behavior: 'smooth' })
     }
 
     // Клавиатура открылась/сменила высоту — верстка уже перестроилась

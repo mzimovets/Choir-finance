@@ -415,7 +415,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   function addSingerRow() {
     const key = nextKey()
     setWeekdayRows((prev) => [...prev, { key, memberId: '', memberName: '', basePrice: 0, bonus: 0, fine: 0, search: '', results: [] }])
-    setTimeout(() => newRowInputRefs.current.get(key)?.focus(), 50)
+    // preventScroll: иначе Safari сам резко проматывает страницу к инпуту.
+    // Позиционированием занимается обработчик в layout — аккуратно и в пределах Drawer.
+    setTimeout(() => newRowInputRefs.current.get(key)?.focus({ preventScroll: true }), 50)
   }
 
   function updateSingerRowSearch(key: string, q: string) {
