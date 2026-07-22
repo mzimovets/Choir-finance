@@ -416,14 +416,12 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     // Не плодим пустые строки: если незаполненная уже есть — просто ставим в неё курсор
     const empty = weekdayRows.find((r) => !r.memberId && !r.search.trim())
     if (empty) {
-      newRowInputRefs.current.get(empty.key)?.focus({ preventScroll: true })
+      newRowInputRefs.current.get(empty.key)?.focus()
       return
     }
     const key = nextKey()
     setWeekdayRows((prev) => [...prev, { key, memberId: '', memberName: '', basePrice: 0, bonus: 0, fine: 0, search: '', results: [] }])
-    // preventScroll: иначе Safari сам резко проматывает страницу к инпуту.
-    // Позиционированием занимается обработчик в layout — аккуратно и в пределах Drawer.
-    setTimeout(() => newRowInputRefs.current.get(key)?.focus({ preventScroll: true }), 50)
+    setTimeout(() => newRowInputRefs.current.get(key)?.focus(), 50)
   }
 
   function updateSingerRowSearch(key: string, q: string) {

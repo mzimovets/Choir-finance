@@ -155,85 +155,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [])
 
   /*
-    Держим активный инпут в видимой части при открытой клавиатуре.
+    Прокруткой к активному инпуту намеренно НЕ управляем.
 
-    Обёртка модалки уже сжимается до видимой области (см. globals.css), поэтому
-    двигаем что-либо нужно только если инпут реально не помещается. Прокручиваем
-    минимально необходимое и никогда не трогаем страницу внутри модалки — иначе
-    iOS уносит вверх всё окно и из-под него вылезает нижнее меню.
+    Обёртка модалки сжимается до видимой области (см. globals.css), и внутри неё
+    iOS сам аккуратно подкручивает содержимое к курсору. Свой обработчик поверх
+    этого дрался с системным: два механизма двигали список одновременно и
+    утаскивали его далеко за пределы экрана.
   */
-  useEffect(() => {
-    /**
-     * @param reserveRoom оставить место под инпутом для выпадающего списка.
-     * Только при фокусе. При изменениях клавиатуры (панель подсказок появляется
-     * во время набора) резервировать нельзя — иначе содержимое дёргает вверх
-     * на каждый символ.
-     */
-    function ensureVisible(reserveRoom: boolean) {
-      const el = document.activeElement
-      if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement)) return
-
-      const wrapper = el.closest('[data-slot="wrapper"]') as HTMLElement | null
-      const stop = wrapper ?? document.body
-
-      // Ближайший реально прокручиваемый родитель, не выходя за пределы модалки
-      let sc: HTMLElement | null = el.parentElement
-      while (sc && sc !== stop) {
-        const oy = getComputedStyle(sc).overflowY
-        if ((oy === 'auto' || oy === 'scroll') && sc.scrollHeight > sc.clientHeight + 1) break
-        sc = sc.parentElement
-      }
-
-      if (!sc || sc === stop) {
-        // Внутри модалки страницу не двигаем: окно уже подогнано под видимую область
-        if (!wrapper) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-        return
-      }
-
-      const er = el.getBoundingClientRect()
-      const cr = sc.getBoundingClientRect()
-      const margin = 12
-      const room = reserveRoom ? Math.min(160, cr.height * 0.35) : 0
-
-      let delta = 0
-      if (er.bottom + room > cr.bottom) delta = er.bottom + room - cr.bottom
-      // Верх важнее: если из-за места под список инпут ушёл бы за верхний край — прижимаем к верху
-      if (er.top - delta < cr.top + margin) delta = er.top - cr.top - margin
-      if (Math.abs(delta) <= 4) return
-
-      // Мгновенно, без плавности. При плавной прокрутке повторные срабатывания
-      // меряют позицию посреди анимации и складывают сдвиги — содержимое улетает.
-      sc.scrollTo({ top: sc.scrollTop + delta, behavior: 'auto' })
-    }
-
-    // События приходят пачками (анимация клавиатуры, панель подсказок).
-    // Считаем один раз, когда всё утихло.
-    let timer: ReturnType<typeof setTimeout> | undefined
-    function schedule(reserveRoom: boolean, delay: number) {
-      clearTimeout(timer)
-      timer = setTimeout(() => ensureVisible(reserveRoom), delay)
-    }
-
-    // Клавиатура открылась или сменила высоту — только возвращаем инпут в видимую
-    // часть, если он из неё выпал. Ничего не двигаем, пока он виден.
-    const onViewportChange = () => schedule(false, 120)
-    const vv = window.visualViewport
-    vv?.addEventListener('resize', onViewportChange)
-
-    // Фокус на инпуте — здесь можно позаботиться о месте под выпадающий список
-    function onFocusIn(e: FocusEvent) {
-      const el = e.target
-      if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement)) return
-      schedule(true, 340)
-    }
-    document.addEventListener('focusin', onFocusIn)
-
-    return () => {
-      clearTimeout(timer)
-      vv?.removeEventListener('resize', onViewportChange)
-      document.removeEventListener('focusin', onFocusIn)
-    }
-  }, [])
 
 
   useEffect(() => {
