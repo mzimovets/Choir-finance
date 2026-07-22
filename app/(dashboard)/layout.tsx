@@ -163,7 +163,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     iOS уносит вверх всё окно и из-под него вылезает нижнее меню.
   */
   useEffect(() => {
-    function scrollActiveIntoView() {
+    /**
+     * @param reserveRoom оставить место под инпутом для выпадающего списка.
+     * Только при фокусе. При изменениях клавиатуры (панель подсказок появляется
+     * во время набора) резервировать нельзя — иначе содержимое дёргает вверх
+     * на каждый символ.
+     */
+    function ensureVisible(reserveRoom: boolean) {
       const el = document.activeElement
       if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement)) return
 
@@ -187,8 +193,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const er = el.getBoundingClientRect()
       const cr = sc.getBoundingClientRect()
       const margin = 12
-      // Немного места под инпутом — чтобы поместился выпадающий список подсказок
-      const room = Math.min(180, cr.height * 0.4)
+      const room = reserveRoom ? Math.min(160, cr.height * 0.35) : 0
 
       let delta = 0
       if (er.bottom + room > cr.bottom) delta = er.bottom + room - cr.bottom
@@ -197,20 +202,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (Math.abs(delta) > 4) sc.scrollBy({ top: delta, behavior: 'smooth' })
     }
 
-    // Клавиатура открылась/сменила высоту — верстка уже перестроилась
+    // Клавиатура открылась или сменила высоту — только возвращаем инпут в видимую
+    // часть, если он из неё выпал. Ничего не двигаем, пока он виден.
+    const onViewportChange = () => ensureVisible(false)
     const vv = window.visualViewport
-    vv?.addEventListener('resize', scrollActiveIntoView)
+    vv?.addEventListener('resize', onViewportChange)
 
-    // Переход между инпутами при уже открытой клавиатуре — resize не придёт
+    // Фокус на инпуте — здесь можно позаботиться о месте под выпадающий список
     function onFocusIn(e: FocusEvent) {
       const el = e.target
       if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement)) return
-      setTimeout(scrollActiveIntoView, 320)
+      setTimeout(() => ensureVisible(true), 320)
     }
     document.addEventListener('focusin', onFocusIn)
 
     return () => {
-      vv?.removeEventListener('resize', scrollActiveIntoView)
+      vv?.removeEventListener('resize', onViewportChange)
       document.removeEventListener('focusin', onFocusIn)
     }
   }, [])
