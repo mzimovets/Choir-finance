@@ -13,7 +13,26 @@
 :root {
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --gradient: linear-gradient(to right, #bd9673, #7d5e42);
-  --keyboard-height: 0px;
+}
+
+/*
+  Модалки и Drawer над экранной клавиатурой.
+
+  HeroUI сам выставляет инлайном --visual-viewport-height на [data-slot="wrapper"]
+  (react-aria следит за visualViewport, включая открытие клавиатуры на iOS),
+  но применяет её классом h-(--visual-viewport-height) — это синтаксис Tailwind v4,
+  а в проекте v3, где такой класс не компилируется. Поэтому применяем вручную.
+
+  Drawer внутри обёртки спозиционирован absolute bottom-0, так что при сжатии
+  обёртки он сам поднимается над клавиатурой.
+*/
+[data-slot="wrapper"] {
+  height: var(--visual-viewport-height, 100dvh);
+}
+
+/* Панель не должна вылезать за видимую область — иначе часть уедет под клавиатуру */
+[data-slot="wrapper"] > [data-slot="base"] {
+  max-height: var(--visual-viewport-height, 100dvh);
 }
 
 
