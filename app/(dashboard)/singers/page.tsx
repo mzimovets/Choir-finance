@@ -77,6 +77,7 @@ export default function SingersPage() {
   const [saving, setSaving] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [activeNumpad, setActiveNumpad] = useState<string | null>(null)
+  const [recalcNotice, setRecalcNotice] = useState('')
 
   // Список типов выходов для редактора цен — из БД для обоих хоров, константа как запасной вариант
   const priceEventTypes: string[] = eventTypeDocs.length > 0
@@ -159,12 +160,14 @@ export default function SingersPage() {
       disabledEventTypes,
       halvedEventTypes,
     }
+    let recalculated = 0
     if (editing) {
-      await fetch(`/api/members/${editing._id}`, {
+      const res = await fetch(`/api/members/${editing._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
+      if (res.ok) recalculated = (await res.json()).recalculated ?? 0
     } else {
       await fetch('/api/members', {
         method: 'POST',
@@ -174,6 +177,10 @@ export default function SingersPage() {
     }
     setSaving(false)
     setDrawerOpen(false)
+    if (recalculated > 0) {
+      setRecalcNotice(`Пересчитано выходов: ${recalculated}`)
+      setTimeout(() => setRecalcNotice(''), 4000)
+    }
     load()
     notifyDataChanged()
   }
@@ -192,6 +199,12 @@ export default function SingersPage() {
 
   return (
     <div className="max-w-lg mx-auto">
+      {recalcNotice && (
+        <div className="fixed left-1/2 -translate-x-1/2 z-[70] px-4 py-2.5 rounded-xl shadow-lg text-white text-sm font-slab font-semibold"
+             style={{ bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))', background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}>
+          {recalcNotice}
+        </div>
+      )}
       <PageHeader
         title={choirLabel}
         subtitle={loading ? '' : `${members.length} ${plural(members.length, PERSON)}`}
