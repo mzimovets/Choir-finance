@@ -199,12 +199,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (er.bottom + room > cr.bottom) delta = er.bottom + room - cr.bottom
       // Верх важнее: если из-за места под список инпут ушёл бы за верхний край — прижимаем к верху
       if (er.top - delta < cr.top + margin) delta = er.top - cr.top - margin
-      if (Math.abs(delta) > 4) sc.scrollBy({ top: delta, behavior: 'smooth' })
+      if (Math.abs(delta) <= 4) return
+
+      // Мгновенно, без плавности. При плавной прокрутке повторные срабатывания
+      // меряют позицию посреди анимации и складывают сдвиги — содержимое улетает.
+      sc.scrollTo({ top: sc.scrollTop + delta, behavior: 'auto' })
+    }
+
+    // События приходят пачками (анимация клавиатуры, панель подсказок).
+    // Считаем один раз, когда всё утихло.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    function schedule(reserveRoom: boolean, delay: number) {
+      clearTimeout(timer)
+      timer = setTimeout(() => ensureVisible(reserveRoom), delay)
     }
 
     // Клавиатура открылась или сменила высоту — только возвращаем инпут в видимую
     // часть, если он из неё выпал. Ничего не двигаем, пока он виден.
-    const onViewportChange = () => ensureVisible(false)
+    const onViewportChange = () => schedule(false, 120)
     const vv = window.visualViewport
     vv?.addEventListener('resize', onViewportChange)
 
@@ -212,11 +224,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     function onFocusIn(e: FocusEvent) {
       const el = e.target
       if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement)) return
-      setTimeout(() => ensureVisible(true), 320)
+      schedule(true, 340)
     }
     document.addEventListener('focusin', onFocusIn)
 
     return () => {
+      clearTimeout(timer)
       vv?.removeEventListener('resize', onViewportChange)
       document.removeEventListener('focusin', onFocusIn)
     }

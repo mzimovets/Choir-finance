@@ -413,6 +413,12 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   const newRowInputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
 
   function addSingerRow() {
+    // Не плодим пустые строки: если незаполненная уже есть — просто ставим в неё курсор
+    const empty = weekdayRows.find((r) => !r.memberId && !r.search.trim())
+    if (empty) {
+      newRowInputRefs.current.get(empty.key)?.focus({ preventScroll: true })
+      return
+    }
     const key = nextKey()
     setWeekdayRows((prev) => [...prev, { key, memberId: '', memberName: '', basePrice: 0, bonus: 0, fine: 0, search: '', results: [] }])
     // preventScroll: иначе Safari сам резко проматывает страницу к инпуту.
