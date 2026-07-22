@@ -7,7 +7,7 @@ import {
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { InlineNumpad } from '@/components/InlineNumpad'
 import type { ChoirEvent, Member, EventTypeDoc } from '@/lib/types'
-import { pricesToMap } from '@/lib/types'
+import { pricesToMap, applyHalf } from '@/lib/types'
 import { plural, SINGER, PARTICIPANT } from '@/lib/plural'
 import { buildMemberName, shortName } from '@/lib/nameFormat'
 
@@ -106,6 +106,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   /**
    * Возвращает цену участника для данного типа выхода.
    * Личная ненулевая цена имеет приоритет; иначе — тариф из типа выхода.
+   * Если тип помечен половинной ставкой — результат делится на 2.
    */
   function getPriceForMember(m: Member, type: string, slotRole?: string): number {
     const priceMap = pricesToMap(m.defaultPrices)
@@ -113,8 +114,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     const etDoc = eventTypeDocs.find((et) => et.name === type && et.choirType === choirType)
     const role = slotRole ?? m.role
     const etPrice = (etDoc?.prices as Record<string, number> | undefined)?.[role] ?? 0
-    if (personal !== undefined && personal > 0) return personal
-    return etPrice
+    const base = (personal !== undefined && personal > 0) ? personal : etPrice
+    return applyHalf(base, (m.halvedEventTypes ?? []).includes(type))
   }
 
   /** Отображает имя в формате "Фамилия И." или "Фамилия И. О." */

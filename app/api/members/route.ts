@@ -32,6 +32,8 @@ export async function POST(req: NextRequest) {
     regentMultiplier: body.role === 'regent' ? (body.regentMultiplier || 2) : 1,
     isActive: true,
     createdAt: now,
+    ...(Array.isArray(body.disabledEventTypes) ? { disabledEventTypes: body.disabledEventTypes } : {}),
+    ...(Array.isArray(body.halvedEventTypes) ? { halvedEventTypes: body.halvedEventTypes } : {}),
   }
 
   const member = await dbInsert<Member>(db.members, doc)

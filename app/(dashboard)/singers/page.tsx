@@ -7,7 +7,7 @@ import {
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { InlineNumpad } from '@/components/InlineNumpad'
 import type { Member, MemberRole, EventTypeDoc } from '@/lib/types'
-import { EVENT_TYPES, DEFAULT_PRICES, pricesToMap, mapToPrices } from '@/lib/types'
+import { EVENT_TYPES, DEFAULT_PRICES, pricesToMap, mapToPrices, applyHalf } from '@/lib/types'
 import { plural, PERSON } from '@/lib/plural'
 import { splitName } from '@/lib/nameFormat'
 import { PageHeader } from '@/components/PageHeader'
@@ -20,6 +20,14 @@ const ROLES: { value: MemberRole; label: string }[] = [
   { value: 'regent',  label: 'Регент'  },
   { value: 'reader',  label: 'Чтец'    },
 ]
+
+function IconScissors() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <path fillRule="evenodd" clipRule="evenodd" d="M17.3462 1.63257C17.5492 1.27151 18.0065 1.14338 18.3676 1.34638C18.7286 1.54938 18.8568 2.00664 18.6538 2.3677L12.8604 12.6718L15.5677 17.4871C16.1494 16.1697 17.4673 15.2501 19 15.2501C21.0711 15.2501 22.75 16.9291 22.75 19.0001C22.75 21.0712 21.0711 22.7501 19 22.7501C17.5771 22.7501 16.3394 21.9577 15.7039 20.7901L12 14.2022L8.29606 20.7901C7.66064 21.9577 6.42286 22.7501 5 22.7501C2.92893 22.7501 1.25 21.0712 1.25 19.0001C1.25 16.9291 2.92893 15.2501 5 15.2501C6.5327 15.2501 7.85064 16.1697 8.43226 17.4871L11.1396 12.6718L5.34624 2.3677C5.14324 2.00664 5.27138 1.54938 5.63244 1.34638C5.99349 1.14338 6.45076 1.27151 6.65376 1.63257L12 11.1415L17.3462 1.63257ZM5 21.2501C5.83538 21.2501 6.56442 20.7949 6.95257 20.1189L6.97252 20.0834C7.14938 19.7621 7.25 19.3929 7.25 19.0001C7.25 17.7575 6.24264 16.7501 5 16.7501C3.75736 16.7501 2.75 17.7575 2.75 19.0001C2.75 20.2428 3.75736 21.2501 5 21.2501ZM19 21.2501C18.1646 21.2501 17.4356 20.7949 17.0474 20.1189L17.0275 20.0834C16.8506 19.7621 16.75 19.3929 16.75 19.0001C16.75 17.7575 17.7574 16.7501 19 16.7501C20.2426 16.7501 21.25 17.7575 21.25 19.0001C21.25 20.2428 20.2426 21.2501 19 21.2501Z" fill="currentColor"/>
+    </svg>
+  )
+}
 
 function IconResetPrices() {
   return (
@@ -65,6 +73,7 @@ export default function SingersPage() {
   const [role, setRole] = useState<MemberRole>('singer')
   const [prices, setPrices] = useState<Record<string, number>>({})
   const [disabledEventTypes, setDisabledEventTypes] = useState<string[]>([])
+  const [halvedEventTypes, setHalvedEventTypes] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [activeNumpad, setActiveNumpad] = useState<string | null>(null)
@@ -95,6 +104,7 @@ export default function SingersPage() {
     setRole('singer')
     setPrices(buildDefaultPrices('singer', eventTypeDocs))
     setDisabledEventTypes([])
+    setHalvedEventTypes([])
     setActiveNumpad(null)
     setDrawerOpen(true)
   }
@@ -107,6 +117,7 @@ export default function SingersPage() {
     const stored = pricesToMap(m.defaultPrices)
     setPrices({ ...buildDefaultPrices(m.role, eventTypeDocs), ...stored })
     setDisabledEventTypes(m.disabledEventTypes ?? [])
+    setHalvedEventTypes(m.halvedEventTypes ?? [])
     setActiveNumpad(null)
     setDrawerOpen(true)
   }
@@ -115,10 +126,17 @@ export default function SingersPage() {
     setRole(r)
     setPrices(buildDefaultPrices(r, eventTypeDocs))
     setDisabledEventTypes([])
+    setHalvedEventTypes([])
   }
 
   function toggleDisabledEventType(t: string) {
     setDisabledEventTypes((prev) =>
+      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+    )
+  }
+
+  function toggleHalvedEventType(t: string) {
+    setHalvedEventTypes((prev) =>
       prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
     )
   }
@@ -139,6 +157,7 @@ export default function SingersPage() {
       defaultPrices: mapToPrices(overrides),
       regentMultiplier: 1,
       disabledEventTypes,
+      halvedEventTypes,
     }
     if (editing) {
       await fetch(`/api/members/${editing._id}`, {
@@ -409,6 +428,7 @@ export default function SingersPage() {
                       <div className="warm-card overflow-hidden">
                         {priceEventTypes.map((t, i) => {
                           const isDisabled = disabledEventTypes.includes(t)
+                          const isHalved = halvedEventTypes.includes(t)
                           const defaultPrice = eventTypeDocs.find((d) => d.name === t)?.prices[role] ?? 0
                           const isOverride = (prices[t] ?? 0) !== defaultPrice
                           return (
@@ -434,13 +454,28 @@ export default function SingersPage() {
                               <span className={`flex-1 text-sm font-slab font-medium ${isDisabled ? 'text-warm-400 line-through' : 'text-warm-800'}`}>
                                 {t}
                               </span>
+                              {/* Половинная ставка (÷2) */}
+                              <button
+                                type="button"
+                                disabled={isDisabled}
+                                title={isHalved ? 'Полная ставка' : 'Половина ставки'}
+                                onClick={() => !isDisabled && toggleHalvedEventType(t)}
+                                className={`flex items-center gap-0.5 h-7 px-1.5 rounded-lg border shrink-0 transition-colors disabled:cursor-not-allowed ${
+                                  isHalved
+                                    ? 'border-[#bd9673] bg-[#f7ece0] text-[#7d5e42]'
+                                    : 'border-warm-200 bg-white text-warm-400 active:bg-warm-50'
+                                }`}
+                              >
+                                <IconScissors />
+                                <span className="text-[11px] font-slab font-bold leading-none">2</span>
+                              </button>
                               <button
                                 type="button"
                                 disabled={isDisabled}
                                 onClick={() => !isDisabled && setActiveNumpad(activeNumpad === t ? null : t)}
                                 className={`text-sm font-semibold font-slab px-3 py-1 rounded-lg border transition-colors ${activeNumpad === t ? 'border-[#bd9673] bg-white text-warm-900' : 'border-warm-200 bg-warm-50 text-warm-900'} ${isOverride ? 'border-b-orange-400' : ''} disabled:cursor-not-allowed`}
                               >
-                                {(prices[t] ?? 0).toLocaleString('ru-RU')} ₽
+                                {applyHalf(prices[t] ?? 0, isHalved).toLocaleString('ru-RU')} ₽
                               </button>
                             </div>
                           )
@@ -472,7 +507,7 @@ export default function SingersPage() {
               {activeNumpad && (
                 <div className="absolute bottom-0 left-0 right-0 z-50">
                   <InlineNumpad
-                    role={activeNumpad}
+                    role={halvedEventTypes.includes(activeNumpad) ? `${activeNumpad} · полная ставка` : activeNumpad}
                     value={String(prices[activeNumpad] ?? 0)}
                     onChange={(v) => setPrices(p => ({ ...p, [activeNumpad]: parseInt(v.replace(/\D/g, '')) || 0 }))}
                     onClose={() => setActiveNumpad(null)}

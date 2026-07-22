@@ -31,6 +31,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (body.disabledEventTypes !== undefined) {
     update.disabledEventTypes = Array.isArray(body.disabledEventTypes) ? body.disabledEventTypes : []
   }
+  if (body.halvedEventTypes !== undefined) {
+    update.halvedEventTypes = Array.isArray(body.halvedEventTypes) ? body.halvedEventTypes : []
+  }
 
   await dbUpdate(db.members, { _id: id, choirType: session.choirType }, update)
   await logAction('update_member', `Изменён певчий «${body.name || id}»`)

@@ -27,6 +27,13 @@ export interface Member {
   createdAt: string
   /** Типы выходов, на которые участник не выходит (не показывается при добавлении выхода) */
   disabledEventTypes?: string[]
+  /** Типы выходов, за которые участник получает половину ставки (формула ÷2 поверх тарифа) */
+  halvedEventTypes?: string[]
+}
+
+/** Половинная ставка: тариф ÷2 с округлением до целого рубля */
+export function applyHalf(price: number, halved: boolean): number {
+  return halved ? Math.round(price / 2) : price
 }
 
 export function pricesToMap(prices: PriceEntry[]): Record<string, number> {
