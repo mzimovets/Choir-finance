@@ -237,7 +237,7 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
     <>
       <Drawer
         isOpen={isOpen}
-        onOpenChange={(open) => { if (!open) { closeForm(); onClose() } }}
+        onOpenChange={(open) => { if (open) return; if (requestCloseDrawer()) return; closeForm(); onClose() }}
         placement="bottom"
         /* Пока висит вложенная модалка — клик вне Drawer его не закрывает.
            HeroUI игнорирует shouldCloseOnInteractOutside, поэтому используем isDismissable */

@@ -638,7 +638,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     <>
     <Drawer
       isOpen={isOpen}
-      onOpenChange={(open) => { if (!open) onClose() }}
+      onOpenChange={(open) => { if (open) return; if (requestCloseDrawer()) return; onClose() }}
       placement="bottom"
       scrollBehavior="inside"
       isDismissable={!discardOpen}

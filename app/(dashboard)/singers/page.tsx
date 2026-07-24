@@ -333,7 +333,7 @@ export default function SingersPage() {
       {/* Drawer: добавить / редактировать певчего */}
       <Drawer
         isOpen={drawerOpen}
-        onOpenChange={(open) => { if (!open) setDrawerOpen(false) }}
+        onOpenChange={(open) => { if (open) return; if (requestCloseDrawer()) return; setDrawerOpen(false) }}
         placement="bottom"
         scrollBehavior="inside"
         /* Пока висит подтверждение сброса цен — клик вне Drawer его не закрывает */
