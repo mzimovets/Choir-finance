@@ -70,11 +70,6 @@ export default function ProfilePage() {
   const [pinExists, setPinExists] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
-  const [pinPasswordOpen, setPinPasswordOpen] = useState(false)
-  const [pinPassword, setPinPassword] = useState('')
-  const [pinPasswordError, setPinPasswordError] = useState('')
-  const [pinPasswordLoading, setPinPasswordLoading] = useState(false)
-
   useEffect(() => {
     setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0)
     setPinExists(hasPin())
@@ -137,30 +132,6 @@ export default function ProfilePage() {
     }
   }
 
-  async function handlePinPasswordConfirm() {
-    if (!pinPassword) { setPinPasswordError('Введите пароль'); return }
-    setPinPasswordLoading(true)
-    setPinPasswordError('')
-    try {
-      const res = await fetch('/api/auth/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: storedUsername, password: pinPassword }),
-      })
-      if (res.ok) {
-        setPinPasswordOpen(false)
-        setPinPassword('')
-        setPinMode('new-pin')
-      } else {
-        setPinPasswordError('Неверный пароль')
-      }
-    } catch {
-      setPinPasswordError('Ошибка сети')
-    } finally {
-      setPinPasswordLoading(false)
-    }
-  }
-
   if (pinMode === 'verify') {
     return <PinLock onUnlock={() => setPinMode('new-pin')} onCancel={() => setPinMode(null)} />
   }
@@ -179,55 +150,11 @@ export default function ProfilePage() {
             PIN-код
           </p>
           <button
-            onClick={() => { setPinPassword(localStorage.getItem('cf_pw_hint') || ''); setPinPasswordError(''); setPinPasswordOpen(true) }}
+            onClick={() => setPinMode('new-pin')}
             className="w-full btn-gradient py-3 text-[15px] rounded-xl"
           >
             {pinExists ? 'Изменить PIN-код' : 'Установить PIN-код'}
           </button>
-
-          {pinPasswordOpen && (
-            <>
-              <div className="fixed inset-0 z-50 bg-black/50" onClick={() => { if (!pinPasswordLoading) setPinPasswordOpen(false) }} />
-              <div className="fixed inset-0 z-50 flex items-center justify-center px-5">
-                <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl overflow-hidden">
-                  <form onSubmit={(e) => { e.preventDefault(); handlePinPasswordConfirm() }}>
-                    <div className="px-5 pt-6 pb-5">
-                      <h2 className="text-base font-slab font-bold text-warm-900 mb-1">Подтвердите пароль</h2>
-                      <p className="text-sm text-warm-500 mb-4">Введите пароль от аккаунта, чтобы изменить PIN-код</p>
-                      <PasswordInput
-                        label="Пароль"
-                        placeholder="Введите пароль"
-                        value={pinPassword}
-                        onChange={setPinPassword}
-                        autoComplete="current-password"
-                        autoFocus
-                      />
-                      {pinPasswordError && (
-                        <p className="text-sm text-red-400 mt-2 font-slab">{pinPasswordError}</p>
-                      )}
-                    </div>
-                    <div className="flex border-t border-warm-100">
-                      <button
-                        type="button"
-                        onClick={() => setPinPasswordOpen(false)}
-                        disabled={pinPasswordLoading}
-                        className="flex-1 py-3.5 text-sm font-slab font-semibold text-warm-700 active:bg-warm-50 border-r border-warm-100"
-                      >
-                        Отмена
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={pinPasswordLoading}
-                        className="flex-1 py-3.5 text-sm font-slab font-semibold text-[#9b7653] active:bg-warm-50 disabled:opacity-40"
-                      >
-                        {pinPasswordLoading ? 'Проверка…' : 'Продолжить'}
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </>
-          )}
         </div>
       )}
 
