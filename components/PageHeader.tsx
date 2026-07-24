@@ -66,7 +66,7 @@ export function PageHeader({ title, subtitle, username, choirType, right, left, 
         className="flex items-center gap-2 rounded-full transition-opacity active:opacity-70"
       >
         <div
-          className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-slab font-bold shadow-sm"
+          className="w-11 h-11 rounded-full flex items-center justify-center text-white text-base font-slab font-bold shadow-sm"
           style={{ background: 'linear-gradient(135deg, #bd9673, #7d5e42)' }}
         >
           {initials}
