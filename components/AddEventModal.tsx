@@ -60,6 +60,37 @@ function emptySlot(): SlotState {
   return { memberId: '', memberName: '', basePrice: 0, bonus: 0, fine: 0, search: '', results: [] }
 }
 
+const ROSTER_CLIPBOARD_KEY = 'cf_roster_clipboard'
+type RosterRole = 'regent' | 'reader' | 'singer'
+interface RosterClip {
+  choirType: string
+  items: { memberId: string; role: RosterRole }[]
+}
+
+function IconCopy() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path fillRule="evenodd" clipRule="evenodd" d="M15 1.25H10.9436C9.10583 1.24998 7.65019 1.24997 6.51098 1.40314C5.33856 1.56076 4.38961 1.89288 3.64124 2.64124C2.89288 3.38961 2.56076 4.33856 2.40314 5.51098C2.24997 6.65019 2.24998 8.10582 2.25 9.94357V16C2.25 17.8722 3.62205 19.424 5.41551 19.7047C5.55348 20.4687 5.81753 21.1208 6.34835 21.6517C6.95027 22.2536 7.70814 22.5125 8.60825 22.6335C9.47522 22.75 10.5775 22.75 11.9451 22.75H15.0549C16.4225 22.75 17.5248 22.75 18.3918 22.6335C19.2919 22.5125 20.0497 22.2536 20.6517 21.6517C21.2536 21.0497 21.5125 20.2919 21.6335 19.3918C21.75 18.5248 21.75 17.4225 21.75 16.0549V10.9451C21.75 9.57754 21.75 8.47522 21.6335 7.60825C21.5125 6.70814 21.2536 5.95027 20.6517 5.34835C20.1208 4.81753 19.4687 4.55348 18.7047 4.41551C18.424 2.62205 16.8722 1.25 15 1.25ZM17.1293 4.27117C16.8265 3.38623 15.9876 2.75 15 2.75H11C9.09318 2.75 7.73851 2.75159 6.71085 2.88976C5.70476 3.02502 5.12511 3.27869 4.7019 3.7019C4.27869 4.12511 4.02502 4.70476 3.88976 5.71085C3.75159 6.73851 3.75 8.09318 3.75 10V16C3.75 16.9876 4.38624 17.8265 5.27117 18.1293C5.24998 17.5194 5.24999 16.8297 5.25 16.0549V10.9451C5.24998 9.57754 5.24996 8.47522 5.36652 7.60825C5.48754 6.70814 5.74643 5.95027 6.34835 5.34835C6.95027 4.74643 7.70814 4.48754 8.60825 4.36652C9.47522 4.24996 10.5775 4.24998 11.9451 4.25H15.0549C15.8297 4.24999 16.5194 4.24998 17.1293 4.27117ZM7.40901 6.40901C7.68577 6.13225 8.07435 5.9518 8.80812 5.85315C9.56347 5.75159 10.5646 5.75 12 5.75H15C16.4354 5.75 17.4365 5.75159 18.1919 5.85315C18.9257 5.9518 19.3142 6.13225 19.591 6.40901C19.8678 6.68577 20.0482 7.07435 20.1469 7.80812C20.2484 8.56347 20.25 9.56458 20.25 11V16C20.25 17.4354 20.2484 18.4365 20.1469 19.1919C20.0482 19.9257 19.8678 20.3142 19.591 20.591C19.3142 20.8678 18.9257 21.0482 18.1919 21.1469C17.4365 21.2484 16.4354 21.25 15 21.25H12C10.5646 21.25 9.56347 21.2484 8.80812 21.1469C8.07435 21.0482 7.68577 20.8678 7.40901 20.591C7.13225 20.3142 6.9518 19.9257 6.85315 19.1919C6.75159 18.4365 6.75 17.4354 6.75 16V11C6.75 9.56458 6.75159 8.56347 6.85315 7.80812C6.9518 7.07435 7.13225 6.68577 7.40901 6.40901Z" fill="currentColor"/>
+    </svg>
+  )
+}
+
+function IconClipboard() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path fillRule="evenodd" clipRule="evenodd" d="M7.2626 3.26045C7.38219 2.13044 8.33828 1.25 9.5 1.25H14.5C15.6617 1.25 16.6178 2.13044 16.7374 3.26045C17.5005 3.27599 18.1603 3.31546 18.7236 3.41895C19.4816 3.55818 20.1267 3.82342 20.6517 4.34835C21.2536 4.95027 21.5125 5.70814 21.6335 6.60825C21.75 7.47522 21.75 8.57754 21.75 9.94513V16.0549C21.75 17.4225 21.75 18.5248 21.6335 19.3918C21.5125 20.2919 21.2536 21.0497 20.6517 21.6517C20.0497 22.2536 19.2919 22.5125 18.3918 22.6335C17.5248 22.75 16.4225 22.75 15.0549 22.75H8.94513C7.57754 22.75 6.47522 22.75 5.60825 22.6335C4.70814 22.5125 3.95027 22.2536 3.34835 21.6517C2.74643 21.0497 2.48754 20.2919 2.36652 19.3918C2.24996 18.5248 2.24998 17.4225 2.25 16.0549V9.94513C2.24998 8.57754 2.24996 7.47522 2.36652 6.60825C2.48754 5.70814 2.74643 4.95027 3.34835 4.34835C3.87328 3.82342 4.51835 3.55818 5.27635 3.41895C5.83973 3.31546 6.49952 3.27599 7.2626 3.26045ZM7.26496 4.76087C6.54678 4.7762 5.99336 4.81234 5.54735 4.89426C4.98054 4.99838 4.65246 5.16556 4.40901 5.40901C4.13225 5.68577 3.9518 6.07435 3.85315 6.80812C3.75159 7.56347 3.75 8.56458 3.75 10V16C3.75 17.4354 3.75159 18.4365 3.85315 19.1919C3.9518 19.9257 4.13225 20.3142 4.40901 20.591C4.68577 20.8678 5.07435 21.0482 5.80812 21.1469C6.56347 21.2484 7.56458 21.25 9 21.25H15C16.4354 21.25 17.4365 21.2484 18.1919 21.1469C18.9257 21.0482 19.3142 20.8678 19.591 20.591C19.8678 20.3142 20.0482 19.9257 20.1469 19.1919C20.2484 18.4365 20.25 17.4354 20.25 16V10C20.25 8.56458 20.2484 7.56347 20.1469 6.80812C20.0482 6.07434 19.8678 5.68577 19.591 5.40901C19.3475 5.16556 19.0195 4.99838 18.4527 4.89426C18.0066 4.81234 17.4532 4.7762 16.735 4.76087C16.6058 5.88062 15.6544 6.75 14.5 6.75H9.5C8.34559 6.75 7.39424 5.88062 7.26496 4.76087ZM9.5 2.75C9.08579 2.75 8.75 3.08579 8.75 3.5V4.5C8.75 4.91421 9.08579 5.25 9.5 5.25H14.5C14.9142 5.25 15.25 4.91421 15.25 4.5V3.5C15.25 3.08579 14.9142 2.75 14.5 2.75H9.5Z" fill="currentColor"/>
+    </svg>
+  )
+}
+
+function IconClipboardCheck() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path fillRule="evenodd" clipRule="evenodd" d="M7.26279 3.25871C7.38317 2.12953 8.33887 1.25 9.5 1.25H14.5C15.6611 1.25 16.6168 2.12953 16.7372 3.25871C17.5004 3.27425 18.1602 3.31372 18.7236 3.41721C19.4816 3.55644 20.1267 3.82168 20.6517 4.34661C21.2536 4.94853 21.5125 5.7064 21.6335 6.60651C21.75 7.47348 21.75 8.5758 21.75 9.94339V16.0531C21.75 17.4207 21.75 18.523 21.6335 19.39C21.5125 20.2901 21.2536 21.048 20.6517 21.6499C20.0497 22.2518 19.2919 22.5107 18.3918 22.6317C17.5248 22.7483 16.4225 22.7483 15.0549 22.7483H8.94513C7.57754 22.7483 6.47522 22.7483 5.60825 22.6317C4.70814 22.5107 3.95027 22.2518 3.34835 21.6499C2.74643 21.048 2.48754 20.2901 2.36652 19.39C2.24996 18.523 2.24998 17.4207 2.25 16.0531V9.94339C2.24998 8.5758 2.24996 7.47348 2.36652 6.60651C2.48754 5.7064 2.74643 4.94853 3.34835 4.34661C3.87328 3.82168 4.51835 3.55644 5.27635 3.41721C5.83977 3.31372 6.49963 3.27425 7.26279 3.25871ZM7.26476 4.75913C6.54668 4.77447 5.99332 4.81061 5.54735 4.89253C4.98054 4.99664 4.65246 5.16382 4.40901 5.40727C4.13225 5.68403 3.9518 6.07261 3.85315 6.80638C3.75159 7.56173 3.75 8.56285 3.75 9.99826V15.9983C3.75 17.4337 3.75159 18.4348 3.85315 19.1901C3.9518 19.9239 4.13225 20.3125 4.40901 20.5893C4.68577 20.866 5.07435 21.0465 5.80812 21.1451C6.56347 21.2467 7.56458 21.2483 9 21.2483H15C16.4354 21.2483 17.4365 21.2467 18.1919 21.1451C18.9257 21.0465 19.3142 20.866 19.591 20.5893C19.8678 20.3125 20.0482 19.9239 20.1469 19.1901C20.2484 18.4348 20.25 17.4337 20.25 15.9983V9.99826C20.25 8.56285 20.2484 7.56173 20.1469 6.80638C20.0482 6.07261 19.8678 5.68403 19.591 5.40727C19.3475 5.16382 19.0195 4.99664 18.4527 4.89253C18.0067 4.81061 17.4533 4.77447 16.7352 4.75913C16.6067 5.87972 15.655 6.75 14.5 6.75H9.5C8.345 6.75 7.39326 5.87972 7.26476 4.75913ZM9.5 2.75C9.08579 2.75 8.75 3.08579 8.75 3.5V4.5C8.75 4.91421 9.08579 5.25 9.5 5.25H14.5C14.9142 5.25 15.25 4.91421 15.25 4.5V3.5C15.25 3.08579 14.9142 2.75 14.5 2.75H9.5ZM15.5483 10.4883C15.8309 10.7911 15.8146 11.2657 15.5117 11.5483L11.226 15.5483C10.9379 15.8172 10.4907 15.8172 10.2025 15.5483L8.48826 13.9483C8.18545 13.6657 8.16908 13.1911 8.45171 12.8883C8.73433 12.5854 9.20893 12.5691 9.51174 12.8517L10.7143 13.9741L14.4883 10.4517C14.7911 10.1691 15.2657 10.1854 15.5483 10.4883Z" fill="currentColor"/>
+    </svg>
+  )
+}
+
 let rowKeyCounter = 0
 function nextKey() { return String(++rowKeyCounter) }
 
@@ -122,6 +153,81 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       return true
     }
     return false
+  }
+
+  // Копирование/вставка списка участников (без цен — цены подставляются по типу выхода)
+  const [clipboard, setClipboard] = useState<RosterClip | null>(null)
+  const [copyDone, setCopyDone] = useState(false)
+  const [pasteDone, setPasteDone] = useState(false)
+
+  function copyRoster() {
+    const items: { memberId: string; role: RosterRole }[] = []
+    if (choirType === 'festive') {
+      if (festiveRegent.memberId) items.push({ memberId: festiveRegent.memberId, role: 'regent' })
+      festiveRows.filter((r) => r.checked && r.memberId !== festiveRegent.memberId)
+        .forEach((r) => items.push({ memberId: r.memberId, role: 'singer' }))
+    } else {
+      if (regent.memberId) items.push({ memberId: regent.memberId, role: 'regent' })
+      if (reader.memberId) items.push({ memberId: reader.memberId, role: 'reader' })
+      weekdayRows.filter((r) => r.memberId).forEach((r) => items.push({ memberId: r.memberId, role: 'singer' }))
+    }
+    if (items.length === 0) return
+    const data: RosterClip = { choirType, items }
+    try { localStorage.setItem(ROSTER_CLIPBOARD_KEY, JSON.stringify(data)) } catch {}
+    setClipboard(data)
+    setCopyDone(true)
+    setTimeout(() => setCopyDone(false), 3000)
+  }
+
+  function pasteRoster() {
+    if (!clipboard || clipboard.choirType !== choirType) return
+    const byId = (id: string) => members.find((m) => m._id === id)
+
+    if (choirType === 'festive') {
+      const reg = clipboard.items.find((i) => i.role === 'regent')
+      if (reg) {
+        const m = byId(reg.memberId)
+        if (m) setFestiveRegent({
+          memberId: m._id, memberName: buildMemberName(m.name, m.patronymic),
+          basePrice: getPriceForMember(m, resolvedType), bonus: 0, fine: 0, search: '', results: [],
+        })
+      }
+      const singerIds = new Set(clipboard.items.filter((i) => i.role === 'singer').map((i) => i.memberId))
+      setFestiveRows((prev) => prev.map((r) => {
+        if (!singerIds.has(r.memberId)) return r
+        const m = byId(r.memberId)
+        return { ...r, checked: true, basePrice: m ? getPriceForMember(m, resolvedType) : r.basePrice }
+      }))
+    } else {
+      const reg = clipboard.items.find((i) => i.role === 'regent')
+      const rdr = clipboard.items.find((i) => i.role === 'reader')
+      const regM = reg && byId(reg.memberId)
+      const rdrM = rdr && byId(rdr.memberId)
+      if (regM) setRegent({
+        memberId: regM._id, memberName: buildMemberName(regM.name, regM.patronymic),
+        basePrice: getPriceForMember(regM, resolvedType, 'regent'), bonus: 0, fine: 0, search: '', results: [],
+      })
+      if (rdrM) setReader({
+        memberId: rdrM._id, memberName: buildMemberName(rdrM.name, rdrM.patronymic),
+        basePrice: getPriceForMember(rdrM, resolvedType, 'reader'), bonus: 0, fine: 0, search: '', results: [],
+      })
+      const rows: WeekdayRow[] = clipboard.items.filter((i) => i.role === 'singer').flatMap((i) => {
+        const m = byId(i.memberId)
+        if (!m) return []
+        return [{
+          key: nextKey(), memberId: m._id, memberName: buildMemberName(m.name, m.patronymic),
+          basePrice: getPriceForMember(m, resolvedType, 'singer'), bonus: 0, fine: 0, search: '', results: [],
+        }]
+      })
+      if (rows.length) setWeekdayRows((prev) => {
+        const existing = new Set(prev.filter((r) => r.memberId).map((r) => r.memberId))
+        const add = rows.filter((r) => !existing.has(r.memberId))
+        const kept = prev.filter((r) => r.memberId)
+        return [...kept, ...add]
+      })
+    }
+    setPasteDone(true)
+    setTimeout(() => setPasteDone(false), 3000)
   }
 
   // Закрыть нампад, если его цель больше не редактируется (сняли галочку, удалили, очистили слот)
@@ -216,6 +322,13 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   useEffect(() => {
     if (!isOpen) return
     setActiveNumpad(null)
+    setCopyDone(false)
+    setPasteDone(false)
+    // Загрузим скопированный список, чтобы показать кнопку «Вставить»
+    try {
+      const raw = localStorage.getItem(ROSTER_CLIPBOARD_KEY)
+      setClipboard(raw ? JSON.parse(raw) as RosterClip : null)
+    } catch { setClipboard(null) }
     setMembersLoading(true)
     setTypesLoading(true)
 
@@ -672,11 +785,39 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                       ? `Редактировать: ${editingEvent.eventType}`
                       : step === 'type' ? 'Новый выход' : resolvedType || 'Певчие'}
                   </span>
-                  {step === 'members' && checkedCount > 0 && (
-                    <span className="text-xs text-warm-500 shrink-0 ml-2">
-                      {checkedCount} {plural(checkedCount, choirType === 'weekday' ? PARTICIPANT : SINGER)}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    {/* Копировать список участников (в режиме редактирования) */}
+                    {step === 'members' && editingEvent && checkedCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={copyRoster}
+                        title="Скопировать список участников"
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                          copyDone ? 'bg-green-500 text-white' : 'bg-warm-100 text-warm-600 active:bg-warm-200'
+                        }`}
+                      >
+                        {copyDone ? <IconClipboardCheck /> : <IconCopy />}
+                      </button>
+                    )}
+                    {/* Вставить скопированный список (при создании нового) */}
+                    {step === 'members' && !editingEvent && clipboard && clipboard.choirType === choirType && (
+                      <button
+                        type="button"
+                        onClick={pasteRoster}
+                        title="Вставить скопированный список"
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                          pasteDone ? 'bg-green-500 text-white' : 'bg-warm-100 text-warm-600 active:bg-warm-200'
+                        }`}
+                      >
+                        {pasteDone ? <IconClipboardCheck /> : <IconClipboard />}
+                      </button>
+                    )}
+                    {step === 'members' && checkedCount > 0 && (
+                      <span className="text-xs text-warm-500">
+                        {checkedCount} {plural(checkedCount, choirType === 'weekday' ? PARTICIPANT : SINGER)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </DrawerHeader>
