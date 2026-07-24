@@ -11,8 +11,8 @@ const NAV = [
   {
     href: '/day',
     label: 'Табель',
-    icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    icon: (active: boolean, size = 22) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#bd9673" />
@@ -32,8 +32,8 @@ const NAV = [
   {
     href: '/singers',
     label: 'Певчие',
-    icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    icon: (active: boolean, size = 22) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#bd9673" />
@@ -52,8 +52,8 @@ const NAV = [
   {
     href: '/stats',
     label: 'Итоги',
-    icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    icon: (active: boolean, size = 22) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="g3" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#bd9673" />
@@ -68,8 +68,8 @@ const NAV = [
   {
     href: '/export',
     label: 'Экспорт',
-    icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    icon: (active: boolean, size = 22) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="g4" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#bd9673" />
@@ -84,8 +84,8 @@ const NAV = [
   {
     href: '/profile',
     label: 'Профиль',
-    icon: (active: boolean) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    icon: (active: boolean, size = 22) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="g5" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#bd9673" />
@@ -109,9 +109,6 @@ const NAV = [
   },
 ]
 
-const ITEM_W = 70
-const PAD = 6
-
 type PinState = 'loading' | 'setup' | 'locked' | 'unlocked'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -121,6 +118,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const [pinState, setPinState] = useState<PinState>('loading')
   const [usernameInitials, setUsernameInitials] = useState('')
+
+  // На планшете (и крупнее) нижнее меню крупнее — иначе кнопки мелковаты
+  const [isTablet, setIsTablet] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)')
+    const update = () => setIsTablet(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+
+  const K = isTablet ? 1.34 : 1
+  const ITEM_W = Math.round(70 * K)
+  const PAD = Math.round(6 * K)
+  const pillH = Math.round(62 * K)
+  const itemH = Math.round(54 * K)
+  const indH = Math.round(46 * K)
+  const iconSize = Math.round(22 * K)
+  const avatarSize = Math.round(22 * K)
+  const labelSize = Math.round(10 * K)
+  const avatarFont = Math.round(9 * K)
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => {
@@ -225,7 +243,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div
           className="relative flex items-center pointer-events-auto"
           style={{
-            height: 62,
+            height: pillH,
             paddingInline: PAD,
             borderRadius: 9999,
             background: 'rgba(255, 252, 249, 0.58)',
@@ -267,7 +285,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               className="absolute top-1/2 -translate-y-1/2 pointer-events-none"
               style={{
                 width: ITEM_W - 8,
-                height: 46,
+                height: indH,
                 borderRadius: 9999,
                 left: PAD + (dragIdx ?? activeIndex) * ITEM_W + 4,
                 transition: dragIdx !== null ? 'none' : 'left 0.38s cubic-bezier(0.34, 1.4, 0.64, 1)',
@@ -287,22 +305,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 key={href}
                 href={href}
                 draggable={false}
-                className={`relative flex flex-col items-center justify-center gap-0.5 text-[10px] transition-colors duration-200 select-none ${
+                className={`relative flex flex-col items-center justify-center gap-0.5 transition-colors duration-200 select-none ${
                   visualActive ? 'font-semibold' : 'text-warm-400 font-medium'
                 }`}
-                style={{ width: ITEM_W, height: 54, color: visualActive ? '#9b7653' : undefined }}
+                style={{ width: ITEM_W, height: itemH, fontSize: labelSize, color: visualActive ? '#9b7653' : undefined }}
                 onClick={(e) => {
                   if (wasDragging.current) e.preventDefault()
                 }}
               >
                 {href === '/profile' && usernameInitials ? (
                   <div
-                    className="w-[22px] h-[22px] rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0"
-                    style={{ background: visualActive ? 'linear-gradient(135deg, #bd9673, #7d5e42)' : '#c4a88a' }}
+                    className="rounded-full flex items-center justify-center text-white font-bold shrink-0"
+                    style={{ width: avatarSize, height: avatarSize, fontSize: avatarFont, background: visualActive ? 'linear-gradient(135deg, #bd9673, #7d5e42)' : '#c4a88a' }}
                   >
                     {usernameInitials}
                   </div>
-                ) : icon(active)}
+                ) : icon(active, iconSize)}
                 <span>{label}</span>
               </Link>
             )
