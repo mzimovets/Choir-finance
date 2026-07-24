@@ -226,8 +226,9 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
         isOpen={isOpen}
         onOpenChange={(open) => { if (!open) { closeForm(); onClose() } }}
         placement="bottom"
-        /* Клик по вложенной модалке (подтверждение удаления) не должен закрывать Drawer */
-        shouldCloseOnInteractOutside={(el) => !el.closest('[data-nested-modal]')}
+        /* Пока висит подтверждение удаления — клик вне Drawer его не закрывает.
+           HeroUI игнорирует shouldCloseOnInteractOutside, поэтому используем isDismissable */
+        isDismissable={!deleteTarget}
         classNames={{
           base: 'bg-white rounded-t-2xl shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
           header: 'bg-white border-b border-warm-200 px-4 pt-2 pb-3',
@@ -355,8 +356,9 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
 
       {deleteTarget && (
         <>
-          <div data-nested-modal className="fixed inset-0 z-[60] bg-black/50" onClick={() => { if (!deleting) setDeleteTarget(null) }} />
-          <div data-nested-modal className="fixed inset-0 z-[60] flex items-center justify-center px-5">
+          {/* Клик по фону ничего не делает — закрытие только кнопками */}
+          <div className="fixed inset-0 z-[60] bg-black/50" />
+          <div className="fixed inset-0 z-[60] flex items-center justify-center px-5">
             <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl">
               <div className="px-5 pt-5 pb-4">
                 <h2 className="text-base font-slab font-bold text-warm-900 mb-2">Удалить тип?</h2>
