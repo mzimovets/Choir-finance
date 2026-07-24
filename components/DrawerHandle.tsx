@@ -9,7 +9,12 @@ import { useRef } from 'react'
  * Двигаем панель (прямого ребёнка [data-slot="wrapper"]) напрямую через стиль.
  * Пока дравер открыт, framer-motion трансформацию панели не трогает, конфликта нет.
  */
-export function DrawerHandle({ onClose }: { onClose: () => void }) {
+export function DrawerHandle({ onClose, interceptClose }: {
+  onClose: () => void
+  /** Вернуть true, чтобы перехватить закрытие (например показать «Закрыть без сохранения?»).
+   *  Тогда панель просто вернётся на место, а закрытием займётся форма. */
+  interceptClose?: () => boolean
+}) {
   const startY = useRef<number | null>(null)
   const panel = useRef<HTMLElement | null>(null)
 
@@ -49,6 +54,11 @@ export function DrawerHandle({ onClose }: { onClose: () => void }) {
         startY.current = null
         panel.current = null
         if (dy > 90) {
+          // Форма может перехватить закрытие (несохранённые изменения) — тогда возвращаем панель
+          if (interceptClose?.()) {
+            settle(p, 'translateY(0px)')
+            return
+          }
           // утянули достаточно — доводим панель вниз и закрываем
           const h = p ? p.getBoundingClientRect().height : 600
           if (p) { p.style.transition = 'transform 0.2s ease'; p.style.transform = `translateY(${h}px)` }

@@ -8,6 +8,7 @@ import {
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { InlineNumpad } from '@/components/InlineNumpad'
 import { DrawerHandle } from '@/components/DrawerHandle'
+import { DiscardConfirm } from '@/components/DiscardConfirm'
 import type { ChoirEvent, Member, EventTypeDoc } from '@/lib/types'
 import { pricesToMap, applyHalf } from '@/lib/types'
 import { plural, SINGER, PARTICIPANT } from '@/lib/plural'
@@ -88,6 +89,40 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   // Активное поле нампада: id слота/строки + поле (цена/доплата/штраф)
   type PriceField = 'basePrice' | 'bonus' | 'fine'
   const [activeNumpad, setActiveNumpad] = useState<{ id: string; field: PriceField; label: string } | null>(null)
+
+  const [discardOpen, setDiscardOpen] = useState(false)
+
+  // Снимок формы для определения несохранённых изменений
+  const formSnapshot = useRef('')
+  const serializeForm = useCallback((): string => {
+    const slot = (s: SlotState) => s.memberId ? [s.memberId, s.basePrice, s.bonus, s.fine] : null
+    return JSON.stringify({
+      type: eventType, custom: customType.trim(),
+      fReg: slot(festiveRegent), reg: slot(regent), rdr: slot(reader),
+      fRows: festiveRows.filter((r) => r.checked).map((r) => [r.memberId, r.basePrice, r.bonus, r.fine]),
+      wRows: weekdayRows.filter((r) => r.memberId).map((r) => [r.memberId, r.basePrice, r.bonus, r.fine]),
+    })
+  }, [eventType, customType, festiveRegent, regent, reader, festiveRows, weekdayRows])
+
+  // Всегда держим ссылку на свежую версию (для чтения из отложенного снимка)
+  const serializeRef = useRef(serializeForm)
+  serializeRef.current = serializeForm
+
+  // Пересниму базовое состояние после смены шага/загрузки — с задержкой, чтобы
+  // авто-заполнение цен (goToMembers, тарифы) успело устаканиться и не считалось изменением.
+  useEffect(() => {
+    if (!isOpen) return
+    const t = setTimeout(() => { formSnapshot.current = serializeRef.current() }, 350)
+    return () => clearTimeout(t)
+  }, [isOpen, step, membersLoading])
+
+  function requestCloseDrawer() {
+    if (formSnapshot.current && formSnapshot.current !== serializeForm()) {
+      setDiscardOpen(true)
+      return true
+    }
+    return false
+  }
 
   // Закрыть нампад, если его цель больше не редактируется (сняли галочку, удалили, очистили слот)
   useEffect(() => {
@@ -600,11 +635,13 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }
 
   return (
+    <>
     <Drawer
       isOpen={isOpen}
       onOpenChange={(open) => { if (!open) onClose() }}
       placement="bottom"
       scrollBehavior="inside"
+      isDismissable={!discardOpen}
       classNames={{
         base: 'bg-white rounded-t-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
         header: 'border-b border-warm-200 px-4 pt-2 pb-3 shrink-0',
@@ -617,7 +654,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         {(closeDrawer) => (
           <>
             <DrawerHeader className="flex-col gap-0">
-              <DrawerHandle onClose={closeDrawer} />
+              <DrawerHandle onClose={closeDrawer} interceptClose={requestCloseDrawer} />
               <div className="flex items-center gap-2 w-full">
                 {step === 'members' && !editingEvent && (
                   <button
@@ -1018,5 +1055,12 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         )}
       </DrawerContent>
     </Drawer>
+
+    <DiscardConfirm
+      open={discardOpen}
+      onStay={() => setDiscardOpen(false)}
+      onDiscard={() => { setDiscardOpen(false); onClose() }}
+    />
+    </>
   )
 }

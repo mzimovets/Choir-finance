@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter,
 } from '@heroui/react'
 import { InlineNumpad } from '@/components/InlineNumpad'
 import { DrawerHandle } from '@/components/DrawerHandle'
+import { DiscardConfirm } from '@/components/DiscardConfirm'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -146,6 +147,11 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<EventTypeDoc | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [activeNumpad, setActiveNumpad] = useState<'singer' | 'soloist' | 'regent' | 'reader' | null>(null)
+  const [discardOpen, setDiscardOpen] = useState(false)
+
+  // Снимок формы на момент открытия — для несохранённых изменений
+  const formSnapshot = useRef('')
+  const isFormDirty = () => showForm && formSnapshot.current !== JSON.stringify(form)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -163,9 +169,15 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
     if (isOpen) load()
   }, [isOpen, load])
 
-  function openNew() { setEditingId(null); setForm(emptyForm()); setActiveNumpad(null); setShowForm(true) }
-  function openEdit(t: EventTypeDoc) { setEditingId(t._id); setForm(typeToForm(t)); setActiveNumpad(null); setShowForm(true) }
+  function openNew() { const f = emptyForm(); setEditingId(null); setForm(f); formSnapshot.current = JSON.stringify(f); setActiveNumpad(null); setShowForm(true) }
+  function openEdit(t: EventTypeDoc) { const f = typeToForm(t); setEditingId(t._id); setForm(f); formSnapshot.current = JSON.stringify(f); setActiveNumpad(null); setShowForm(true) }
   function closeForm() { setShowForm(false); setEditingId(null); setActiveNumpad(null) }
+
+  // Перехват закрытия дравера свайпом: если в форме есть изменения — спросить
+  function requestCloseDrawer() {
+    if (isFormDirty()) { setDiscardOpen(true); return true }
+    return false
+  }
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -227,9 +239,9 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
         isOpen={isOpen}
         onOpenChange={(open) => { if (!open) { closeForm(); onClose() } }}
         placement="bottom"
-        /* Пока висит подтверждение удаления — клик вне Drawer его не закрывает.
+        /* Пока висит вложенная модалка — клик вне Drawer его не закрывает.
            HeroUI игнорирует shouldCloseOnInteractOutside, поэтому используем isDismissable */
-        isDismissable={!deleteTarget}
+        isDismissable={!deleteTarget && !discardOpen}
         classNames={{
           base: 'bg-white rounded-t-2xl shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
           header: 'bg-white border-b border-warm-200 px-4 pt-2 pb-3',
@@ -242,7 +254,7 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
           {() => (
             <>
               <DrawerHeader className="flex-col gap-0">
-                <DrawerHandle onClose={() => { closeForm(); onClose() }} />
+                <DrawerHandle onClose={() => { closeForm(); onClose() }} interceptClose={requestCloseDrawer} />
                 {showForm ? (
                   <div className="flex items-center gap-2 w-full">
                     <button onClick={closeForm} className="w-8 h-8 rounded-xl bg-warm-100 text-warm-600 flex items-center justify-center shrink-0 active:bg-warm-200">
@@ -352,6 +364,12 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
           )}
         </DrawerContent>
       </Drawer>
+
+      <DiscardConfirm
+        open={discardOpen}
+        onStay={() => setDiscardOpen(false)}
+        onDiscard={() => { setDiscardOpen(false); closeForm(); onClose() }}
+      />
 
       {deleteTarget && (
         <>

@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter,
 } from '@heroui/react'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { InlineNumpad } from '@/components/InlineNumpad'
 import { DrawerHandle } from '@/components/DrawerHandle'
+import { DiscardConfirm } from '@/components/DiscardConfirm'
 import type { Member, MemberRole, EventTypeDoc } from '@/lib/types'
 import { EVENT_TYPES, DEFAULT_PRICES, pricesToMap, mapToPrices, applyHalf } from '@/lib/types'
 import { plural, PERSON } from '@/lib/plural'
@@ -79,6 +80,21 @@ export default function SingersPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [activeNumpad, setActiveNumpad] = useState<string | null>(null)
   const [recalcNotice, setRecalcNotice] = useState('')
+  const [discardOpen, setDiscardOpen] = useState(false)
+
+  // Снимок формы на момент открытия — для определения несохранённых изменений
+  const formSnapshot = useRef('')
+  function serializeForm(
+    n: string, p: string, r: MemberRole,
+    pr: Record<string, number>, dis: string[], hal: string[],
+  ): string {
+    return JSON.stringify({
+      n: n.trim(), p: p.trim(), r, pr,
+      dis: [...dis].sort(), hal: [...hal].sort(),
+    })
+  }
+  const isFormDirty = () =>
+    formSnapshot.current !== serializeForm(name, patronymic, role, prices, disabledEventTypes, halvedEventTypes)
 
   // Список типов выходов для редактора цен — из БД для обоих хоров, константа как запасной вариант
   const priceEventTypes: string[] = eventTypeDocs.length > 0
@@ -104,10 +120,12 @@ export default function SingersPage() {
     setName('')
     setPatronymic('')
     setRole('singer')
-    setPrices(buildDefaultPrices('singer', eventTypeDocs))
+    const pr = buildDefaultPrices('singer', eventTypeDocs)
+    setPrices(pr)
     setDisabledEventTypes([])
     setHalvedEventTypes([])
     setActiveNumpad(null)
+    formSnapshot.current = serializeForm('', '', 'singer', pr, [], [])
     setDrawerOpen(true)
   }
 
@@ -117,11 +135,20 @@ export default function SingersPage() {
     setPatronymic(m.patronymic || '')
     setRole(m.role)
     const stored = pricesToMap(m.defaultPrices)
-    setPrices({ ...buildDefaultPrices(m.role, eventTypeDocs), ...stored })
-    setDisabledEventTypes(m.disabledEventTypes ?? [])
-    setHalvedEventTypes(m.halvedEventTypes ?? [])
+    const pr = { ...buildDefaultPrices(m.role, eventTypeDocs), ...stored }
+    setPrices(pr)
+    const dis = m.disabledEventTypes ?? []
+    const hal = m.halvedEventTypes ?? []
+    setDisabledEventTypes(dis)
+    setHalvedEventTypes(hal)
     setActiveNumpad(null)
+    formSnapshot.current = serializeForm(m.name, m.patronymic || '', m.role, pr, dis, hal)
     setDrawerOpen(true)
+  }
+
+  function requestCloseDrawer() {
+    if (isFormDirty()) { setDiscardOpen(true); return true }
+    return false
   }
 
   function handleRoleChange(r: MemberRole) {
@@ -310,7 +337,7 @@ export default function SingersPage() {
         placement="bottom"
         scrollBehavior="inside"
         /* Пока висит подтверждение сброса цен — клик вне Drawer его не закрывает */
-        isDismissable={!showResetConfirm}
+        isDismissable={!showResetConfirm && !discardOpen}
         classNames={{
           base: 'bg-white rounded-t-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
           header: 'border-b border-warm-200 px-4 pt-2 pb-3 shrink-0',
@@ -323,7 +350,7 @@ export default function SingersPage() {
           {(closeDrawer) => (
             <>
               <DrawerHeader className="flex-col gap-0">
-                <DrawerHandle onClose={closeDrawer} />
+                <DrawerHandle onClose={closeDrawer} interceptClose={requestCloseDrawer} />
                 <span className="text-base font-slab font-bold text-warm-900">
                   {editing ? 'Редактировать певчего' : 'Добавить певчего'}
                 </span>
@@ -532,6 +559,12 @@ export default function SingersPage() {
           )}
         </DrawerContent>
       </Drawer>
+
+      <DiscardConfirm
+        open={discardOpen}
+        onStay={() => setDiscardOpen(false)}
+        onDiscard={() => { setDiscardOpen(false); setDrawerOpen(false) }}
+      />
 
       {/* Подтверждение удаления */}
       {deleteTarget && (
