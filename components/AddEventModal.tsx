@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { flushSync } from 'react-dom'
 import {
   Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter,
 } from '@heroui/react'
@@ -420,8 +421,12 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       return
     }
     const key = nextKey()
-    setWeekdayRows((prev) => [...prev, { key, memberId: '', memberName: '', basePrice: 0, bonus: 0, fine: 0, search: '', results: [] }])
-    setTimeout(() => newRowInputRefs.current.get(key)?.focus(), 50)
+    // flushSync — рендерим строку синхронно, чтобы инпут появился сразу и focus()
+    // остался внутри пользовательского жеста. Иначе iOS не покажет клавиатуру.
+    flushSync(() => {
+      setWeekdayRows((prev) => [...prev, { key, memberId: '', memberName: '', basePrice: 0, bonus: 0, fine: 0, search: '', results: [] }])
+    })
+    newRowInputRefs.current.get(key)?.focus()
   }
 
   function updateSingerRowSearch(key: string, q: string) {

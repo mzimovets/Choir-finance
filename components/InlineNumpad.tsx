@@ -115,7 +115,9 @@ export function InlineNumpad({ role, value, onChange, onClose }: Props) {
 
         <button
           type="button"
-          onPointerDown={(e) => { e.preventDefault(); onClose() }}
+          /* onClick, а не onPointerDown: иначе нампад исчезает на нажатии, и клик
+             проваливается на кнопку футера под ним (Сохранить/Отмена) */
+          onClick={onClose}
           style={{
             height: 48,
             borderRadius: 12,

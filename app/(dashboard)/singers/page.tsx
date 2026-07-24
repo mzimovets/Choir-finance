@@ -308,6 +308,8 @@ export default function SingersPage() {
         onOpenChange={(open) => { if (!open) setDrawerOpen(false) }}
         placement="bottom"
         scrollBehavior="inside"
+        /* Клик по вложенной модалке (сброс цен) не должен закрывать Drawer */
+        shouldCloseOnInteractOutside={(el) => !el.closest('[data-nested-modal]')}
         classNames={{
           base: 'bg-white rounded-t-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
           header: 'border-b border-warm-200 px-4 pt-2 pb-3 shrink-0',
@@ -405,8 +407,8 @@ export default function SingersPage() {
                           </div>
                           {showResetConfirm && (
                             <>
-                              <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setShowResetConfirm(false)} />
-                              <div className="fixed inset-0 z-50 flex items-center justify-center px-5">
+                              <div data-nested-modal className="fixed inset-0 z-50 bg-black/50" onClick={() => setShowResetConfirm(false)} />
+                              <div data-nested-modal className="fixed inset-0 z-50 flex items-center justify-center px-5">
                                 <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl overflow-hidden">
                                   <div className="px-5 pt-6 pb-5 text-center">
                                     <h2 className="text-base font-slab font-bold text-warm-900 mb-2">Сбросить цены?</h2>
