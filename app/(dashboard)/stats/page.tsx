@@ -8,6 +8,7 @@ import {
   DrawerBody,
 } from "@heroui/react";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { DrawerHandle } from "@/components/DrawerHandle";
 import { useSession } from "@/hooks/useSession";
 import { PageHeader } from "@/components/PageHeader";
 import type { ChoirEvent, Member } from "@/lib/types";
@@ -464,10 +465,7 @@ export default function StatsPage() {
           {(close) => (
             <>
               <DrawerHeader className="flex-col gap-0">
-                {/* Ручка */}
-                <div className="flex justify-center pt-1 pb-2 w-full">
-                  <div className="w-10 h-1 rounded-full bg-warm-300" />
-                </div>
+                <DrawerHandle onClose={close} />
                 <div className="flex items-center justify-between w-full">
                   <div>
                     <p className="text-base font-bold text-warm-900">

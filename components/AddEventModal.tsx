@@ -7,6 +7,7 @@ import {
 } from '@heroui/react'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { InlineNumpad } from '@/components/InlineNumpad'
+import { DrawerHandle } from '@/components/DrawerHandle'
 import type { ChoirEvent, Member, EventTypeDoc } from '@/lib/types'
 import { pricesToMap, applyHalf } from '@/lib/types'
 import { plural, SINGER, PARTICIPANT } from '@/lib/plural'
@@ -616,9 +617,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         {(closeDrawer) => (
           <>
             <DrawerHeader className="flex-col gap-0">
-              <div className="flex justify-center pt-1 pb-2 w-full">
-                <div className="w-10 h-1 rounded-full bg-warm-300" />
-              </div>
+              <DrawerHandle onClose={closeDrawer} />
               <div className="flex items-center gap-2 w-full">
                 {step === 'members' && !editingEvent && (
                   <button

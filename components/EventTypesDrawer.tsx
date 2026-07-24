@@ -5,6 +5,7 @@ import {
   Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter,
 } from '@heroui/react'
 import { InlineNumpad } from '@/components/InlineNumpad'
+import { DrawerHandle } from '@/components/DrawerHandle'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -241,9 +242,7 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
           {() => (
             <>
               <DrawerHeader className="flex-col gap-0">
-                <div className="flex justify-center pt-1 pb-2 w-full">
-                  <div className="w-10 h-1 rounded-full bg-warm-300" />
-                </div>
+                <DrawerHandle onClose={() => { closeForm(); onClose() }} />
                 {showForm ? (
                   <div className="flex items-center gap-2 w-full">
                     <button onClick={closeForm} className="w-8 h-8 rounded-xl bg-warm-100 text-warm-600 flex items-center justify-center shrink-0 active:bg-warm-200">

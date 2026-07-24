@@ -6,6 +6,7 @@ import {
 } from '@heroui/react'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { InlineNumpad } from '@/components/InlineNumpad'
+import { DrawerHandle } from '@/components/DrawerHandle'
 import type { Member, MemberRole, EventTypeDoc } from '@/lib/types'
 import { EVENT_TYPES, DEFAULT_PRICES, pricesToMap, mapToPrices, applyHalf } from '@/lib/types'
 import { plural, PERSON } from '@/lib/plural'
@@ -322,10 +323,7 @@ export default function SingersPage() {
           {(closeDrawer) => (
             <>
               <DrawerHeader className="flex-col gap-0">
-                {/* Ручка */}
-                <div className="flex justify-center pt-1 pb-2 w-full">
-                  <div className="w-10 h-1 rounded-full bg-warm-300" />
-                </div>
+                <DrawerHandle onClose={closeDrawer} />
                 <span className="text-base font-slab font-bold text-warm-900">
                   {editing ? 'Редактировать певчего' : 'Добавить певчего'}
                 </span>
