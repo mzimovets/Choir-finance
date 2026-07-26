@@ -181,7 +181,13 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   function pasteRoster() {
     if (!clipboard || clipboard.choirType !== choirType) return
-    const byId = (id: string) => members.find((m) => m._id === id)
+    // Пропускаем участников, недоступных в целевом типе выхода (роль отключена в
+    // этом типе или тип отключён у самого участника). Напр. чтец не вставится в
+    // молебен, где чтеца нет.
+    const byId = (id: string) => {
+      const m = members.find((mm) => mm._id === id)
+      return m && !isMemberDisabled(m, resolvedType) ? m : undefined
+    }
 
     if (choirType === 'festive') {
       const reg = clipboard.items.find((i) => i.role === 'regent')
@@ -196,7 +202,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       setFestiveRows((prev) => prev.map((r) => {
         if (!singerIds.has(r.memberId)) return r
         const m = byId(r.memberId)
-        return { ...r, checked: true, basePrice: m ? getPriceForMember(m, resolvedType) : r.basePrice }
+        if (!m) return r
+        return { ...r, checked: true, basePrice: getPriceForMember(m, resolvedType) }
       }))
     } else {
       const reg = clipboard.items.find((i) => i.role === 'regent')
