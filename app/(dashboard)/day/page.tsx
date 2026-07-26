@@ -176,32 +176,53 @@ export default function DayPage() {
       calWrapRef.current.querySelectorAll('.cal-dot').forEach(d => d.remove())
 
       const ym = calDisplayMonthRef.current
-      if (ym && calEventDates.size > 0) {
-        // HeroUI Calendar: <td data-slot="cell"><span data-outside-month? ...>{formattedDate}</span></td>
-        const cellButtons = calWrapRef.current.querySelectorAll<HTMLElement>('td[data-slot="cell"] > span')
+      // HeroUI Calendar: <td data-slot="cell"><span data-outside-month? ...>{formattedDate}</span></td>
+      const cellButtons = calWrapRef.current.querySelectorAll<HTMLElement>('td[data-slot="cell"] > span')
 
-        cellButtons.forEach(span => {
-          // Пропускаем дни соседних месяцев
-          if (span.hasAttribute('data-outside-month')) return
+      cellButtons.forEach(span => {
+        // Сброс наших инлайновых стилей (при перерисовке)
+        span.style.boxShadow = ''
+        span.style.background = ''
+        span.style.color = ''
+        span.style.borderRadius = ''
+        span.style.fontWeight = ''
 
-          const day = parseInt(span.textContent?.trim() || '0')
-          if (!day || day > 31) return
-          const ds = `${ym}-${String(day).padStart(2, '0')}`
-          if (!calEventDates.has(ds)) return
+        // Пропускаем дни соседних месяцев
+        if (span.hasAttribute('data-outside-month')) return
 
-          // На выбранном дне заливка того же цвета, что точка — делаем точку белой
-          const selected = span.hasAttribute('data-selected')
-          const dot = document.createElement('span')
-          dot.className = 'cal-dot'
-          dot.setAttribute('aria-hidden', 'true')
-          dot.style.cssText =
-            'display:block;position:absolute;top:2px;left:50%;transform:translateX(-50%);' +
-            'width:4px;height:4px;border-radius:50%;pointer-events:none;z-index:2;' +
-            'background:' + (selected ? '#ffffff' : '#9b7653') + ';'
-          span.style.position = 'relative'
-          span.appendChild(dot)
-        })
-      }
+        const selected = span.hasAttribute('data-selected')
+        const today = span.hasAttribute('data-today')
+
+        // Единая форма для всех — скруглённый квадрат (база HeroUI — круг)
+        span.style.borderRadius = '10px'
+        span.style.position = 'relative'
+        if (selected) {
+          // Выбранный день — сплошная заливка акцентом, белый текст
+          span.style.background = '#9b7653'
+          span.style.color = '#ffffff'
+          span.style.fontWeight = '600'
+        } else if (today) {
+          // Сегодня — обводка, без заливки (не прячет точку)
+          span.style.boxShadow = 'inset 0 0 0 2px #bd9673'
+          span.style.fontWeight = '700'
+        }
+
+        // Точка «есть выход»
+        const day = parseInt(span.textContent?.trim() || '0')
+        if (!ym || !day || day > 31) return
+        const ds = `${ym}-${String(day).padStart(2, '0')}`
+        if (!calEventDates.has(ds)) return
+
+        // На выбранном дне (заливка того же цвета) точку делаем белой
+        const dot = document.createElement('span')
+        dot.className = 'cal-dot'
+        dot.setAttribute('aria-hidden', 'true')
+        dot.style.cssText =
+          'display:block;position:absolute;top:2px;left:50%;transform:translateX(-50%);' +
+          'width:4px;height:4px;border-radius:50%;pointer-events:none;z-index:2;' +
+          'background:' + (selected ? '#ffffff' : '#9b7653') + ';'
+        span.appendChild(dot)
+      })
       applyingRef.current = false
     }
 
@@ -340,14 +361,7 @@ export default function DayPage() {
                   gridHeaderCell: 'text-warm-400 text-xs font-semibold',
                   gridBodyRow: 'first:mt-1',
                   cell: 'text-warm-800',
-                  cellButton:
-                    // Единая форма ячейки — скруглённый квадрат (база HeroUI — круг)
-                    '!rounded-xl ' +
-                    'data-[outside-month=true]:text-warm-300 data-[outside-month=true]:opacity-60 ' +
-                    // Сегодня — обводка, без заливки (не прячет точку)
-                    'data-[today=true]:font-bold data-[today=true]:shadow-[inset_0_0_0_2px_#bd9673] ' +
-                    // Выбранный день — сплошная заливка акцентом, белый текст
-                    'data-[selected=true]:!bg-[#9b7653] data-[selected=true]:!text-white data-[selected=true]:font-semibold',
+                  cellButton: 'data-[outside-month=true]:text-warm-300 data-[outside-month=true]:opacity-60',
                   content: 'pb-2',
                 }}
               />
