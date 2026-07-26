@@ -19,6 +19,7 @@ declare global {
     events: Datastore
     eventTypes: Datastore
     auditLog: Datastore
+    meta: Datastore
   } | undefined
 }
 
@@ -30,6 +31,7 @@ function getDb() {
       events: createStore('events.db'),
       eventTypes: createStore('event-types.db'),
       auditLog: createStore('audit-log.db'),
+      meta: createStore('meta.db'),
     }
   }
   return global.__db

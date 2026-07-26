@@ -3,12 +3,14 @@ import { getSession } from '@/lib/auth'
 import { db, dbFind, dbInsert } from '@/lib/db'
 import { mapToPrices } from '@/lib/types'
 import { logAction } from '@/lib/audit'
+import { ensureMigrations } from '@/lib/migrate'
 import type { Member } from '@/lib/types'
 
 export async function GET() {
   const session = await getSession()
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
+  await ensureMigrations()
   const members = await dbFind<Member>(db.members, { choirType: session.choirType })
   members.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
   return Response.json(members)
