@@ -341,11 +341,13 @@ export default function DayPage() {
                   gridBodyRow: 'first:mt-1',
                   cell: 'text-warm-800',
                   cellButton:
+                    // Единая форма ячейки — скруглённый квадрат (база HeroUI — круг)
+                    '!rounded-xl ' +
                     'data-[outside-month=true]:text-warm-300 data-[outside-month=true]:opacity-60 ' +
                     // Сегодня — обводка, без заливки (не прячет точку)
                     'data-[today=true]:font-bold data-[today=true]:shadow-[inset_0_0_0_2px_#bd9673] ' +
                     // Выбранный день — сплошная заливка акцентом, белый текст
-                    'data-[selected=true]:!bg-[#9b7653] data-[selected=true]:!text-white data-[selected=true]:font-semibold data-[selected=true]:rounded-xl',
+                    'data-[selected=true]:!bg-[#9b7653] data-[selected=true]:!text-white data-[selected=true]:font-semibold',
                   content: 'pb-2',
                 }}
               />
