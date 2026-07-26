@@ -940,7 +940,7 @@ export default function ExportPage() {
                 {mbEvents.length === 0 ? (
                   <p className="text-center text-warm-400 text-sm py-8">Нет выходов за {monthLabel}</p>
                 ) : memberActiveTab === "xlsx" ? (
-                  <table style={{ borderCollapse: "collapse", tableLayout: "auto", fontFamily: "'Roboto Slab', serif" }}>
+                  <table style={{ borderCollapse: "collapse", tableLayout: "auto", width: "100%", fontFamily: "'Roboto Slab', serif" }}>
                     <thead>
                       <tr>
                         <th rowSpan={2} style={{ ...thBase, ...stickyNumH, textAlign: "center", verticalAlign: "middle" }}>№</th>
@@ -1116,7 +1116,7 @@ export default function ExportPage() {
 
               <div className="overflow-auto flex-1" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
                 {groupActiveTab === "xlsx" ? (
-                  <table style={{ borderCollapse: "collapse", tableLayout: "auto", fontFamily: "'Roboto Slab', serif" }}>
+                  <table style={{ borderCollapse: "collapse", tableLayout: "auto", width: "100%", fontFamily: "'Roboto Slab', serif" }}>
                     <thead>
                       <tr>
                         <th rowSpan={2} style={{ ...thBase, ...stickyNumH, textAlign: "center", verticalAlign: "middle" }}>№</th>
