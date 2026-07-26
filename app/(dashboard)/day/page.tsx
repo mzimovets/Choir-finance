@@ -189,12 +189,15 @@ export default function DayPage() {
           const ds = `${ym}-${String(day).padStart(2, '0')}`
           if (!calEventDates.has(ds)) return
 
+          // На выбранном дне заливка того же цвета, что точка — делаем точку белой
+          const selected = span.hasAttribute('data-selected')
           const dot = document.createElement('span')
           dot.className = 'cal-dot'
           dot.setAttribute('aria-hidden', 'true')
           dot.style.cssText =
             'display:block;position:absolute;top:2px;left:50%;transform:translateX(-50%);' +
-            'width:4px;height:4px;border-radius:50%;background:#9b7653;pointer-events:none;'
+            'width:4px;height:4px;border-radius:50%;pointer-events:none;z-index:2;' +
+            'background:' + (selected ? '#ffffff' : '#9b7653') + ';'
           span.style.position = 'relative'
           span.appendChild(dot)
         })
@@ -231,8 +234,9 @@ export default function DayPage() {
 
     observer.observe(calWrapRef.current, { childList: true, subtree: true })
     return () => { clearTimeout(timer); observer.disconnect() }
+  // date — чтобы перекрасить точку (белая/акцент) при смене выбранного дня
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calOpen, calEventDates])
+  }, [calOpen, calEventDates, date])
   // ─────────────────────────────────────────────────────────────────────
 
   if (sessionLoading) {
@@ -336,7 +340,7 @@ export default function DayPage() {
                   gridHeaderCell: 'text-warm-400 text-xs font-semibold',
                   gridBodyRow: 'first:mt-1',
                   cell: 'text-warm-800',
-                  cellButton: 'data-[outside-month=true]:text-warm-300 data-[outside-month=true]:opacity-60',
+                  cellButton: 'data-[outside-month=true]:text-warm-300 data-[outside-month=true]:opacity-60 data-[today=true]:font-bold data-[today=true]:shadow-[inset_0_0_0_1.5px_#bd9673]',
                   content: 'pb-2',
                 }}
               />
