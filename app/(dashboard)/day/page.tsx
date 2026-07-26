@@ -340,7 +340,12 @@ export default function DayPage() {
                   gridHeaderCell: 'text-warm-400 text-xs font-semibold',
                   gridBodyRow: 'first:mt-1',
                   cell: 'text-warm-800',
-                  cellButton: 'data-[outside-month=true]:text-warm-300 data-[outside-month=true]:opacity-60 data-[today=true]:font-bold data-[today=true]:shadow-[inset_0_0_0_1.5px_#bd9673]',
+                  cellButton:
+                    'data-[outside-month=true]:text-warm-300 data-[outside-month=true]:opacity-60 ' +
+                    // Сегодня — обводка, без заливки (не прячет точку)
+                    'data-[today=true]:font-bold data-[today=true]:shadow-[inset_0_0_0_2px_#bd9673] ' +
+                    // Выбранный день — сплошная заливка акцентом, белый текст
+                    'data-[selected=true]:!bg-[#9b7653] data-[selected=true]:!text-white data-[selected=true]:font-semibold data-[selected=true]:rounded-xl',
                   content: 'pb-2',
                 }}
               />
