@@ -76,7 +76,7 @@ export function PageHeader({ title, subtitle, username, choirType, right, left, 
       {showMenu && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-          <div className="absolute right-0 top-11 z-50 warm-card min-w-[190px] py-2 shadow-lg">
+          <div className="absolute right-0 top-[52px] z-50 warm-card min-w-[190px] py-2 shadow-lg">
             <div className="px-3 py-2 border-b border-warm-100">
               <p className="text-xs font-slab font-semibold text-warm-800 truncate">
                 {username || 'Профиль'}

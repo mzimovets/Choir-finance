@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
 import { Spinner } from "@heroui/react";
 import { useSession } from "@/hooks/useSession";
 import { PageHeader } from "@/components/PageHeader";
@@ -270,6 +270,20 @@ export default function ExportPage() {
   const activeMembers = members
     .filter((mb) => mb.isActive)
     .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+
+  /* Закреплённые строки заголовка большой таблицы (даты + названия выходов):
+     вторая строка должна прилипать сразу под первой, поэтому измеряем её
+     реальную высоту (шрифты/паддинги дают неровные пиксельные значения). */
+  const headRow1Ref = useRef<HTMLTableRowElement>(null);
+  const [headRow1H, setHeadRow1H] = useState(0);
+  useLayoutEffect(() => {
+    const measure = () => {
+      if (headRow1Ref.current) setHeadRow1H(headRow1Ref.current.getBoundingClientRect().height);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [sortedEvents.length, dateGroups.length, activeDocTab, isFullscreen]);
 
   const totalAmount = events.reduce(
     (sum, ev) => sum + ev.attendances.reduce((s, a) => s + a.basePrice + a.bonus - (a.fine || 0), 0),
@@ -666,7 +680,14 @@ export default function ExportPage() {
               <div
                 onPointerDown={handleTablePointerDown}
                 onPointerUp={handleTablePointerUp}
-                style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", flex: 1 } as React.CSSProperties}
+                style={{
+                  overflowX: "auto",
+                  // В обычном режиме скроллит страница (нужно для sticky-заголовков относительно viewport);
+                  // в полноэкранном контейнер сам ограничен по высоте — скроллить должен он.
+                  overflowY: isFullscreen ? "auto" : "visible",
+                  WebkitOverflowScrolling: "touch",
+                  flex: 1,
+                } as React.CSSProperties}
               >
               {activeDocTab === "xlsx" ? (
                 /* ── Табель: выходы по датам ── */
@@ -679,11 +700,11 @@ export default function ExportPage() {
                   }}
                 >
                   <thead>
-                    <tr>
-                      <th rowSpan={2} style={{ ...thBase, ...stickyNumH, textAlign: "center", verticalAlign: "middle" }}>
+                    <tr ref={headRow1Ref}>
+                      <th rowSpan={2} style={{ ...thBase, ...stickyNumH, top: 0, textAlign: "center", verticalAlign: "middle" }}>
                         №
                       </th>
-                      <th rowSpan={2} style={{ ...thBase, ...stickyNameH, textAlign: "left", paddingLeft: 8, verticalAlign: "middle" }}>
+                      <th rowSpan={2} style={{ ...thBase, ...stickyNameH, top: 0, textAlign: "left", paddingLeft: 8, verticalAlign: "middle" }}>
                         Певчий
                       </th>
                       {dateGroups.map((g, gi) => {
@@ -691,6 +712,7 @@ export default function ExportPage() {
                         return (
                           <th key={g.date} colSpan={g.count} style={{
                             ...thBase,
+                            position: "sticky", top: 0, zIndex: 3,
                             textAlign: "center", verticalAlign: "middle",
                             fontSize: 16, fontWeight: 700, color: C_TEXT,
                             paddingTop: 7, paddingBottom: 3,
@@ -700,7 +722,7 @@ export default function ExportPage() {
                           </th>
                         );
                       })}
-                      <th rowSpan={2} style={{ ...thBase, textAlign: "center", fontWeight: 700, color: C_TEXT, verticalAlign: "middle", borderLeft: `1px solid ${C_SEP}` }}>
+                      <th rowSpan={2} style={{ ...thBase, position: "sticky", top: 0, zIndex: 3, textAlign: "center", fontWeight: 700, color: C_TEXT, verticalAlign: "middle", borderLeft: `1px solid ${C_SEP}` }}>
                         Итого
                       </th>
                     </tr>
@@ -715,6 +737,7 @@ export default function ExportPage() {
                         return (
                           <th key={ev._id} style={{
                             ...thBase, fontSize: 10, color: C_MUTED,
+                            position: "sticky", top: headRow1H, zIndex: 3,
                             verticalAlign: "middle", padding: "2px 8px 5px", whiteSpace: "nowrap",
                             borderRight: isGroupEnd && idx < sortedEvents.length - 1 ? `1px solid ${C_SEP}` : undefined,
                           }}>
