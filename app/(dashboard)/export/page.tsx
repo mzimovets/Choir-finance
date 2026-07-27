@@ -274,7 +274,10 @@ export default function ExportPage() {
   /* Закреплённые строки заголовка большой таблицы (даты + названия выходов):
      вторая строка должна прилипать сразу под первой, поэтому измеряем её
      реальную высоту (шрифты/паддинги дают неровные пиксельные значения). */
-  const headRow1Ref = useRef<HTMLTableRowElement>(null);
+  // Ref именно на ячейку с датой, а не на <tr>: в первой строке есть ячейки с
+  // rowSpan=2 (№, Певчий, Итого), из-за них высота <tr> меряется по обеим строкам
+  // сразу — вторая строка прилипала не туда и наезжала на даты.
+  const headRow1Ref = useRef<HTMLTableCellElement>(null);
   const [headRow1H, setHeadRow1H] = useState(0);
   useLayoutEffect(() => {
     const el = headRow1Ref.current;
@@ -288,6 +291,24 @@ export default function ExportPage() {
     window.addEventListener("resize", measure);
     return () => { ro.disconnect(); window.removeEventListener("resize", measure); };
   }, [sortedEvents.length, dateGroups.length, activeDocTab, isFullscreen]);
+
+  /* Высота области таблицы — от её верха до низа экрана. Тогда таблица занимает
+     весь оставшийся экран, страница целиком не прокручивается, и листание внутри
+     таблицы визуально не отличается от листания страницы (но заголовок закреплён). */
+  const scrollWrapRef = useRef<HTMLDivElement>(null);
+  const [wrapMaxH, setWrapMaxH] = useState<number | undefined>(undefined);
+  useLayoutEffect(() => {
+    if (isFullscreen) { setWrapMaxH(undefined); return; }
+    const el = scrollWrapRef.current;
+    if (!el) return;
+    const calc = () => {
+      const docTop = el.getBoundingClientRect().top + window.scrollY;
+      setWrapMaxH(Math.max(300, window.innerHeight - docTop - 96)); // 96px — плавающее меню снизу
+    };
+    calc();
+    window.addEventListener("resize", calc);
+    return () => window.removeEventListener("resize", calc);
+  }, [isFullscreen, activeDocTab, sortedEvents.length, activeMembers.length]);
 
   const totalAmount = events.reduce(
     (sum, ev) => sum + ev.attendances.reduce((s, a) => s + a.basePrice + a.bonus - (a.fine || 0), 0),
@@ -690,6 +711,7 @@ export default function ExportPage() {
               })()}
               {/* ── Прокрутка таблицы ── */}
               <div
+                ref={scrollWrapRef}
                 onPointerDown={handleTablePointerDown}
                 onPointerUp={handleTablePointerUp}
                 style={{
@@ -699,7 +721,7 @@ export default function ExportPage() {
                   // привязываются sticky-заголовки. Значит он и должен скроллиться по вертикали:
                   // иначе (когда высота не ограничена и скроллит страница) sticky не работает вовсе.
                   overflow: "auto",
-                  maxHeight: isFullscreen ? undefined : "70dvh",
+                  maxHeight: isFullscreen ? undefined : wrapMaxH,
                   WebkitOverflowScrolling: "touch",
                   flex: 1,
                 } as React.CSSProperties}
@@ -719,7 +741,7 @@ export default function ExportPage() {
                   }}
                 >
                   <thead>
-                    <tr ref={headRow1Ref}>
+                    <tr>
                       <th rowSpan={2} style={{ ...thBase, ...stickyNumH, top: 0, textAlign: "center", verticalAlign: "middle" }}>
                         №
                       </th>
@@ -729,7 +751,7 @@ export default function ExportPage() {
                       {dateGroups.map((g, gi) => {
                         const isLast = gi === dateGroups.length - 1;
                         return (
-                          <th key={g.date} colSpan={g.count} style={{
+                          <th key={g.date} colSpan={g.count} ref={gi === 0 ? headRow1Ref : undefined} style={{
                             ...thBase,
                             position: "sticky", top: 0, zIndex: 3,
                             textAlign: "center", verticalAlign: "middle",
