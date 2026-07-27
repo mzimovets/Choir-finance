@@ -160,8 +160,12 @@ export async function GET(req: NextRequest) {
       }
       ws.getCell(5, c).alignment = { horizontal: 'center', vertical: 'middle' }; ws.getCell(5, c).border = allBorders()
     })
+    const memberTotal = events.reduce((s, ev) => {
+      const a = ev.attendances.find(x => x.memberId === memberId)
+      return s + (a ? (a.basePrice || 0) + (a.bonus || 0) - (a.fine || 0) : 0)
+    }, 0)
     if (numEv > 0) {
-      ws.getCell(5, sumCol).value = { formula: `SUM(${ws.getColumn(3).letter}5:${ws.getColumn(2 + numEv).letter}5)` }
+      ws.getCell(5, sumCol).value = { formula: `SUM(${ws.getColumn(3).letter}5:${ws.getColumn(2 + numEv).letter}5)`, result: memberTotal }
     }
     ws.getCell(5, sumCol).fill = sumColFill; ws.getCell(5, sumCol).font = { bold: true, size: 11, name: 'Calibri' }
     ws.getCell(5, sumCol).alignment = { horizontal: 'right', vertical: 'middle' }; ws.getCell(5, sumCol).border = allBorders()
@@ -176,7 +180,7 @@ export async function GET(req: NextRequest) {
     if (numEv > 0) ws.mergeCells(6, 3, 6, sumCol - 1)
     ws.getCell(6, 3).fill = totalFill; ws.getCell(6, 3).border = allBorders()
     const sumLtr = ws.getColumn(sumCol).letter
-    ws.getCell(6, sumCol).value = { formula: `${sumLtr}5` }
+    ws.getCell(6, sumCol).value = { formula: `${sumLtr}5`, result: memberTotal }
     ws.getCell(6, sumCol).font = { bold: true, size: 13, name: 'Calibri' }
     ws.getCell(6, sumCol).alignment = { horizontal: 'right', vertical: 'middle' }
     ws.getCell(6, sumCol).fill = totalFill; ws.getCell(6, sumCol).border = allBorders()
@@ -226,13 +230,17 @@ export async function GET(req: NextRequest) {
     wsG.getRow(3).height = 20; wsG.getRow(4).height = 18
     const sumFillG: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDAE3F3' } }
     const totFillG: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCCCC' } }
+    const grpTotal = (memberId: string) => events.reduce((s, ev) => {
+      const a = ev.attendances.find(x => x.memberId === memberId)
+      return s + (a ? (a.basePrice || 0) + (a.bonus || 0) - (a.fine || 0) : 0)
+    }, 0)
     grpMembers.forEach((mb, mi) => {
       const rn = 5 + mi
       wsG.getCell(rn, 1).value = mi + 1; wsG.getCell(rn, 1).alignment = { horizontal: 'center', vertical: 'middle' }; wsG.getCell(rn, 1).border = allBorders()
       wsG.getCell(rn, 2).value = shortName(mb.name, mb.patronymic); wsG.getCell(rn, 2).alignment = { horizontal: 'left', vertical: 'middle' }; wsG.getCell(rn, 2).border = allBorders()
       const fineFillG: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE4EC' } }
       events.forEach((ev, evIdx) => { const c = 3 + evIdx; const att = ev.attendances.find(a => a.memberId === mb._id); if (att) { const fine = att.fine || 0; const t = (att.basePrice || 0) + (att.bonus || 0) - fine; const parts = [String(att.basePrice || 0), ...(att.bonus > 0 ? [`+${att.bonus}`] : []), ...(fine > 0 ? [`-${fine}`] : [])]; wsG.getCell(rn, c).value = (att.bonus > 0 || fine > 0) ? { formula: parts.join(''), result: t } : t > 0 ? t : undefined; if (fine > 0) wsG.getCell(rn, c).fill = fineFillG } wsG.getCell(rn, c).alignment = { horizontal: 'center', vertical: 'middle' }; wsG.getCell(rn, c).border = allBorders() })
-      if (numEv2 > 0) wsG.getCell(rn, sumColG).value = { formula: `SUM(${wsG.getColumn(3).letter}${rn}:${wsG.getColumn(2 + numEv2).letter}${rn})` }
+      if (numEv2 > 0) wsG.getCell(rn, sumColG).value = { formula: `SUM(${wsG.getColumn(3).letter}${rn}:${wsG.getColumn(2 + numEv2).letter}${rn})`, result: grpTotal(mb._id) }
       wsG.getCell(rn, sumColG).fill = sumFillG; wsG.getCell(rn, sumColG).font = { bold: true, size: 11, name: 'Calibri' }; wsG.getCell(rn, sumColG).alignment = { horizontal: 'right', vertical: 'middle' }; wsG.getCell(rn, sumColG).border = allBorders()
       wsG.getRow(rn).height = 18
     })
@@ -242,7 +250,7 @@ export async function GET(req: NextRequest) {
     if (numEv2 > 0) wsG.mergeCells(totRn, 3, totRn, sumColG - 1)
     wsG.getCell(totRn, 3).fill = totFillG; wsG.getCell(totRn, 3).border = allBorders()
     const sumLtrG = wsG.getColumn(sumColG).letter
-    Object.assign(wsG.getCell(totRn, sumColG), { value: { formula: `SUM(${sumLtrG}5:${sumLtrG}${totRn - 1})` }, font: { bold: true, size: 13, name: 'Calibri' }, alignment: { horizontal: 'right', vertical: 'middle' }, fill: totFillG, border: allBorders() })
+    Object.assign(wsG.getCell(totRn, sumColG), { value: { formula: `SUM(${sumLtrG}5:${sumLtrG}${totRn - 1})`, result: grpMembers.reduce((s, mb) => s + grpTotal(mb._id), 0) }, font: { bold: true, size: 13, name: 'Calibri' }, alignment: { horizontal: 'right', vertical: 'middle' }, fill: totFillG, border: allBorders() })
     wsG.getRow(totRn).height = 20
     const bufG = await wbG.xlsx.writeBuffer()
     const fnameG = `Табель_группа_${MONTHS_LOWER[monthNum - 1]}_${year}.xlsx`
@@ -371,6 +379,15 @@ export async function GET(req: NextRequest) {
   const fineFillWs1: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE4EC' } }
   const sumColLetter = ws1.getColumn(sumColNum).letter
 
+  // Месячная сумма участника — для кэшированного result у формул (iOS Numbers/Файлы не пересчитывают)
+  const memberMonthTotal = (memberId: string) =>
+    events.reduce((s, ev) => {
+      const a = ev.attendances.find(x => x.memberId === memberId)
+      return s + (a ? (a.basePrice || 0) + (a.bonus || 0) - (a.fine || 0) : 0)
+    }, 0)
+  const singersTotal = singers.reduce((s, m) => s + memberMonthTotal(m._id), 0)
+  const readersTotal = readers.reduce((s, m) => s + memberMonthTotal(m._id), 0)
+
   function writeTabMemberRow(member: Member, rowNum: number, displayNum: number) {
     memberTabRow.set(member._id, rowNum)
     const row = ws1.getRow(rowNum)
@@ -397,6 +414,7 @@ export async function GET(req: NextRequest) {
     if (events.length > 0) {
       row.getCell(sumColNum).value = {
         formula: `SUM(${ws1.getColumn(3).letter}${rowNum}:${ws1.getColumn(2 + events.length).letter}${rowNum})`,
+        result: memberMonthTotal(member._id),
       }
     }
     row.getCell(sumColNum).fill = sumColFill
@@ -436,7 +454,7 @@ export async function GET(req: NextRequest) {
   ws1.getCell(totalRowNum, 3).fill = totalRowFill
   ws1.getCell(totalRowNum, 3).border = allBorders()
   const totalSumCell = ws1.getCell(totalRowNum, sumColNum)
-  totalSumCell.value = { formula: `SUM(${sumColLetter}5:${sumColLetter}${lastMemberRow})` }
+  totalSumCell.value = { formula: `SUM(${sumColLetter}5:${sumColLetter}${lastMemberRow})`, result: singersTotal + readersTotal }
   totalSumCell.font = { bold: true, size: 13, name: 'Calibri' }
   totalSumCell.alignment = { horizontal: 'right', vertical: 'middle' }
   totalSumCell.fill = totalRowFill
@@ -469,7 +487,7 @@ export async function GET(req: NextRequest) {
     ws2.getCell(rowNum, 1).alignment = { horizontal: 'center', vertical: 'middle' }
     ws2.getCell(rowNum, 2).value = shortName(member.name, member.patronymic)
     ws2.getCell(rowNum, 2).alignment = { horizontal: 'left', vertical: 'middle' }
-    ws2.getCell(rowNum, 3).value = { formula: `Табель!${sumColLetter}${memberTabRow.get(member._id)}` }
+    ws2.getCell(rowNum, 3).value = { formula: `Табель!${sumColLetter}${memberTabRow.get(member._id)}`, result: memberMonthTotal(member._id) }
     ws2.getCell(rowNum, 3).numFmt = '#,##0'
     ws2.getCell(rowNum, 3).alignment = { horizontal: 'right', vertical: 'middle' }
     ;[1, 2, 3].forEach(c => ws2.getCell(rowNum, c).border = allBorders())
@@ -484,7 +502,7 @@ export async function GET(req: NextRequest) {
     ws2.getCell(singerSubTotRow, 1).value = 'Итого:'
     ws2.getCell(singerSubTotRow, 1).font = { bold: true, size: 11, name: 'Calibri' }
     ws2.getCell(singerSubTotRow, 1).alignment = { horizontal: 'left', vertical: 'middle' }
-    ws2.getCell(singerSubTotRow, 3).value = { formula: `SUM(C3:C${singerSubTotRow - 1})` }
+    ws2.getCell(singerSubTotRow, 3).value = { formula: `SUM(C3:C${singerSubTotRow - 1})`, result: singersTotal }
     ws2.getCell(singerSubTotRow, 3).font = { bold: true, size: 11, name: 'Calibri' }
     ws2.getCell(singerSubTotRow, 3).numFmt = '#,##0'
     ws2.getCell(singerSubTotRow, 3).alignment = { horizontal: 'right', vertical: 'middle' }
@@ -510,7 +528,7 @@ export async function GET(req: NextRequest) {
       ws2.getCell(rowNum, 1).alignment = { horizontal: 'center', vertical: 'middle' }
       ws2.getCell(rowNum, 2).value = shortName(member.name, member.patronymic)
       ws2.getCell(rowNum, 2).alignment = { horizontal: 'left', vertical: 'middle' }
-      ws2.getCell(rowNum, 3).value = { formula: `Табель!${sumColLetter}${memberTabRow.get(member._id)}` }
+      ws2.getCell(rowNum, 3).value = { formula: `Табель!${sumColLetter}${memberTabRow.get(member._id)}`, result: memberMonthTotal(member._id) }
       ws2.getCell(rowNum, 3).numFmt = '#,##0'
       ws2.getCell(rowNum, 3).alignment = { horizontal: 'right', vertical: 'middle' }
       ;[1, 2, 3].forEach(c => ws2.getCell(rowNum, c).border = allBorders())
@@ -523,7 +541,7 @@ export async function GET(req: NextRequest) {
     ws2.getCell(readerSubTotRow, 1).value = 'Итого:'
     ws2.getCell(readerSubTotRow, 1).font = { bold: true, size: 11, name: 'Calibri' }
     ws2.getCell(readerSubTotRow, 1).alignment = { horizontal: 'left', vertical: 'middle' }
-    ws2.getCell(readerSubTotRow, 3).value = { formula: `SUM(C${ws2ReaderStart}:C${readerSubTotRow - 1})` }
+    ws2.getCell(readerSubTotRow, 3).value = { formula: `SUM(C${ws2ReaderStart}:C${readerSubTotRow - 1})`, result: readersTotal }
     ws2.getCell(readerSubTotRow, 3).font = { bold: true, size: 11, name: 'Calibri' }
     ws2.getCell(readerSubTotRow, 3).numFmt = '#,##0'
     ws2.getCell(readerSubTotRow, 3).alignment = { horizontal: 'right', vertical: 'middle' }
@@ -537,7 +555,7 @@ export async function GET(req: NextRequest) {
     ws2.getCell(grandTotRow, 1).value = 'Всего:'
     ws2.getCell(grandTotRow, 1).font = { bold: true, size: 13, name: 'Calibri' }
     ws2.getCell(grandTotRow, 1).alignment = { horizontal: 'left', vertical: 'middle' }
-    ws2.getCell(grandTotRow, 3).value = { formula: `C${singerSubTotRow}+C${readerSubTotRow}` }
+    ws2.getCell(grandTotRow, 3).value = { formula: `C${singerSubTotRow}+C${readerSubTotRow}`, result: singersTotal + readersTotal }
     ws2.getCell(grandTotRow, 3).font = { bold: true, size: 13, name: 'Calibri' }
     ws2.getCell(grandTotRow, 3).numFmt = '#,##0'
     ws2.getCell(grandTotRow, 3).alignment = { horizontal: 'right', vertical: 'middle' }
@@ -550,7 +568,7 @@ export async function GET(req: NextRequest) {
     ws2.getCell(totalRow2Num, 1).value = 'Итого:'
     ws2.getCell(totalRow2Num, 1).font = { bold: true, size: 13, name: 'Calibri' }
     ws2.getCell(totalRow2Num, 1).alignment = { horizontal: 'left', vertical: 'middle' }
-    ws2.getCell(totalRow2Num, 3).value = { formula: `SUM(C3:C${totalRow2Num - 1})` }
+    ws2.getCell(totalRow2Num, 3).value = { formula: `SUM(C3:C${totalRow2Num - 1})`, result: singersTotal }
     ws2.getCell(totalRow2Num, 3).font = { bold: true, size: 13, name: 'Calibri' }
     ws2.getCell(totalRow2Num, 3).numFmt = '#,##0'
     ws2.getCell(totalRow2Num, 3).alignment = { horizontal: 'right', vertical: 'middle' }
