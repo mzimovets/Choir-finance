@@ -693,10 +693,13 @@ export default function ExportPage() {
                 onPointerDown={handleTablePointerDown}
                 onPointerUp={handleTablePointerUp}
                 style={{
-                  overflowX: "auto",
-                  // В обычном режиме скроллит страница (нужно для sticky-заголовков относительно viewport);
-                  // в полноэкранном контейнер сам ограничен по высоте — скроллить должен он.
-                  overflowY: isFullscreen ? "auto" : "visible",
+                  // overflow по обеим осям. Важно: overflowY:"visible" здесь невозможен —
+                  // по спецификации CSS, если одна ось не visible, вторая тоже становится auto.
+                  // То есть этот блок в любом случае контейнер прокрутки, и именно к нему
+                  // привязываются sticky-заголовки. Значит он и должен скроллиться по вертикали:
+                  // иначе (когда высота не ограничена и скроллит страница) sticky не работает вовсе.
+                  overflow: "auto",
+                  maxHeight: isFullscreen ? undefined : "70dvh",
                   WebkitOverflowScrolling: "touch",
                   flex: 1,
                 } as React.CSSProperties}
