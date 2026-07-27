@@ -129,14 +129,38 @@ export default function ExportPage() {
     const res = await fetch(url);
     if (!res.ok) return;
     const blob = await res.blob();
+    const disp = res.headers.get("Content-Disposition") || "";
+    const match = disp.match(/filename\*=UTF-8''(.+)/);
+    const filename = match ? decodeURIComponent(match[1]) : fallback;
+
+    // iOS/PWA: обычное скачивание <a download> не работает в standalone-режиме.
+    // На сенсорных устройствах отдаём файл через системный лист «Поделиться»
+    // (там есть «Сохранить в Файлы»). На десктопе — привычное скачивание.
+    const isTouch = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
+    if (isTouch) {
+      try {
+        const file = new File([blob], filename, { type: blob.type || "application/octet-stream" });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const nav = navigator as any;
+        if (nav.canShare && nav.canShare({ files: [file] })) {
+          await nav.share({ files: [file], title: filename });
+          return;
+        }
+      } catch (e) {
+        // Пользователь отменил лист «Поделиться» — не падаем на скачивание
+        if ((e as { name?: string })?.name === "AbortError") return;
+      }
+    }
+
+    // Десктоп (и запасной вариант): обычное скачивание
     const objectUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = objectUrl;
-    const disp = res.headers.get("Content-Disposition") || "";
-    const match = disp.match(/filename\*=UTF-8''(.+)/);
-    a.download = match ? decodeURIComponent(match[1]) : fallback;
+    a.download = filename;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(objectUrl);
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
   }
 
   function toggleMember(id: string) {
