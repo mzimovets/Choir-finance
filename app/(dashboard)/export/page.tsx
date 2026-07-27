@@ -143,7 +143,8 @@ export default function ExportPage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const nav = navigator as any;
         if (nav.canShare && nav.canShare({ files: [file] })) {
-          await nav.share({ files: [file], title: filename });
+          // Без title/text: иначе iOS добавляет отдельный текстовый файл рядом с документом
+          await nav.share({ files: [file] });
           return;
         }
       } catch (e) {

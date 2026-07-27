@@ -101,9 +101,10 @@ export async function GET(req: NextRequest) {
       return s + (att ? att.basePrice + att.bonus - (att.fine || 0) : 0)
     }, 0)
 
-    const W_NUM  = 700
-    const W_NAME = 4500
-    const W_SUM  = 1800
+    // Ширина = полная ширина текста страницы (Letter 12240 DXA − поля 720×2 = 10800)
+    const W_NUM  = 1080
+    const W_NAME = 6940
+    const W_SUM  = 2780
     const W_TOTAL = W_NUM + W_NAME + W_SUM
 
     const mbRows: TableRow[] = [
@@ -167,7 +168,8 @@ export async function GET(req: NextRequest) {
   if (memberIdsParam) {
     const ids = memberIdsParam.split(',').filter(Boolean)
     const grpMembers = members.filter(m => ids.includes(m._id))
-    const W_NG = 700, W_NAG = 4500, W_SG = 1800, W_TG = W_NG + W_NAG + W_SG
+    // Ширина = полная ширина текста страницы (Letter 12240 DXA − поля 720×2 = 10800)
+    const W_NG = 1080, W_NAG = 6940, W_SG = 2780, W_TG = W_NG + W_NAG + W_SG
     const grpMemberTotal = (m: Member) => events.reduce((ss, ev) => { const att = ev.attendances.find(a => a.memberId === m._id); return ss + (att ? att.basePrice + att.bonus - (att.fine || 0) : 0) }, 0)
     const grpTotal = grpMembers.reduce((s, m) => s + grpMemberTotal(m), 0)
     const grpRows: TableRow[] = [
@@ -195,10 +197,11 @@ export async function GET(req: NextRequest) {
   const readerTotal = readers.reduce((s, m) => s + memberTotal(m), 0)
   const grandTotal = singerTotal + readerTotal
 
-  // Ширины колонок в DXA (1440 DXA = 1 дюйм)
-  const W_NUM  = 700   // №
-  const W_NAME = 4500  // ФИО
-  const W_SUM  = 1800  // Итого, руб.
+  // Ширины колонок в DXA (1440 DXA = 1 дюйм).
+  // Сумма = полная ширина текста страницы (Letter 12240 DXA − поля 720×2 = 10800)
+  const W_NUM  = 1080  // №
+  const W_NAME = 6940  // ФИО
+  const W_SUM  = 2780  // Итого, руб.
   const W_TOTAL = W_NUM + W_NAME + W_SUM
 
   const headerShading = 'FFFFFF'
