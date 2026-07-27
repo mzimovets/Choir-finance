@@ -234,7 +234,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-page flex flex-col">
-      <main className="flex-1 pb-nav overflow-auto">{children}</main>
+      {/* Без overflow-auto: у <main> нет ограничения высоты (родитель — min-h-screen,
+          не height), поэтому сам <main> никогда не скроллится — реально скроллит body.
+          Но overflow != visible всё равно делает элемент точкой привязки для
+          потомков с position: sticky, из-за чего они не работали нигде на странице. */}
+      <main className="flex-1 pb-nav">{children}</main>
 
       <nav
         className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none"
