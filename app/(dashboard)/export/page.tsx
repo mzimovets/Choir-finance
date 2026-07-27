@@ -625,7 +625,12 @@ export default function ExportPage() {
                 )}
               </button>
 
-            <div className={isFullscreen ? "flex-1 flex flex-col overflow-hidden" : "warm-card overflow-hidden"}>
+            {/* overflow-clip, а не overflow-hidden: hidden делает элемент "контейнером
+                прокрутки" по спецификации CSS даже если сам он не скроллится (просто
+                обрезает), и sticky-заголовки таблицы начинают привязываться к НЕМУ вместо
+                реального скроллящегося <main> — из-за этого закрепление не работало вовсе.
+                clip визуально обрезает так же, но не создаёт эту скрытую точку привязки. */}
+            <div className={isFullscreen ? "flex-1 flex flex-col overflow-clip" : "warm-card overflow-clip"}>
               {/* ── Табы + Заголовок ── */}
               {(() => {
                 const choirLabel = session?.choirType === 'festive' ? 'ПРАЗДНИЧНОГО' : 'БУДНЕГО';
