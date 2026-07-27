@@ -277,12 +277,16 @@ export default function ExportPage() {
   const headRow1Ref = useRef<HTMLTableRowElement>(null);
   const [headRow1H, setHeadRow1H] = useState(0);
   useLayoutEffect(() => {
-    const measure = () => {
-      if (headRow1Ref.current) setHeadRow1H(headRow1Ref.current.getBoundingClientRect().height);
-    };
+    const el = headRow1Ref.current;
+    if (!el) return;
+    const measure = () => setHeadRow1H(el.getBoundingClientRect().height);
     measure();
+    // ResizeObserver — на случай если высота строки поменяется уже после
+    // первого измерения (шрифт догрузился, перенос текста и т.п.)
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
     window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+    return () => { ro.disconnect(); window.removeEventListener("resize", measure); };
   }, [sortedEvents.length, dateGroups.length, activeDocTab, isFullscreen]);
 
   const totalAmount = events.reduce(
@@ -307,8 +311,11 @@ export default function ExportPage() {
     boxShadow: `inset -1px 0 0 ${C_SEP}`,
   };
 
-  const stickyNumH:  React.CSSProperties = { ...stickyNum,  background: C_HEAD_BG, zIndex: 3 };
-  const stickyNameH: React.CSSProperties = { ...stickyName, background: C_HEAD_BG, zIndex: 3 };
+  // zIndex 4 — выше строк-заголовков (3), которые закреплены только сверху:
+  // угловые ячейки закреплены и сверху, и слева, при горизонтальной прокрутке
+  // должны рисоваться поверх дат/типов выходов, а не под ними.
+  const stickyNumH:  React.CSSProperties = { ...stickyNum,  background: C_HEAD_BG, zIndex: 4 };
+  const stickyNameH: React.CSSProperties = { ...stickyName, background: C_HEAD_BG, zIndex: 4 };
 
   // Закреплённая колонка «Итого» справа
   const stickySum:  React.CSSProperties = { ...stickyBase, right: 0, minWidth: COL_SUM, maxWidth: COL_SUM,

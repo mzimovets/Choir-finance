@@ -28,5 +28,9 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons/|fonts/).*)'],
+  // manifest.json и apple-touch-icon.png — статика, которую iOS запрашивает
+  // при «Добавить на экран Домой» без гарантии передачи сессионной куки.
+  // Если middleware отдаёт им редирект на /login вместо JSON/PNG, PWA
+  // не подхватывает тему/иконку (отсюда чёрная статус-бар полоса).
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons/|fonts/|manifest.json|apple-touch-icon.png).*)'],
 }
