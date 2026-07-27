@@ -705,7 +705,11 @@ export default function ExportPage() {
                 /* ── Табель: выходы по датам ── */
                 <table
                   style={{
-                    borderCollapse: "collapse",
+                    // border-collapse: collapse ломает position:sticky на <th> в Safari/iOS —
+                    // известный баг WebKit. separate + border-spacing:0 даёт тот же визуальный
+                    // результат (ячейки всё так же вплотную), но sticky начинает работать.
+                    borderCollapse: "separate",
+                    borderSpacing: 0,
                     tableLayout: "auto",
                     width: "100%",
                     fontFamily: "'Roboto Slab', serif",
