@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
 
     const mbTotal = events.reduce((s, ev) => {
       const att = ev.attendances.find(a => a.memberId === memberId)
-      return s + (att ? att.basePrice + att.bonus : 0)
+      return s + (att ? att.basePrice + att.bonus - (att.fine || 0) : 0)
     }, 0)
 
     const W_NUM  = 700
@@ -148,7 +148,7 @@ export async function GET(req: NextRequest) {
             children: [new TextRun({ text: `Итоговая ведомость по вознаграждению певчего ${shortName(member.name, member.patronymic)} — ${MONTHS_LOWER[monthNum - 1]} ${year}г.`, bold: true, size: 24, font: 'Calibri' })],
             spacing: { after: 200 },
           }),
-          new Table({ layout: TableLayoutType.FIXED, width: { size: W_TOTAL, type: WidthType.DXA }, alignment: AlignmentType.CENTER, rows: mbRows }),
+          new Table({ layout: TableLayoutType.FIXED, width: { size: W_TOTAL, type: WidthType.DXA }, columnWidths: [W_NUM, W_NAME, W_SUM], alignment: AlignmentType.CENTER, rows: mbRows }),
         ],
       }],
     })
@@ -168,13 +168,14 @@ export async function GET(req: NextRequest) {
     const ids = memberIdsParam.split(',').filter(Boolean)
     const grpMembers = members.filter(m => ids.includes(m._id))
     const W_NG = 700, W_NAG = 4500, W_SG = 1800, W_TG = W_NG + W_NAG + W_SG
-    const grpTotal = grpMembers.reduce((s, m) => s + events.reduce((ss, ev) => { const att = ev.attendances.find(a => a.memberId === m._id); return ss + (att ? att.basePrice + att.bonus : 0) }, 0), 0)
+    const grpMemberTotal = (m: Member) => events.reduce((ss, ev) => { const att = ev.attendances.find(a => a.memberId === m._id); return ss + (att ? att.basePrice + att.bonus - (att.fine || 0) : 0) }, 0)
+    const grpTotal = grpMembers.reduce((s, m) => s + grpMemberTotal(m), 0)
     const grpRows: TableRow[] = [
       new TableRow({ tableHeader: true, height: { value: 320, rule: HeightRule.ATLEAST }, children: [cell('№ п/п', { bold: true, align: AlignmentType.CENTER, width: W_NG }), cell('ФИО', { bold: true, align: AlignmentType.CENTER, width: W_NAG }), cell('Итого, руб.', { bold: true, align: AlignmentType.CENTER, width: W_SG })] }),
-      ...grpMembers.map((m, i) => new TableRow({ height: { value: 280, rule: HeightRule.ATLEAST }, children: [cell(String(i + 1), { align: AlignmentType.CENTER, width: W_NG }), cell(shortName(m.name, m.patronymic), { align: AlignmentType.LEFT, width: W_NAG }), cell(numFmt(events.reduce((ss, ev) => { const att = ev.attendances.find(a => a.memberId === m._id); return ss + (att ? att.basePrice + att.bonus : 0) }, 0)), { align: AlignmentType.RIGHT, width: W_SG })] })),
+      ...grpMembers.map((m, i) => new TableRow({ height: { value: 280, rule: HeightRule.ATLEAST }, children: [cell(String(i + 1), { align: AlignmentType.CENTER, width: W_NG }), cell(shortName(m.name, m.patronymic), { align: AlignmentType.LEFT, width: W_NAG }), cell(numFmt(grpMemberTotal(m)), { align: AlignmentType.RIGHT, width: W_SG })] })),
       new TableRow({ height: { value: 320, rule: HeightRule.ATLEAST }, children: [new TableCell({ columnSpan: 2, shading: { type: ShadingType.SOLID, color: 'D9D9D9' }, borders: allBorders(), margins: CELL_MARGINS, children: [new Paragraph({ alignment: AlignmentType.LEFT, children: [new TextRun({ text: 'Итого:', bold: true, size: 26, font: 'Calibri' })] })] }), cell(numFmt(grpTotal), { bold: true, size: 13, align: AlignmentType.RIGHT, width: W_SG, shading: 'D9D9D9' })] }),
     ]
-    const grpDoc = new Document({ sections: [{ properties: { page: { margin: { top: 720, bottom: 720, left: 720, right: 720 } } }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: titleOverride || `Ведомость — ${MONTHS_LOWER[monthNum - 1]} ${year}г.`, bold: true, size: 24, font: 'Calibri' })], spacing: { after: 200 } }), new Table({ layout: TableLayoutType.FIXED, width: { size: W_TG, type: WidthType.DXA }, alignment: AlignmentType.CENTER, rows: grpRows })] }] })
+    const grpDoc = new Document({ sections: [{ properties: { page: { margin: { top: 720, bottom: 720, left: 720, right: 720 } } }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: titleOverride || `Ведомость — ${MONTHS_LOWER[monthNum - 1]} ${year}г.`, bold: true, size: 24, font: 'Calibri' })], spacing: { after: 200 } }), new Table({ layout: TableLayoutType.FIXED, width: { size: W_TG, type: WidthType.DXA }, columnWidths: [W_NG, W_NAG, W_SG], alignment: AlignmentType.CENTER, rows: grpRows })] }] })
     const grpBuf = await Packer.toBuffer(grpDoc)
     const grpFname = `Ведомость_группа_${MONTHS_LOWER[monthNum - 1]}_${year}.docx`
     return new Response(grpBuf as unknown as BodyInit, { headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(grpFname)}` } })
@@ -184,7 +185,7 @@ export async function GET(req: NextRequest) {
   function memberTotal(member: Member): number {
     return events.reduce((s, ev) => {
       const att = ev.attendances.find((a) => a.memberId === member._id)
-      return s + (att ? (att.basePrice || 0) + (att.bonus || 0) : 0)
+      return s + (att ? (att.basePrice || 0) + (att.bonus || 0) - (att.fine || 0) : 0)
     }, 0)
   }
 
@@ -316,6 +317,7 @@ export async function GET(req: NextRequest) {
   const table = new Table({
     layout: TableLayoutType.FIXED,
     width: { size: W_TOTAL, type: WidthType.DXA },
+    columnWidths: [W_NUM, W_NAME, W_SUM],
     alignment: AlignmentType.CENTER,
     rows,
   })
