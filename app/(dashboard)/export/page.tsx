@@ -875,7 +875,9 @@ export default function ExportPage() {
                           <tbody>
                             <tr>
                               <td colSpan={2 + numEvCols + 1} style={{ background: "#f5ece3", borderTop: "2px solid #d4c0ac", borderBottom: "2px solid #d4c0ac", padding: "4px 8px", textAlign: "left" }}>
-                                <span style={{ fontSize: 10, fontWeight: 700, color: "#7d5e42", textTransform: "uppercase" as const, letterSpacing: "0.1em" }}>Чтец</span>
+                                {/* Ячейка тянется на всю ширину таблицы, поэтому сам текст
+                                    закрепляем у левого края — иначе уезжает при прокрутке вбок */}
+                                <span style={{ position: "sticky", left: 8, display: "inline-block", fontSize: 10, fontWeight: 700, color: "#7d5e42", textTransform: "uppercase" as const, letterSpacing: "0.1em" }}>Чтец</span>
                               </td>
                             </tr>
                             {readers.map((mb, i) => renderRow(mb, singers.length + i))}
