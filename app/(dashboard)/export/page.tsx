@@ -388,7 +388,10 @@ export default function ExportPage() {
           return (
             <th key={ev._id} style={{
               ...thBase, fontSize: 10, color: C_MUTED,
-              verticalAlign: "middle", padding: "2px 8px 5px", whiteSpace: "nowrap",
+              verticalAlign: "middle", padding: "2px 4px 5px",
+              // Колонки фиксированной ширины, поэтому длинные названия переносим,
+              // а не оставляем nowrap — иначе текст вылезал на соседние колонки.
+              whiteSpace: "normal", wordBreak: "break-word", lineHeight: 1.15, hyphens: "auto",
               borderRight: isGroupEnd && idx < sortedEvents.length - 1 ? `1px solid ${C_SEP}` : undefined,
             }}>
               {ev.eventType}
@@ -690,7 +693,7 @@ export default function ExportPage() {
               {/* Закреплённая верхушка: табы, название табеля и шапка таблицы —
                   в одном sticky-слое, поэтому липнут к странице вместе и не
                   требуют вычисления высот друг друга. */}
-              <div style={{ position: "sticky", top: 0, zIndex: 6, background: C_BG }}>
+              <div style={{ position: "sticky", top: 0, zIndex: 6, background: C_BG, flexShrink: 0 }}>
               {/* ── Табы + Заголовок ── */}
               {(() => {
                 const choirLabel = session?.choirType === 'festive' ? 'ПРАЗДНИЧНОГО' : 'БУДНЕГО';
@@ -781,6 +784,10 @@ export default function ExportPage() {
                   overflowY: isFullscreen ? "auto" : undefined,
                   WebkitOverflowScrolling: "touch",
                   flex: 1,
+                  // min-height у flex-элемента по умолчанию auto — он не даёт блоку стать
+                  // меньше содержимого, поэтому в полноэкранном режиме таблица вырастала
+                  // за пределы контейнера и низ обрезался вместо прокрутки.
+                  minHeight: 0,
                 } as React.CSSProperties}
               >
               {activeDocTab === "xlsx" ? (
