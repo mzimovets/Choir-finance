@@ -282,12 +282,20 @@ export default function ExportPage() {
   const scrollWrapRef = useRef<HTMLDivElement>(null);
   const [wrapMaxH, setWrapMaxH] = useState<number | undefined>(undefined);
   useEffect(() => {
-    if (isFullscreen) { setWrapMaxH(undefined); return; }
     const el = scrollWrapRef.current;
     if (!el) return;
+    // Высоту задаём явно в обоих режимах: в полноэкранном полагаться на цепочку
+    // флекс-контейнеров ненадёжно — ограничение высоты по пути терялось и блок
+    // растягивался по содержимому, из-за чего вертикальная прокрутка пропадала.
     const calc = () => {
-      const docTop = el.getBoundingClientRect().top + window.scrollY;
-      setWrapMaxH(Math.max(320, window.innerHeight - docTop - 88)); // 88px — плавающее меню снизу
+      const rect = el.getBoundingClientRect();
+      if (isFullscreen) {
+        // контейнер зафиксирован во весь экран, верх стабилен относительно окна
+        setWrapMaxH(Math.max(240, window.innerHeight - rect.top - 8));
+      } else {
+        const docTop = rect.top + window.scrollY;
+        setWrapMaxH(Math.max(320, window.innerHeight - docTop - 88)); // 88px — плавающее меню снизу
+      }
     };
     calc();
     window.addEventListener("resize", calc);
@@ -781,7 +789,7 @@ export default function ExportPage() {
                   // Прокрутка по обеим осям в одном блоке — можно листать по диагонали,
                   // а шапка едет вбок вместе с телом силами браузера, без отставания.
                   overflow: "auto",
-                  maxHeight: isFullscreen ? undefined : wrapMaxH,
+                  maxHeight: wrapMaxH,
                   // Долистав до края, таблицу нельзя оттянуть дальше — ни вбок, ни вниз.
                   // Именно none: contain лишь запрещает передать жест странице,
                   // но сам резиновый отскок внутри блока оставляет.
