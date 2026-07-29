@@ -290,6 +290,40 @@ export default function ExportPage() {
   }, []);
   const tableScrollsInside = isTouchDevice || isFullscreen;
 
+  /* На компьютере таблицу листает страница, поэтому шапка не может быть внутри
+     блока с горизонтальной прокруткой — она бы держалась за него, а не за
+     страницу. Там шапка живёт отдельным слоем, а её сдвиг вбок повторяем за
+     телом таблицы. На сенсорных устройствах этого слоя нет: шапка лежит внутри
+     общего прокручиваемого блока и едет вместе с телом сама. */
+  const headWrapRef = useRef<HTMLDivElement>(null);
+  const syncRafRef = useRef<number | null>(null);
+  const syncIdleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleBodyScroll() {
+    if (!headWrapRef.current) return;
+    const sync = () => {
+      const body = scrollWrapRef.current;
+      const head = headWrapRef.current;
+      if (body && head && head.scrollLeft !== body.scrollLeft) head.scrollLeft = body.scrollLeft;
+    };
+    // Пока идёт прокрутка — синхронизируем покадрово (события scroll приходят
+    // с задержкой и рывками), через 200 мс тишины останавливаемся.
+    if (syncRafRef.current == null) {
+      const loop = () => { sync(); syncRafRef.current = requestAnimationFrame(loop); };
+      syncRafRef.current = requestAnimationFrame(loop);
+    }
+    if (syncIdleRef.current) clearTimeout(syncIdleRef.current);
+    syncIdleRef.current = setTimeout(() => {
+      if (syncRafRef.current != null) { cancelAnimationFrame(syncRafRef.current); syncRafRef.current = null; }
+      sync();
+    }, 200);
+  }
+
+  useEffect(() => () => {
+    if (syncRafRef.current != null) cancelAnimationFrame(syncRafRef.current);
+    if (syncIdleRef.current) clearTimeout(syncIdleRef.current);
+  }, []);
+
   const [wrapMaxH, setWrapMaxH] = useState<number | undefined>(undefined);
   useEffect(() => {
     if (!tableScrollsInside) { setWrapMaxH(undefined); return; }
@@ -756,7 +790,7 @@ export default function ExportPage() {
                     </div>
                     {/* Название табеля закреплено; табы выше — не липнут.
                         Шапка таблицы закреплена отдельно, внутри самой таблицы. */}
-                    <div style={{ position: tableScrollsInside ? "sticky" : "static", top: 0, zIndex: 7, background: C_BG, flexShrink: 0 }}>
+                    <div style={{ position: "sticky", top: 0, zIndex: 7, background: C_BG, flexShrink: 0 }}>
                     {/* Заголовок */}
                     <div style={{ borderBottom: `1px solid ${C_BORDER}`, padding: "6px 16px", background: C_BG, textTransform: "uppercase" }}>
                       <div
@@ -786,6 +820,16 @@ export default function ExportPage() {
                         {isXlsx ? (exportTitle || defaultXlsxTitle) : (docxTitle || defaultDocxTitle)}
                       </div>
                     </div>
+                    {/* Шапка таблицы для компьютера — в закреплённом слое рядом с названием.
+                        Сдвиг вбок повторяет за телом таблицы (см. handleBodyScroll). */}
+                    {isXlsx && !tableScrollsInside && (
+                      <div ref={headWrapRef} style={{ overflow: "hidden", background: C_HEAD_BG }}>
+                        <table style={xlsxTableStyle}>
+                          {xlsxColgroup}
+                          {xlsxThead}
+                        </table>
+                      </div>
+                    )}
                     </div>
                   </>
                 );
@@ -796,6 +840,7 @@ export default function ExportPage() {
                 ref={scrollWrapRef}
                 onPointerDown={handleTablePointerDown}
                 onPointerUp={handleTablePointerUp}
+                onScroll={handleBodyScroll}
                 style={{
                   // Прокрутка по обеим осям в одном блоке — можно листать по диагонали,
                   // а шапка едет вбок вместе с телом силами браузера, без отставания.
@@ -816,12 +861,15 @@ export default function ExportPage() {
               {activeDocTab === "xlsx" ? (
                 /* ── Табель: выходы по датам ── */
                 <>
-                {/* Шапка — в том же прокручиваемом блоке: вбок едет вместе с телом,
-                    по вертикали держится за счёт sticky. */}
-                <table style={{ ...xlsxTableStyle, position: tableScrollsInside ? "sticky" : "static", top: 0, zIndex: 6 }}>
-                  {xlsxColgroup}
-                  {xlsxThead}
-                </table>
+                {/* На сенсорных устройствах шапка лежит в том же прокручиваемом блоке:
+                    вбок едет вместе с телом сама, по вертикали держится за счёт sticky.
+                    На компьютере она вынесена наверх, в слой рядом с названием. */}
+                {tableScrollsInside && (
+                  <table style={{ ...xlsxTableStyle, position: "sticky", top: 0, zIndex: 6 }}>
+                    {xlsxColgroup}
+                    {xlsxThead}
+                  </table>
+                )}
                 <table style={xlsxTableStyle}>
                   {xlsxColgroup}
                   {(() => {
