@@ -280,8 +280,19 @@ export default function ExportPage() {
      возможность листать по диагонали — вверх/вниз и вбок одновременно.
      Высота блока — до низа экрана, чтобы таблица занимала всё доступное место. */
   const scrollWrapRef = useRef<HTMLDivElement>(null);
+
+  /* На компьютере таблица показывается целиком и листается страница — как было
+     раньше. Прокрутка внутри блока с закреплённой шапкой нужна на сенсорных
+     устройствах, где экран маленький и удобно листать по диагонали. */
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  useEffect(() => {
+    setIsTouchDevice("ontouchstart" in window || navigator.maxTouchPoints > 0);
+  }, []);
+  const tableScrollsInside = isTouchDevice || isFullscreen;
+
   const [wrapMaxH, setWrapMaxH] = useState<number | undefined>(undefined);
   useEffect(() => {
+    if (!tableScrollsInside) { setWrapMaxH(undefined); return; }
     const el = scrollWrapRef.current;
     if (!el) return;
     // Высоту задаём явно в обоих режимах: в полноэкранном полагаться на цепочку
@@ -300,7 +311,7 @@ export default function ExportPage() {
     calc();
     window.addEventListener("resize", calc);
     return () => window.removeEventListener("resize", calc);
-  }, [isFullscreen, activeDocTab, sortedEvents.length, activeMembers.length]);
+  }, [tableScrollsInside, isFullscreen, activeDocTab, sortedEvents.length, activeMembers.length]);
 
   const totalAmount = events.reduce(
     (sum, ev) => sum + ev.attendances.reduce((s, a) => s + a.basePrice + a.bonus - (a.fine || 0), 0),
@@ -745,7 +756,7 @@ export default function ExportPage() {
                     </div>
                     {/* Название табеля закреплено; табы выше — не липнут.
                         Шапка таблицы закреплена отдельно, внутри самой таблицы. */}
-                    <div style={{ position: "sticky", top: 0, zIndex: 7, background: C_BG, flexShrink: 0 }}>
+                    <div style={{ position: tableScrollsInside ? "sticky" : "static", top: 0, zIndex: 7, background: C_BG, flexShrink: 0 }}>
                     {/* Заголовок */}
                     <div style={{ borderBottom: `1px solid ${C_BORDER}`, padding: "6px 16px", background: C_BG, textTransform: "uppercase" }}>
                       <div
@@ -807,7 +818,7 @@ export default function ExportPage() {
                 <>
                 {/* Шапка — в том же прокручиваемом блоке: вбок едет вместе с телом,
                     по вертикали держится за счёт sticky. */}
-                <table style={{ ...xlsxTableStyle, position: "sticky", top: 0, zIndex: 6 }}>
+                <table style={{ ...xlsxTableStyle, position: tableScrollsInside ? "sticky" : "static", top: 0, zIndex: 6 }}>
                   {xlsxColgroup}
                   {xlsxThead}
                 </table>
