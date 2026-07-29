@@ -274,41 +274,25 @@ export default function ExportPage() {
   /* Закреплённые строки заголовка большой таблицы (даты + названия выходов):
      вторая строка должна прилипать сразу под первой, поэтому измеряем её
      реальную высоту (шрифты/паддинги дают неровные пиксельные значения). */
-  // Шапка табеля живёт в отдельном sticky-слое, её горизонтальная прокрутка
-  // синхронизируется с телом таблицы.
-  const headWrapRef = useRef<HTMLDivElement>(null);
+  /* Шапка и тело таблицы лежат в одном прокручиваемом блоке: тогда по горизонтали
+     они едут вместе средствами браузера (без синхронизации из кода, а значит без
+     отставания шапки), а по вертикали шапка держится за счёт sticky. Это же даёт
+     возможность листать по диагонали — вверх/вниз и вбок одновременно.
+     Высота блока — до низа экрана, чтобы таблица занимала всё доступное место. */
   const scrollWrapRef = useRef<HTMLDivElement>(null);
-  const syncRafRef = useRef<number | null>(null);
-  const syncIdleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function syncHeadScroll() {
-    const body = scrollWrapRef.current;
-    const head = headWrapRef.current;
-    if (body && head && head.scrollLeft !== body.scrollLeft) head.scrollLeft = body.scrollLeft;
-  }
-
-  /* Во время инерционной прокрутки iOS присылает события scroll редко и с
-     задержкой — шапка отставала от таблицы. Поэтому пока идёт прокрутка,
-     синхронизируем покадрово, а через 200 мс тишины останавливаемся. */
-  function handleBodyScroll() {
-    if (syncRafRef.current == null) {
-      const loop = () => {
-        syncHeadScroll();
-        syncRafRef.current = requestAnimationFrame(loop);
-      };
-      syncRafRef.current = requestAnimationFrame(loop);
-    }
-    if (syncIdleRef.current) clearTimeout(syncIdleRef.current);
-    syncIdleRef.current = setTimeout(() => {
-      if (syncRafRef.current != null) { cancelAnimationFrame(syncRafRef.current); syncRafRef.current = null; }
-      syncHeadScroll();
-    }, 200);
-  }
-
-  useEffect(() => () => {
-    if (syncRafRef.current != null) cancelAnimationFrame(syncRafRef.current);
-    if (syncIdleRef.current) clearTimeout(syncIdleRef.current);
-  }, []);
+  const [wrapMaxH, setWrapMaxH] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    if (isFullscreen) { setWrapMaxH(undefined); return; }
+    const el = scrollWrapRef.current;
+    if (!el) return;
+    const calc = () => {
+      const docTop = el.getBoundingClientRect().top + window.scrollY;
+      setWrapMaxH(Math.max(320, window.innerHeight - docTop - 88)); // 88px — плавающее меню снизу
+    };
+    calc();
+    window.addEventListener("resize", calc);
+    return () => window.removeEventListener("resize", calc);
+  }, [isFullscreen, activeDocTab, sortedEvents.length, activeMembers.length]);
 
   const totalAmount = events.reduce(
     (sum, ev) => sum + ev.attendances.reduce((s, a) => s + a.basePrice + a.bonus - (a.fine || 0), 0),
@@ -751,10 +735,9 @@ export default function ExportPage() {
                         </button>
                       ))}
                     </div>
-                    {/* Закреплённая верхушка: название табеля и шапка таблицы —
-                        в одном sticky-слое, поэтому липнут вместе и не требуют
-                        вычисления высот друг друга. Табы остались выше, не липнут. */}
-                    <div style={{ position: "sticky", top: 0, zIndex: 6, background: C_BG, flexShrink: 0 }}>
+                    {/* Название табеля закреплено; табы выше — не липнут.
+                        Шапка таблицы закреплена отдельно, внутри самой таблицы. */}
+                    <div style={{ position: "sticky", top: 0, zIndex: 7, background: C_BG, flexShrink: 0 }}>
                     {/* Заголовок */}
                     <div style={{ borderBottom: `1px solid ${C_BORDER}`, padding: "6px 16px", background: C_BG, textTransform: "uppercase" }}>
                       <div
@@ -784,21 +767,6 @@ export default function ExportPage() {
                         {isXlsx ? (exportTitle || defaultXlsxTitle) : (docxTitle || defaultDocxTitle)}
                       </div>
                     </div>
-                    {/* ── Шапка табеля — в том же закреплённом слое ── */}
-                    {activeDocTab === "xlsx" && (
-                      <div
-                        ref={headWrapRef}
-                        style={{
-                          overflow: "hidden",   // сдвигается программно, вслед за телом
-                          background: C_HEAD_BG,
-                        }}
-                      >
-                        <table style={xlsxTableStyle}>
-                          {xlsxColgroup}
-                          {xlsxThead}
-                        </table>
-                      </div>
-                    )}
                     </div>
                   </>
                 );
@@ -809,15 +777,14 @@ export default function ExportPage() {
                 ref={scrollWrapRef}
                 onPointerDown={handleTablePointerDown}
                 onPointerUp={handleTablePointerUp}
-                onScroll={handleBodyScroll}
                 style={{
-                  // Только горизонтальная прокрутка: по вертикали блок не ограничен,
-                  // поэтому листается сама страница. Шапка вынесена наружу и липнет к странице.
-                  overflowX: "auto",
-                  overflowY: isFullscreen ? "auto" : undefined,
+                  // Прокрутка по обеим осям в одном блоке — можно листать по диагонали,
+                  // а шапка едет вбок вместе с телом силами браузера, без отставания.
+                  overflow: "auto",
+                  maxHeight: isFullscreen ? undefined : wrapMaxH,
                   // Долистав до края, таблицу нельзя оттянуть дальше: убирает
                   // резиновый отскок и передачу жеста странице.
-                  overscrollBehaviorX: "none",
+                  overscrollBehavior: "contain",
                   WebkitOverflowScrolling: "touch",
                   flex: 1,
                   // min-height у flex-элемента по умолчанию auto — он не даёт блоку стать
@@ -828,6 +795,13 @@ export default function ExportPage() {
               >
               {activeDocTab === "xlsx" ? (
                 /* ── Табель: выходы по датам ── */
+                <>
+                {/* Шапка — в том же прокручиваемом блоке: вбок едет вместе с телом,
+                    по вертикали держится за счёт sticky. */}
+                <table style={{ ...xlsxTableStyle, position: "sticky", top: 0, zIndex: 6 }}>
+                  {xlsxColgroup}
+                  {xlsxThead}
+                </table>
                 <table style={xlsxTableStyle}>
                   {xlsxColgroup}
                   {(() => {
@@ -911,6 +885,7 @@ export default function ExportPage() {
                     );
                   })()}
                 </table>
+                </>
               ) : (
                 /* ── Ведомость: №, ФИО, Итого ── */
                 <table
