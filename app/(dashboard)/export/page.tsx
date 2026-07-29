@@ -598,6 +598,10 @@ export default function ExportPage() {
               className={isFullscreen ? "fixed inset-0 z-[51] flex flex-col" : "relative mb-4"}
               style={isFullscreen ? { background: "#fdf8f4" } : undefined}
             >
+              {/* Плавающие кнопки — в sticky-слое нулевой высоты (высоты нет, поэтому
+                  на раскладку не влияет). При прокрутке страницы они остаются в поле
+                  зрения, а не уезжают вместе с верхом таблицы. */}
+              <div style={{ position: "sticky", top: 0, zIndex: 20, height: 0 }}>
               {/* Кнопка выбора группы — появляется по тапу, остаётся при активном режиме */}
               <button
                 onClick={() => { setSelectionMode(true); }}
@@ -683,6 +687,7 @@ export default function ExportPage() {
                   </svg>
                 )}
               </button>
+              </div>
 
             {/* overflow-clip, а не overflow-hidden: hidden делает элемент "контейнером
                 прокрутки" по спецификации CSS даже если сам он не скроллится (просто
