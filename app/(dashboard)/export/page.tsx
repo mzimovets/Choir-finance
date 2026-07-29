@@ -275,9 +275,40 @@ export default function ExportPage() {
      вторая строка должна прилипать сразу под первой, поэтому измеряем её
      реальную высоту (шрифты/паддинги дают неровные пиксельные значения). */
   // Шапка табеля живёт в отдельном sticky-слое, её горизонтальная прокрутка
-  // синхронизируется с телом таблицы (см. onScroll ниже).
+  // синхронизируется с телом таблицы.
   const headWrapRef = useRef<HTMLDivElement>(null);
   const scrollWrapRef = useRef<HTMLDivElement>(null);
+  const syncRafRef = useRef<number | null>(null);
+  const syncIdleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function syncHeadScroll() {
+    const body = scrollWrapRef.current;
+    const head = headWrapRef.current;
+    if (body && head && head.scrollLeft !== body.scrollLeft) head.scrollLeft = body.scrollLeft;
+  }
+
+  /* Во время инерционной прокрутки iOS присылает события scroll редко и с
+     задержкой — шапка отставала от таблицы. Поэтому пока идёт прокрутка,
+     синхронизируем покадрово, а через 200 мс тишины останавливаемся. */
+  function handleBodyScroll() {
+    if (syncRafRef.current == null) {
+      const loop = () => {
+        syncHeadScroll();
+        syncRafRef.current = requestAnimationFrame(loop);
+      };
+      syncRafRef.current = requestAnimationFrame(loop);
+    }
+    if (syncIdleRef.current) clearTimeout(syncIdleRef.current);
+    syncIdleRef.current = setTimeout(() => {
+      if (syncRafRef.current != null) { cancelAnimationFrame(syncRafRef.current); syncRafRef.current = null; }
+      syncHeadScroll();
+    }, 200);
+  }
+
+  useEffect(() => () => {
+    if (syncRafRef.current != null) cancelAnimationFrame(syncRafRef.current);
+    if (syncIdleRef.current) clearTimeout(syncIdleRef.current);
+  }, []);
 
   const totalAmount = events.reduce(
     (sum, ev) => sum + ev.attendances.reduce((s, a) => s + a.basePrice + a.bonus - (a.fine || 0), 0),
@@ -695,10 +726,6 @@ export default function ExportPage() {
                 реального скроллящегося <main> — из-за этого закрепление не работало вовсе.
                 clip визуально обрезает так же, но не создаёт эту скрытую точку привязки. */}
             <div className={isFullscreen ? "flex-1 flex flex-col overflow-clip" : "warm-card overflow-clip"}>
-              {/* Закреплённая верхушка: табы, название табеля и шапка таблицы —
-                  в одном sticky-слое, поэтому липнут к странице вместе и не
-                  требуют вычисления высот друг друга. */}
-              <div style={{ position: "sticky", top: 0, zIndex: 6, background: C_BG, flexShrink: 0 }}>
               {/* ── Табы + Заголовок ── */}
               {(() => {
                 const choirLabel = session?.choirType === 'festive' ? 'ПРАЗДНИЧНОГО' : 'БУДНЕГО';
@@ -706,8 +733,8 @@ export default function ExportPage() {
                 const defaultDocxTitle = `ИТОГОВАЯ ВЕДОМОСТЬ ПО ВОЗНАГРАЖДЕНИЮ ${choirLabel} ХОРА ${MONTHS_UPPER[m - 1]} ${y} Г.`;
                 const isXlsx = activeDocTab === "xlsx";
                 return (
-                  <div>
-                    {/* Табы */}
+                  <>
+                    {/* Табы — не закреплены, уезжают при прокрутке */}
                     <div style={{ display: "flex", background: C_HEAD_BG, borderBottom: `1px solid ${C_BORDER}` }}>
                       {([{ id: "xlsx", label: "Табель" }, { id: "docx", label: "Ведомость" }] as const).map(tab => (
                         <button key={tab.id} onClick={() => setActiveDocTab(tab.id)} style={{
@@ -724,6 +751,10 @@ export default function ExportPage() {
                         </button>
                       ))}
                     </div>
+                    {/* Закреплённая верхушка: название табеля и шапка таблицы —
+                        в одном sticky-слое, поэтому липнут вместе и не требуют
+                        вычисления высот друг друга. Табы остались выше, не липнут. */}
+                    <div style={{ position: "sticky", top: 0, zIndex: 6, background: C_BG, flexShrink: 0 }}>
                     {/* Заголовок */}
                     <div style={{ borderBottom: `1px solid ${C_BORDER}`, padding: "6px 16px", background: C_BG, textTransform: "uppercase" }}>
                       <div
@@ -753,35 +784,32 @@ export default function ExportPage() {
                         {isXlsx ? (exportTitle || defaultXlsxTitle) : (docxTitle || defaultDocxTitle)}
                       </div>
                     </div>
-                  </div>
+                    {/* ── Шапка табеля — в том же закреплённом слое ── */}
+                    {activeDocTab === "xlsx" && (
+                      <div
+                        ref={headWrapRef}
+                        style={{
+                          overflow: "hidden",   // сдвигается программно, вслед за телом
+                          background: C_HEAD_BG,
+                        }}
+                      >
+                        <table style={xlsxTableStyle}>
+                          {xlsxColgroup}
+                          {xlsxThead}
+                        </table>
+                      </div>
+                    )}
+                    </div>
+                  </>
                 );
               })()}
-              {/* ── Шапка табеля (внутри общего закреплённого слоя) ── */}
-              {activeDocTab === "xlsx" && (
-                <div
-                  ref={headWrapRef}
-                  style={{
-                    overflow: "hidden",           // прокручивается программно, вслед за телом
-                    background: C_HEAD_BG,
-                  }}
-                >
-                  <table style={xlsxTableStyle}>
-                    {xlsxColgroup}
-                    {xlsxThead}
-                  </table>
-                </div>
-              )}
-              </div>
 
               {/* ── Прокрутка таблицы ── */}
               <div
                 ref={scrollWrapRef}
                 onPointerDown={handleTablePointerDown}
                 onPointerUp={handleTablePointerUp}
-                onScroll={(e) => {
-                  // синхронизируем горизонтальную прокрутку шапки с телом
-                  if (headWrapRef.current) headWrapRef.current.scrollLeft = e.currentTarget.scrollLeft;
-                }}
+                onScroll={handleBodyScroll}
                 style={{
                   // Только горизонтальная прокрутка: по вертикали блок не ограничен,
                   // поэтому листается сама страница. Шапка вынесена наружу и липнет к странице.
