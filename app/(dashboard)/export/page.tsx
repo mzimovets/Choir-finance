@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Spinner } from "@heroui/react";
 import { useSession } from "@/hooks/useSession";
 import { PageHeader } from "@/components/PageHeader";
@@ -274,41 +274,10 @@ export default function ExportPage() {
   /* Закреплённые строки заголовка большой таблицы (даты + названия выходов):
      вторая строка должна прилипать сразу под первой, поэтому измеряем её
      реальную высоту (шрифты/паддинги дают неровные пиксельные значения). */
-  // Ref именно на ячейку с датой, а не на <tr>: в первой строке есть ячейки с
-  // rowSpan=2 (№, Певчий, Итого), из-за них высота <tr> меряется по обеим строкам
-  // сразу — вторая строка прилипала не туда и наезжала на даты.
-  const headRow1Ref = useRef<HTMLTableCellElement>(null);
-  const [headRow1H, setHeadRow1H] = useState(0);
-  useLayoutEffect(() => {
-    const el = headRow1Ref.current;
-    if (!el) return;
-    const measure = () => setHeadRow1H(el.getBoundingClientRect().height);
-    measure();
-    // ResizeObserver — на случай если высота строки поменяется уже после
-    // первого измерения (шрифт догрузился, перенос текста и т.п.)
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    window.addEventListener("resize", measure);
-    return () => { ro.disconnect(); window.removeEventListener("resize", measure); };
-  }, [sortedEvents.length, dateGroups.length, activeDocTab, isFullscreen]);
-
-  /* Высота области таблицы — от её верха до низа экрана. Тогда таблица занимает
-     весь оставшийся экран, страница целиком не прокручивается, и листание внутри
-     таблицы визуально не отличается от листания страницы (но заголовок закреплён). */
+  // Шапка табеля живёт в отдельном sticky-слое, её горизонтальная прокрутка
+  // синхронизируется с телом таблицы (см. onScroll ниже).
+  const headWrapRef = useRef<HTMLDivElement>(null);
   const scrollWrapRef = useRef<HTMLDivElement>(null);
-  const [wrapMaxH, setWrapMaxH] = useState<number | undefined>(undefined);
-  useLayoutEffect(() => {
-    if (isFullscreen) { setWrapMaxH(undefined); return; }
-    const el = scrollWrapRef.current;
-    if (!el) return;
-    const calc = () => {
-      const docTop = el.getBoundingClientRect().top + window.scrollY;
-      setWrapMaxH(Math.max(300, window.innerHeight - docTop - 96)); // 96px — плавающее меню снизу
-    };
-    calc();
-    window.addEventListener("resize", calc);
-    return () => window.removeEventListener("resize", calc);
-  }, [isFullscreen, activeDocTab, sortedEvents.length, activeMembers.length]);
 
   const totalAmount = events.reduce(
     (sum, ev) => sum + ev.attendances.reduce((s, a) => s + a.basePrice + a.bonus - (a.fine || 0), 0),
@@ -363,6 +332,72 @@ export default function ExportPage() {
     borderBottom: `1px solid #e5d9cc`,
     padding: "6px 4px",
   };
+
+  /* ── Табель: шапка вынесена в отдельный слой ──────────────────────────
+     Горизонтальная прокрутка делает свой контейнер точкой привязки и для
+     вертикального sticky, поэтому «закрепить шапку + листать страницу»
+     внутри одной таблицы невозможно. Решение: две таблицы с одинаковой
+     сеткой колонок — шапка в отдельном sticky-слое (липнет к странице),
+     тело в горизонтально прокручиваемом блоке. Прокрутка синхронизируется.
+     Заодно даты и типы выходов теперь всегда едут вместе — они в одном слое. */
+  const xlsxTotalW = COL_NUM + COL_NAME + COL_EVT * sortedEvents.length + COL_SUM;
+  const xlsxTableStyle: React.CSSProperties = {
+    borderCollapse: "separate",
+    borderSpacing: 0,
+    tableLayout: "fixed",   // фиксированная сетка — колонки обеих таблиц совпадают
+    width: "100%",
+    minWidth: xlsxTotalW,
+    fontFamily: "'Roboto Slab', serif",
+  };
+  const xlsxColgroup = (
+    <colgroup>
+      <col style={{ width: COL_NUM }} />
+      <col style={{ width: COL_NAME }} />
+      {sortedEvents.map((ev) => <col key={ev._id} style={{ width: COL_EVT }} />)}
+      <col style={{ width: COL_SUM }} />
+    </colgroup>
+  );
+  const xlsxThead = (
+    <thead>
+      <tr>
+        <th rowSpan={2} style={{ ...thBase, ...stickyNumH, textAlign: "center", verticalAlign: "middle" }}>№</th>
+        <th rowSpan={2} style={{ ...thBase, ...stickyNameH, textAlign: "left", paddingLeft: 8, verticalAlign: "middle" }}>Певчий</th>
+        {dateGroups.map((g, gi) => (
+          <th key={g.date} colSpan={g.count} style={{
+            ...thBase,
+            textAlign: "center", verticalAlign: "middle",
+            fontSize: 16, fontWeight: 700, color: C_TEXT,
+            paddingTop: 7, paddingBottom: 3,
+            borderRight: gi < dateGroups.length - 1 ? `1px solid ${C_SEP}` : undefined,
+          }}>
+            {g.label}
+          </th>
+        ))}
+        <th rowSpan={2} style={{ ...thBase, textAlign: "center", fontWeight: 700, color: C_TEXT, verticalAlign: "middle", borderLeft: `1px solid ${C_SEP}` }}>
+          Итого
+        </th>
+      </tr>
+      <tr>
+        {sortedEvents.map((ev, idx) => {
+          let cumIdx = 0, isGroupEnd = false;
+          for (const g of dateGroups) {
+            cumIdx += g.count;
+            if (idx === cumIdx - 1) { isGroupEnd = true; break; }
+            if (idx < cumIdx) break;
+          }
+          return (
+            <th key={ev._id} style={{
+              ...thBase, fontSize: 10, color: C_MUTED,
+              verticalAlign: "middle", padding: "2px 8px 5px", whiteSpace: "nowrap",
+              borderRight: isGroupEnd && idx < sortedEvents.length - 1 ? `1px solid ${C_SEP}` : undefined,
+            }}>
+              {ev.eventType}
+            </th>
+          );
+        })}
+      </tr>
+    </thead>
+  );
 
   return (
     <div className="max-w-screen-lg mx-auto">
@@ -709,85 +744,45 @@ export default function ExportPage() {
                   </div>
                 );
               })()}
+              {/* ── Закреплённая шапка табеля (липнет к странице при прокрутке) ── */}
+              {activeDocTab === "xlsx" && (
+                <div
+                  ref={headWrapRef}
+                  style={{
+                    position: "sticky", top: 0, zIndex: 5,
+                    overflow: "hidden",           // прокручивается программно, вслед за телом
+                    background: C_HEAD_BG,
+                  }}
+                >
+                  <table style={xlsxTableStyle}>
+                    {xlsxColgroup}
+                    {xlsxThead}
+                  </table>
+                </div>
+              )}
+
               {/* ── Прокрутка таблицы ── */}
               <div
                 ref={scrollWrapRef}
                 onPointerDown={handleTablePointerDown}
                 onPointerUp={handleTablePointerUp}
+                onScroll={(e) => {
+                  // синхронизируем горизонтальную прокрутку шапки с телом
+                  if (headWrapRef.current) headWrapRef.current.scrollLeft = e.currentTarget.scrollLeft;
+                }}
                 style={{
-                  // overflow по обеим осям. Важно: overflowY:"visible" здесь невозможен —
-                  // по спецификации CSS, если одна ось не visible, вторая тоже становится auto.
-                  // То есть этот блок в любом случае контейнер прокрутки, и именно к нему
-                  // привязываются sticky-заголовки. Значит он и должен скроллиться по вертикали:
-                  // иначе (когда высота не ограничена и скроллит страница) sticky не работает вовсе.
-                  overflow: "auto",
-                  maxHeight: isFullscreen ? undefined : wrapMaxH,
+                  // Только горизонтальная прокрутка: по вертикали блок не ограничен,
+                  // поэтому листается сама страница. Шапка вынесена наружу и липнет к странице.
+                  overflowX: "auto",
+                  overflowY: isFullscreen ? "auto" : undefined,
                   WebkitOverflowScrolling: "touch",
                   flex: 1,
                 } as React.CSSProperties}
               >
               {activeDocTab === "xlsx" ? (
                 /* ── Табель: выходы по датам ── */
-                <table
-                  style={{
-                    // border-collapse: collapse ломает position:sticky на <th> в Safari/iOS —
-                    // известный баг WebKit. separate + border-spacing:0 даёт тот же визуальный
-                    // результат (ячейки всё так же вплотную), но sticky начинает работать.
-                    borderCollapse: "separate",
-                    borderSpacing: 0,
-                    tableLayout: "auto",
-                    width: "100%",
-                    fontFamily: "'Roboto Slab', serif",
-                  }}
-                >
-                  <thead>
-                    <tr>
-                      <th rowSpan={2} style={{ ...thBase, ...stickyNumH, top: 0, textAlign: "center", verticalAlign: "middle" }}>
-                        №
-                      </th>
-                      <th rowSpan={2} style={{ ...thBase, ...stickyNameH, top: 0, textAlign: "left", paddingLeft: 8, verticalAlign: "middle" }}>
-                        Певчий
-                      </th>
-                      {dateGroups.map((g, gi) => {
-                        const isLast = gi === dateGroups.length - 1;
-                        return (
-                          <th key={g.date} colSpan={g.count} ref={gi === 0 ? headRow1Ref : undefined} style={{
-                            ...thBase,
-                            position: "sticky", top: 0, zIndex: 3,
-                            textAlign: "center", verticalAlign: "middle",
-                            fontSize: 16, fontWeight: 700, color: C_TEXT,
-                            paddingTop: 7, paddingBottom: 3,
-                            borderRight: !isLast ? `1px solid ${C_SEP}` : undefined,
-                          }}>
-                            {g.label}
-                          </th>
-                        );
-                      })}
-                      <th rowSpan={2} style={{ ...thBase, position: "sticky", top: 0, zIndex: 3, textAlign: "center", fontWeight: 700, color: C_TEXT, verticalAlign: "middle", borderLeft: `1px solid ${C_SEP}` }}>
-                        Итого
-                      </th>
-                    </tr>
-                    <tr style={{ borderBottom: `1px solid #e5d9cc` }}>
-                      {sortedEvents.map((ev, idx) => {
-                        let cumIdx = 0, isGroupEnd = false;
-                        for (const g of dateGroups) {
-                          cumIdx += g.count;
-                          if (idx === cumIdx - 1) { isGroupEnd = true; break; }
-                          if (idx < cumIdx) break;
-                        }
-                        return (
-                          <th key={ev._id} style={{
-                            ...thBase, fontSize: 10, color: C_MUTED,
-                            position: "sticky", top: headRow1H, zIndex: 3,
-                            verticalAlign: "middle", padding: "2px 8px 5px", whiteSpace: "nowrap",
-                            borderRight: isGroupEnd && idx < sortedEvents.length - 1 ? `1px solid ${C_SEP}` : undefined,
-                          }}>
-                            {ev.eventType}
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
+                <table style={xlsxTableStyle}>
+                  {xlsxColgroup}
                   {(() => {
                     const singers = activeMembers.filter(mb => mb.role !== "reader");
                     const readers = activeMembers.filter(mb => mb.role === "reader");
