@@ -782,9 +782,10 @@ export default function ExportPage() {
                   // а шапка едет вбок вместе с телом силами браузера, без отставания.
                   overflow: "auto",
                   maxHeight: isFullscreen ? undefined : wrapMaxH,
-                  // Долистав до края, таблицу нельзя оттянуть дальше: убирает
-                  // резиновый отскок и передачу жеста странице.
-                  overscrollBehavior: "contain",
+                  // Долистав до края, таблицу нельзя оттянуть дальше — ни вбок, ни вниз.
+                  // Именно none: contain лишь запрещает передать жест странице,
+                  // но сам резиновый отскок внутри блока оставляет.
+                  overscrollBehavior: "none",
                   WebkitOverflowScrolling: "touch",
                   flex: 1,
                   // min-height у flex-элемента по умолчанию auto — он не даёт блоку стать
