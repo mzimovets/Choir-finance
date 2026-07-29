@@ -209,10 +209,37 @@ async function downloadMemberPng(
   ctx.fillText(`${stat.total.toLocaleString("ru-RU")} ₽`, W - EDGE - IP, totalCY)
 
   // Download
+  const filename = `${memberShortName} — ${monthLabel}.png`
+  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"))
+  if (!blob) return
+
+  // iOS/PWA: обычное скачивание <a download> в standalone-режиме не срабатывает.
+  // На сенсорных устройствах отдаём картинку через системный лист «Поделиться»
+  // (там есть «Сохранить в Фото» / «Сохранить в Файлы»). На десктопе — как обычно.
+  const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0
+  if (isTouch) {
+    try {
+      const file = new File([blob], filename, { type: "image/png" })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const nav = navigator as any
+      if (nav.canShare && nav.canShare({ files: [file] })) {
+        await nav.share({ files: [file] })
+        return
+      }
+    } catch (e) {
+      // Пользователь закрыл лист «Поделиться» — не подсовываем ему скачивание
+      if ((e as { name?: string })?.name === "AbortError") return
+    }
+  }
+
+  const url = URL.createObjectURL(blob)
   const link = document.createElement("a")
-  link.download = `${memberShortName} — ${monthLabel}.png`
-  link.href = canvas.toDataURL("image/png")
+  link.download = filename
+  link.href = url
+  document.body.appendChild(link)
   link.click()
+  link.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 interface MemberStat {
