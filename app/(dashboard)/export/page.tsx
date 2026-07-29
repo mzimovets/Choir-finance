@@ -815,6 +815,9 @@ export default function ExportPage() {
                   // поэтому листается сама страница. Шапка вынесена наружу и липнет к странице.
                   overflowX: "auto",
                   overflowY: isFullscreen ? "auto" : undefined,
+                  // Долистав до края, таблицу нельзя оттянуть дальше: убирает
+                  // резиновый отскок и передачу жеста странице.
+                  overscrollBehaviorX: "none",
                   WebkitOverflowScrolling: "touch",
                   flex: 1,
                   // min-height у flex-элемента по умолчанию auto — он не даёт блоку стать
