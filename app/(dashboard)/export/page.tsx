@@ -687,6 +687,10 @@ export default function ExportPage() {
                 реального скроллящегося <main> — из-за этого закрепление не работало вовсе.
                 clip визуально обрезает так же, но не создаёт эту скрытую точку привязки. */}
             <div className={isFullscreen ? "flex-1 flex flex-col overflow-clip" : "warm-card overflow-clip"}>
+              {/* Закреплённая верхушка: табы, название табеля и шапка таблицы —
+                  в одном sticky-слое, поэтому липнут к странице вместе и не
+                  требуют вычисления высот друг друга. */}
+              <div style={{ position: "sticky", top: 0, zIndex: 6, background: C_BG }}>
               {/* ── Табы + Заголовок ── */}
               {(() => {
                 const choirLabel = session?.choirType === 'festive' ? 'ПРАЗДНИЧНОГО' : 'БУДНЕГО';
@@ -744,12 +748,11 @@ export default function ExportPage() {
                   </div>
                 );
               })()}
-              {/* ── Закреплённая шапка табеля (липнет к странице при прокрутке) ── */}
+              {/* ── Шапка табеля (внутри общего закреплённого слоя) ── */}
               {activeDocTab === "xlsx" && (
                 <div
                   ref={headWrapRef}
                   style={{
-                    position: "sticky", top: 0, zIndex: 5,
                     overflow: "hidden",           // прокручивается программно, вслед за телом
                     background: C_HEAD_BG,
                   }}
@@ -760,6 +763,7 @@ export default function ExportPage() {
                   </table>
                 </div>
               )}
+              </div>
 
               {/* ── Прокрутка таблицы ── */}
               <div
