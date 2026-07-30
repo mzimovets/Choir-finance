@@ -32,5 +32,5 @@ export const config = {
   // при «Добавить на экран Домой» без гарантии передачи сессионной куки.
   // Если middleware отдаёт им редирект на /login вместо JSON/PNG, PWA
   // не подхватывает тему/иконку (отсюда чёрная статус-бар полоса).
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icons/|fonts/|manifest.json|apple-touch-icon.png).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon|icons/|fonts/|manifest.json|apple-touch-icon.png).*)'],
 }
