@@ -318,8 +318,21 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     if (!isOpen) return
     const vv = window.visualViewport
     if (!vv) return
+    let lastHeight = vv.height
     function onResize() {
-      document.activeElement?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      const shrink = lastHeight - vv!.height
+      lastHeight = vv!.height
+      // Реагируем только на выехавшую клавиатуру. Без этого порога iOS шлёт
+      // resize при каждой мелочи (схлопывание панелей Safari, набор текста),
+      // и страница дёргается на ровном месте.
+      if (shrink < 120) return
+      const el = document.activeElement as HTMLElement | null
+      if (!el || typeof el.getBoundingClientRect !== 'function') return
+      // Уже видно над клавиатурой — не трогаем
+      if (el.getBoundingClientRect().bottom <= vv!.height - 8) return
+      // 'nearest', а не 'center': подтягиваем ровно настолько, чтобы стало
+      // видно, иначе инпут уплывает в середину экрана
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
     vv.addEventListener('resize', onResize)
     return () => vv.removeEventListener('resize', onResize)
@@ -592,10 +605,13 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       ...weekdayRows.filter((r) => r.key !== key && r.memberId).map((r) => r.memberId),
     ].filter(Boolean)
     const results = searchMembers(q, excludeIds)
+    // Список только что раскрылся? Прокручиваем один раз — иначе каждый
+    // набранный символ дёргал бы контейнер и уводил инпут наверх
+    const hadResults = (weekdayRows.find((r) => r.key === key)?.results.length ?? 0) > 0
     setWeekdayRows((prev) => prev.map((r) => r.key === key ? { ...r, search: q, results } : r))
 
-    // Автопрокрутка: инпут к верху скролл-контейнера дравера
-    if (results.length > 0) {
+    // Автопрокрутка: показать список подсказок под инпутом
+    if (results.length > 0 && !hadResults) {
       setTimeout(() => {
         const input = newRowInputRefs.current.get(key)
         if (!input) return
@@ -609,7 +625,11 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         if (!el) return
         const inputTop = input.getBoundingClientRect().top
         const containerTop = el.getBoundingClientRect().top
-        el.scrollBy({ top: inputTop - containerTop - 12, behavior: 'smooth' })
+        const delta = inputTop - containerTop - 12
+        // Мелкие поправки не стоят рывка — и вверх не тянем, пользователь
+        // мог сам прокрутить список
+        if (delta < 24) return
+        el.scrollBy({ top: delta, behavior: 'smooth' })
       }, 60)
     }
   }
