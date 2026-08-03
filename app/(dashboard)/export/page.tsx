@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Spinner } from "@heroui/react";
 import { useSession } from "@/hooks/useSession";
 import { PageHeader } from "@/components/PageHeader";
@@ -43,6 +44,7 @@ const C_ACCENT   = "#7d5e42";
 
 export default function ExportPage() {
   const { session } = useSession();
+  const router = useRouter();
   const [month, setMonth] = useState(monthStr);
   const [events, setEvents] = useState<ChoirEvent[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -171,6 +173,32 @@ export default function ExportPage() {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
   }
+
+  // Переход к выходу в разделе «Табель».
+  // Таблица прокручивается по диагонали, поэтому нажатие засчитываем только
+  // если палец почти не сместился и не задержался — иначе это была прокрутка.
+  const tapRef = useRef<{ x: number; y: number; t: number } | null>(null);
+
+  function handleCellPointerDown(e: React.PointerEvent) {
+    tapRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+  }
+
+  function handleCellPointerUp(e: React.PointerEvent, ev: ChoirEvent) {
+    const start = tapRef.current;
+    tapRef.current = null;
+    if (!start) return;
+    if (selectionMode) return;
+    if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) return;
+    if (Date.now() - start.t > 700) return;
+    router.push(`/day?date=${ev.date}&event=${encodeURIComponent(ev._id)}`);
+  }
+
+  const cellTapProps = (ev: ChoirEvent) => ({
+    onPointerDown: handleCellPointerDown,
+    onPointerUp: (e: React.PointerEvent) => handleCellPointerUp(e, ev),
+    onPointerCancel: () => { tapRef.current = null; },
+    title: "Открыть выход в табеле",
+  });
 
   function toggleMember(id: string) {
     setSelectedIds(prev => {
@@ -915,7 +943,7 @@ export default function ExportPage() {
                             let cumIdx = 0, isGroupEnd = false;
                             for (const g of dateGroups) { cumIdx += g.count; if (idx === cumIdx - 1) { isGroupEnd = true; break; } if (idx < cumIdx) break; }
                             return (
-                              <td key={ev._id} style={{ ...tdBase, position: "relative", overflow: "hidden", background: evenRow ? "#fdf8f4" : C_BG, fontWeight: val ? 600 : 400, color: val ? C_TEXT : "#d4c0ac", fontSize: 12, borderRight: isGroupEnd && idx < sortedEvents.length - 1 ? `1px solid ${C_SEP}` : undefined }}>
+                              <td key={ev._id} {...cellTapProps(ev)} style={{ ...tdBase, position: "relative", overflow: "hidden", background: evenRow ? "#fdf8f4" : C_BG, fontWeight: val ? 600 : 400, color: val ? C_TEXT : "#d4c0ac", fontSize: 12, cursor: selectionMode ? undefined : "pointer", borderRight: isGroupEnd && idx < sortedEvents.length - 1 ? `1px solid ${C_SEP}` : undefined }}>
                                 {fine > 0 && (<span style={{ position: "absolute", top: 10, right: -4, width: "400%", height: 6, background: "#ef4444", transformOrigin: "top right", transform: "rotate(45deg)", zIndex: 1 }}><span style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.25)", filter: "blur(3px)", transform: "rotate(12deg)" }} /></span>)}
                                 {val !== null ? val.toLocaleString("ru-RU") : "—"}
                               </td>
@@ -1153,7 +1181,7 @@ export default function ExportPage() {
                           const val = att ? att.basePrice + att.bonus - mbFine : null;
                           let cumIdx = 0, isGroupEnd = false;
                           for (const g of dateGroups) { cumIdx += g.count; if (idx === cumIdx - 1) { isGroupEnd = true; break; } if (idx < cumIdx) break; }
-                          return <td key={ev._id} style={{ ...tdBase, position: "relative", overflow: "hidden", fontWeight: val ? 600 : 400, color: val ? C_TEXT : "#d4c0ac", fontSize: 12, borderRight: isGroupEnd && idx < mbEvents.length - 1 ? `1px solid ${C_SEP}` : undefined }}>{mbFine > 0 && <span style={{ position: "absolute", top: 10, right: -4, width: "400%", height: 6, background: "#ef4444", transformOrigin: "top right", transform: "rotate(45deg)", zIndex: 1 }}><span style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.25)", filter: "blur(3px)", transform: "rotate(12deg)" }} /></span>}{val !== null ? val.toLocaleString("ru-RU") : "—"}</td>;
+                          return <td key={ev._id} {...cellTapProps(ev)} style={{ ...tdBase, position: "relative", overflow: "hidden", fontWeight: val ? 600 : 400, color: val ? C_TEXT : "#d4c0ac", fontSize: 12, cursor: "pointer", borderRight: isGroupEnd && idx < mbEvents.length - 1 ? `1px solid ${C_SEP}` : undefined }}>{mbFine > 0 &&<span style={{ position: "absolute", top: 10, right: -4, width: "400%", height: 6, background: "#ef4444", transformOrigin: "top right", transform: "rotate(45deg)", zIndex: 1 }}><span style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.25)", filter: "blur(3px)", transform: "rotate(12deg)" }} /></span>}{val !== null ? val.toLocaleString("ru-RU") : "—"}</td>;
                         })}
                         <td style={{ ...tdBase, background: "#f5ece3", fontWeight: 700, fontSize: 12, color: mbTotal > 0 ? C_TEXT : C_MUTED, borderLeft: `1px solid ${C_SEP}`, textAlign: "right", paddingRight: 8 }}>{mbTotal > 0 ? mbTotal.toLocaleString("ru-RU") : "—"}</td>
                       </tr>
@@ -1343,7 +1371,7 @@ export default function ExportPage() {
                               let cumIdx = 0, isGroupEnd = false;
                               for (const g of dateGroups) { cumIdx += g.count; if (idx === cumIdx - 1) { isGroupEnd = true; break; } if (idx < cumIdx) break; }
                               return (
-                                <td key={ev._id} style={{ ...tdBase, background: evenRow ? "#fdf8f4" : C_BG, fontWeight: val ? 600 : 400, color: val ? C_TEXT : "#d4c0ac", fontSize: 12, borderRight: isGroupEnd && idx < sortedEvents.length - 1 ? `1px solid ${C_SEP}` : undefined }}>
+                                <td key={ev._id} {...cellTapProps(ev)} style={{ ...tdBase, background: evenRow ? "#fdf8f4" : C_BG, fontWeight: val ? 600 : 400, color: val ? C_TEXT : "#d4c0ac", fontSize: 12, cursor: "pointer", borderRight: isGroupEnd && idx < sortedEvents.length - 1 ? `1px solid ${C_SEP}` : undefined }}>
                                   {val !== null ? val.toLocaleString("ru-RU") : "—"}
                                 </td>
                               );
