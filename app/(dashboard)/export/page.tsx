@@ -181,9 +181,9 @@ export default function ExportPage() {
   }
 
   async function handleGroupXlsx() {
-    if (selectedIds.size === 0) return;
+    if (snapshotIds.size === 0) return;
     setDlGroupXlsx(true);
-    const ids = Array.from(selectedIds).join(",");
+    const ids = Array.from(snapshotIds).join(",");
     const choirLabel = session?.choirType === 'festive' ? 'ПРАЗДНИЧНОГО' : 'БУДНЕГО';
     const defaultXlsx = `ГРАФИК ПОСЕЩЕНИЯ ПЕВЧИХ ${choirLabel} ХОРА ЗА ${MONTHS_UPPER[m - 1]} ${y} Г.`;
     const title = groupXlsxTitle || defaultXlsx;
@@ -192,9 +192,9 @@ export default function ExportPage() {
   }
 
   async function handleGroupDocx() {
-    if (selectedIds.size === 0) return;
+    if (snapshotIds.size === 0) return;
     setDlGroupDocx(true);
-    const ids = Array.from(selectedIds).join(",");
+    const ids = Array.from(snapshotIds).join(",");
     const choirLabel = session?.choirType === 'festive' ? 'ПРАЗДНИЧНОГО' : 'БУДНЕГО';
     const defaultDocx = `ИТОГОВАЯ ВЕДОМОСТЬ ПЕВЧИХ ${choirLabel} ХОРА ${MONTHS_UPPER[m - 1]} ${y} Г.`;
     const title = groupDocxTitle || defaultDocx;
