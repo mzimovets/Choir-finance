@@ -31,6 +31,10 @@ interface FestiveRow {
   bonus: number
   fine: number
   checked: boolean
+  /** Полная ставка — от неё считается доля выхода */
+  fullPrice: number
+  /** Доля выхода: 1 — целиком, 0.5 — половина */
+  share: number
 }
 
 /* ─── Строка буднего хора (певчий) ─── */
@@ -43,6 +47,8 @@ interface WeekdayRow {
   fine: number
   search: string
   results: Member[]
+  fullPrice: number
+  share: number
 }
 
 /* ─── Состояние регента / чтеца ─── */
@@ -54,10 +60,27 @@ interface SlotState {
   fine: number
   search: string
   results: Member[]
+  fullPrice: number
+  share: number
 }
 
 function emptySlot(): SlotState {
-  return { memberId: '', memberName: '', basePrice: 0, bonus: 0, fine: 0, search: '', results: [] }
+  return { memberId: '', memberName: '', basePrice: 0, bonus: 0, fine: 0, search: '', results: [], fullPrice: 0, share: 1 }
+}
+
+/** Цена с учётом доли выхода */
+function priceForShare(fullPrice: number, share: number): number {
+  return Math.round(fullPrice * share)
+}
+
+/** «½», «⅓», «60%» — как показать долю на бейдже */
+function shareLabel(share: number): string {
+  if (share === 1) return '1'
+  if (Math.abs(share - 0.5) < 0.001) return '\u00bd'
+  if (Math.abs(share - 1 / 3) < 0.005) return '\u2153'
+  if (Math.abs(share - 0.25) < 0.001) return '\u00bc'
+  if (Math.abs(share - 0.75) < 0.001) return '\u00be'
+  return `${Math.round(share * 100)}%`
 }
 
 const ROSTER_CLIPBOARD_KEY = 'cf_roster_clipboard'
@@ -118,7 +141,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   const [weekdayRows, setWeekdayRows] = useState<WeekdayRow[]>([])
 
   // Активное поле нампада: id слота/строки + поле (цена/доплата/штраф)
-  type PriceField = 'basePrice' | 'bonus' | 'fine'
+  // 'share' — доля выхода в процентах, 'allBase' — цена сразу всем певчим
+  type PriceField = 'basePrice' | 'bonus' | 'fine' | 'share'
   const [activeNumpad, setActiveNumpad] = useState<{ id: string; field: PriceField; label: string } | null>(null)
 
   const [discardOpen, setDiscardOpen] = useState(false)
@@ -126,12 +150,12 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   // Снимок формы для определения несохранённых изменений
   const formSnapshot = useRef('')
   const serializeForm = useCallback((): string => {
-    const slot = (s: SlotState) => s.memberId ? [s.memberId, s.basePrice, s.bonus, s.fine] : null
+    const slot = (s: SlotState) => s.memberId ? [s.memberId, s.basePrice, s.bonus, s.fine, s.share] : null
     return JSON.stringify({
       type: eventType, custom: customType.trim(),
       fReg: slot(festiveRegent), reg: slot(regent), rdr: slot(reader),
-      fRows: festiveRows.filter((r) => r.checked).map((r) => [r.memberId, r.basePrice, r.bonus, r.fine]),
-      wRows: weekdayRows.filter((r) => r.memberId).map((r) => [r.memberId, r.basePrice, r.bonus, r.fine]),
+      fRows: festiveRows.filter((r) => r.checked).map((r) => [r.memberId, r.basePrice, r.bonus, r.fine, r.share]),
+      wRows: weekdayRows.filter((r) => r.memberId).map((r) => [r.memberId, r.basePrice, r.bonus, r.fine, r.share]),
     })
   }, [eventType, customType, festiveRegent, regent, reader, festiveRows, weekdayRows])
 
@@ -196,6 +220,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         if (m) setFestiveRegent({
           memberId: m._id, memberName: buildMemberName(m.name, m.patronymic),
           basePrice: getPriceForMember(m, resolvedType), bonus: 0, fine: 0, search: '', results: [],
+          fullPrice: getPriceForMember(m, resolvedType), share: 1,
         })
       }
       const singerIds = new Set(clipboard.items.filter((i) => i.role === 'singer').map((i) => i.memberId))
@@ -203,7 +228,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         if (!singerIds.has(r.memberId)) return r
         const m = byId(r.memberId)
         if (!m) return r
-        return { ...r, checked: true, basePrice: getPriceForMember(m, resolvedType) }
+        const p = getPriceForMember(m, resolvedType)
+        return { ...r, checked: true, basePrice: p, fullPrice: p, share: 1 }
       }))
     } else {
       const reg = clipboard.items.find((i) => i.role === 'regent')
@@ -213,10 +239,12 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       if (regM) setRegent({
         memberId: regM._id, memberName: buildMemberName(regM.name, regM.patronymic),
         basePrice: getPriceForMember(regM, resolvedType, 'regent'), bonus: 0, fine: 0, search: '', results: [],
+        fullPrice: getPriceForMember(regM, resolvedType, 'regent'), share: 1,
       })
       if (rdrM) setReader({
         memberId: rdrM._id, memberName: buildMemberName(rdrM.name, rdrM.patronymic),
         basePrice: getPriceForMember(rdrM, resolvedType, 'reader'), bonus: 0, fine: 0, search: '', results: [],
+        fullPrice: getPriceForMember(rdrM, resolvedType, 'reader'), share: 1,
       })
       const rows: WeekdayRow[] = clipboard.items.filter((i) => i.role === 'singer').flatMap((i) => {
         const m = byId(i.memberId)
@@ -224,6 +252,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         return [{
           key: nextKey(), memberId: m._id, memberName: buildMemberName(m.name, m.patronymic),
           basePrice: getPriceForMember(m, resolvedType, 'singer'), bonus: 0, fine: 0, search: '', results: [],
+          fullPrice: getPriceForMember(m, resolvedType, 'singer'), share: 1,
         }]
       })
       if (rows.length) setWeekdayRows((prev) => {
@@ -301,8 +330,21 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         const readerMember = members.find((m) => m._id === cur.memberId)
         if (!readerMember) return cur
         if (isMemberDisabled(readerMember, rt)) return emptySlot()
-        return { ...cur, basePrice: getPriceForMember(readerMember, rt, 'reader') }
+        const full = getPriceForMember(readerMember, rt, 'reader')
+        return { ...cur, fullPrice: full, basePrice: priceForShare(full, cur.share) }
       })
+    }
+  }
+
+  /** Слот из сохранённой записи: восстанавливаем полную ставку по доле */
+  function slotFromAtt(a: { memberId: string; memberName: string; basePrice: number; bonus: number; fine?: number; share?: number }): SlotState {
+    const share = a.share ?? 1
+    return {
+      memberId: a.memberId, memberName: a.memberName,
+      basePrice: a.basePrice, bonus: a.bonus, fine: a.fine ?? 0,
+      search: '', results: [],
+      fullPrice: share === 1 ? a.basePrice : Math.round(a.basePrice / share),
+      share,
     }
   }
 
@@ -413,10 +455,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
         if (choirType === 'festive') {
           const regentAtt = editingEvent.attendances.find((a) => a.isRegent)
-          setFestiveRegent(regentAtt
-            ? { memberId: regentAtt.memberId, memberName: regentAtt.memberName, basePrice: regentAtt.basePrice, bonus: regentAtt.bonus, fine: regentAtt.fine ?? 0, search: '', results: [] }
-            : emptySlot()
-          )
+          setFestiveRegent(regentAtt ? slotFromAtt(regentAtt) : emptySlot())
         }
 
         if (choirType === 'weekday') {
@@ -427,24 +466,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
             (a) => a !== regentAtt && a !== readerAtt
           )
 
-          setRegent(regentAtt
-            ? { memberId: regentAtt.memberId, memberName: regentAtt.memberName, basePrice: regentAtt.basePrice, bonus: regentAtt.bonus, fine: regentAtt.fine ?? 0, search: '', results: [] }
-            : emptySlot()
-          )
-          setReader(readerAtt
-            ? { memberId: readerAtt.memberId, memberName: readerAtt.memberName, basePrice: readerAtt.basePrice, bonus: readerAtt.bonus, fine: readerAtt.fine ?? 0, search: '', results: [] }
-            : emptySlot()
-          )
-          setWeekdayRows(singerAtts.map((a) => ({
-            key: nextKey(),
-            memberId: a.memberId,
-            memberName: a.memberName,
-            basePrice: a.basePrice,
-            bonus: a.bonus,
-            fine: a.fine ?? 0,
-            search: '',
-            results: [],
-          })))
+          setRegent(regentAtt ? slotFromAtt(regentAtt) : emptySlot())
+          setReader(readerAtt ? slotFromAtt(readerAtt) : emptySlot())
+          setWeekdayRows(singerAtts.map((a) => ({ key: nextKey(), ...slotFromAtt(a) })))
         }
       } else {
         setStep('type')
@@ -460,7 +484,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         if (choirType === 'festive') {
           const defaultRegent = (membersData as Member[]).find((m) => m.role === 'regent')
           setFestiveRegent(defaultRegent
-            ? { memberId: defaultRegent._id, memberName: buildMemberName(defaultRegent.name, defaultRegent.patronymic), basePrice: 0, bonus: 0, fine: 0, search: '', results: [] }
+            ? { memberId: defaultRegent._id, memberName: buildMemberName(defaultRegent.name, defaultRegent.patronymic), basePrice: 0, bonus: 0, fine: 0, search: '', results: [], fullPrice: 0, share: 1 }
             : emptySlot()
           )
         } else {
@@ -472,7 +496,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
           const defaultReader = (membersData as Member[]).find((m) => m.role === 'reader')
           setReader(emptySlot()) // basePrice выставим позже в goToMembers, когда тип будет известен
           if (defaultReader) {
-            setReader({ memberId: defaultReader._id, memberName: buildMemberName(defaultReader.name, defaultReader.patronymic), basePrice: 0, bonus: 0, fine: 0, search: '', results: [] })
+            setReader({ memberId: defaultReader._id, memberName: buildMemberName(defaultReader.name, defaultReader.patronymic), basePrice: 0, bonus: 0, fine: 0, search: '', results: [], fullPrice: 0, share: 1 })
           }
         } else {
           setReader(emptySlot())
@@ -496,6 +520,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         if (isRegentAtt) return null
         const existing = existingAtt.find((a) => a.memberId === m._id || a.memberName === m.name || a.memberName === mName)
         const basePrice = existing?.basePrice ?? getPriceForMember(m, resolvedType)
+        const share = existing?.share ?? 1
         return {
           memberId: m._id,
           memberName: mName,
@@ -503,6 +528,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
           bonus: existing?.bonus ?? 0,
           fine: existing?.fine ?? 0,
           checked: !!existing,
+          fullPrice: share === 1 ? basePrice : Math.round(basePrice / share),
+          share,
         }
       })
       .filter((r): r is FestiveRow => r !== null)
@@ -514,7 +541,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         if (!cur.memberId) return cur
         const regentMember = members.find((m) => m._id === cur.memberId)
         if (!regentMember) return cur
-        return { ...cur, basePrice: getPriceForMember(regentMember, resolvedType) }
+        const full = getPriceForMember(regentMember, resolvedType)
+        return { ...cur, fullPrice: full, basePrice: priceForShare(full, cur.share) }
       })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -528,7 +556,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         const member = members.find((m) => m._id === id)
         const defaultPrice = member ? getPriceForMember(member, resolvedType) : 0
         setFestiveRows((prev) => prev.map((r) =>
-          r.memberId === id ? { ...r, checked: false, basePrice: defaultPrice, bonus: 0, fine: 0 } : r
+          r.memberId === id ? { ...r, checked: false, basePrice: defaultPrice, fullPrice: defaultPrice, share: 1, bonus: 0, fine: 0 } : r
         ))
         return
       }
@@ -583,7 +611,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   function selectRegent(m: Member) {
     const price = getPriceForMember(m, resolvedType, 'regent')
-    setRegent({ memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [] })
+    setRegent({ memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [], fullPrice: price, share: 1 })
   }
 
   function clearRegent() { setRegent(emptySlot()) }
@@ -596,7 +624,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   function selectFestiveRegent(m: Member) {
     const price = getPriceForMember(m, resolvedType)
-    setFestiveRegent({ memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [] })
+    setFestiveRegent({ memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [], fullPrice: price, share: 1 })
   }
 
   /* ── Чтец ── */
@@ -608,7 +636,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   function selectReader(m: Member) {
     const price = getPriceForMember(m, resolvedType, 'reader')   // слот = чтец
-    setReader({ memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [] })
+    setReader({ memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [], fullPrice: price, share: 1 })
   }
 
   function clearReader() { setReader(emptySlot()) }
@@ -628,7 +656,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     // flushSync — рендерим строку синхронно, чтобы инпут появился сразу и focus()
     // остался внутри пользовательского жеста. Иначе iOS не покажет клавиатуру.
     flushSync(() => {
-      setWeekdayRows((prev) => [...prev, { key, memberId: '', memberName: '', basePrice: 0, bonus: 0, fine: 0, search: '', results: [] }])
+      setWeekdayRows((prev) => [...prev, { key, memberId: '', memberName: '', basePrice: 0, bonus: 0, fine: 0, search: '', results: [], fullPrice: 0, share: 1 }])
     })
     newRowInputRefs.current.get(key)?.focus()
   }
@@ -671,7 +699,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     setEmptyError(false)
     setWeekdayRows((prev) =>
       prev.map((r) => r.key === key
-        ? { ...r, memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [] }
+        ? { ...r, memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [], fullPrice: price, share: 1 }
         : r
       )
     )
@@ -694,23 +722,23 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     if (choirType === 'festive') {
       const singerAtts = festiveRows
         .filter((r) => r.checked)
-        .map((r) => ({ memberId: r.memberId, memberName: r.memberName, basePrice: r.basePrice, bonus: r.bonus, ...(r.fine ? { fine: r.fine } : {}) }))
+        .map((r) => ({ memberId: r.memberId, memberName: r.memberName, basePrice: r.basePrice, bonus: r.bonus, ...(r.fine ? { fine: r.fine } : {}), ...(r.share !== 1 ? { share: r.share } : {}) }))
       attendances = [
         ...(festiveRegent.memberId
-          ? [{ memberId: festiveRegent.memberId, memberName: festiveRegent.memberName, basePrice: festiveRegent.basePrice, bonus: festiveRegent.bonus, ...(festiveRegent.fine ? { fine: festiveRegent.fine } : {}), isRegent: true as const }]
+          ? [{ memberId: festiveRegent.memberId, memberName: festiveRegent.memberName, basePrice: festiveRegent.basePrice, bonus: festiveRegent.bonus, ...(festiveRegent.fine ? { fine: festiveRegent.fine } : {}), ...(festiveRegent.share !== 1 ? { share: festiveRegent.share } : {}), isRegent: true as const }]
           : []),
         ...singerAtts,
       ]
     } else {
       const singerAtts = weekdayRows
         .filter((r) => r.memberId)
-        .map((r) => ({ memberId: r.memberId, memberName: r.memberName, basePrice: r.basePrice, bonus: r.bonus, ...(r.fine ? { fine: r.fine } : {}) }))
+        .map((r) => ({ memberId: r.memberId, memberName: r.memberName, basePrice: r.basePrice, bonus: r.bonus, ...(r.fine ? { fine: r.fine } : {}), ...(r.share !== 1 ? { share: r.share } : {}) }))
       attendances = [
         ...(regent.memberId
-          ? [{ memberId: regent.memberId, memberName: regent.memberName, basePrice: regent.basePrice, bonus: regent.bonus, ...(regent.fine ? { fine: regent.fine } : {}), isRegent: true as const }]
+          ? [{ memberId: regent.memberId, memberName: regent.memberName, basePrice: regent.basePrice, bonus: regent.bonus, ...(regent.fine ? { fine: regent.fine } : {}), ...(regent.share !== 1 ? { share: regent.share } : {}), isRegent: true as const }]
           : []),
         ...(reader.memberId
-          ? [{ memberId: reader.memberId, memberName: reader.memberName, basePrice: reader.basePrice, bonus: reader.bonus, ...(reader.fine ? { fine: reader.fine } : {}), isReader: true as const }]
+          ? [{ memberId: reader.memberId, memberName: reader.memberName, basePrice: reader.basePrice, bonus: reader.bonus, ...(reader.fine ? { fine: reader.fine } : {}), ...(reader.share !== 1 ? { share: reader.share } : {}), isReader: true as const }]
           : []),
         ...singerAtts,
       ]
@@ -743,27 +771,90 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     : (regent.memberId ? 1 : 0) + (reader.memberId ? 1 : 0) + weekdayRows.filter((r) => r.memberId).length
 
   /* ─── Нампад: чтение и запись значения активного поля ─── */
-  const FIELD_LABELS: Record<PriceField, string> = { basePrice: 'цена', bonus: 'доплата', fine: 'штраф' }
+  const FIELD_LABELS: Record<PriceField, string> = { basePrice: 'цена', bonus: 'доплата', fine: 'штраф', share: 'доля, %' }
 
   function numpadValue(): number {
     if (!activeNumpad) return 0
     const { id, field } = activeNumpad
-    if (id === 'festiveRegent') return festiveRegent[field]
-    if (id === 'regent') return regent[field]
-    if (id === 'reader') return reader[field]
-    if (id.startsWith('f:')) return festiveRows.find((r) => r.memberId === id.slice(2))?.[field] ?? 0
-    if (id.startsWith('w:')) return weekdayRows.find((r) => r.key === id.slice(2))?.[field] ?? 0
+    // Цена всем — поле общее, стартуем с чистого листа
+    if (id === 'all') return 0
+    const pct = (v: number) => Math.round(v * 100)
+    if (id === 'festiveRegent') return field === 'share' ? pct(festiveRegent.share) : festiveRegent[field]
+    if (id === 'regent') return field === 'share' ? pct(regent.share) : regent[field]
+    if (id === 'reader') return field === 'share' ? pct(reader.share) : reader[field]
+    if (id.startsWith('f:')) {
+      const row = festiveRows.find((r) => r.memberId === id.slice(2))
+      if (!row) return 0
+      return field === 'share' ? pct(row.share) : row[field]
+    }
+    if (id.startsWith('w:')) {
+      const row = weekdayRows.find((r) => r.key === id.slice(2))
+      if (!row) return 0
+      return field === 'share' ? pct(row.share) : row[field]
+    }
     return 0
+  }
+
+  /** Новое состояние слота/строки после правки поля через нампад */
+  function applyField<T extends { basePrice: number; bonus: number; fine: number; fullPrice: number; share: number }>(
+    row: T, field: PriceField, v: number,
+  ): T {
+    if (field === 'share') {
+      // Доля вводится в процентах; 0 или пусто — считаем целым выходом
+      const share = v > 0 ? Math.min(v, 100) / 100 : 1
+      return { ...row, share, basePrice: priceForShare(row.fullPrice, share) }
+    }
+    if (field === 'basePrice') {
+      // Цену вписали руками — это и есть итог, долю больше не применяем
+      return { ...row, basePrice: v, fullPrice: v, share: 1 }
+    }
+    return { ...row, [field]: v }
   }
 
   function applyNumpad(v: number) {
     if (!activeNumpad) return
     const { id, field } = activeNumpad
-    if (id === 'festiveRegent') setFestiveRegent((r) => ({ ...r, [field]: v }))
-    else if (id === 'regent') setRegent((r) => ({ ...r, [field]: v }))
-    else if (id === 'reader') setReader((r) => ({ ...r, [field]: v }))
-    else if (id.startsWith('f:')) updateFestiveRow(id.slice(2), field, v)
-    else if (id.startsWith('w:')) updateSingerRowField(id.slice(2), field, String(v))
+    if (id === 'all') { applyPriceToAll(v); return }
+    if (id === 'festiveRegent') setFestiveRegent((r) => applyField(r, field, v))
+    else if (id === 'regent') setRegent((r) => applyField(r, field, v))
+    else if (id === 'reader') setReader((r) => applyField(r, field, v))
+    else if (id.startsWith('f:')) {
+      const mid = id.slice(2)
+      setFestiveRows((prev) => prev.map((r) => r.memberId === mid ? applyField(r, field, v) : r))
+    } else if (id.startsWith('w:')) {
+      const key = id.slice(2)
+      setWeekdayRows((prev) => prev.map((r) => r.key === key ? applyField(r, field, v) : r))
+    }
+  }
+
+  /** Особая цена на весь выход: ставим её всем певчим, сохраняя их доли */
+  function applyPriceToAll(v: number) {
+    if (choirType === 'weekday') {
+      setWeekdayRows((prev) => prev.map((r) =>
+        r.memberId ? { ...r, fullPrice: v, basePrice: priceForShare(v, r.share) } : r))
+    } else {
+      setFestiveRows((prev) => prev.map((r) =>
+        r.checked ? { ...r, fullPrice: v, basePrice: priceForShare(v, r.share) } : r))
+    }
+  }
+
+  /** Бейдж доли: короткое нажатие — половина/целое, долгое — своя доля */
+  function toggleShare(id: string, name: string) {
+    const flip = <T extends { basePrice: number; fullPrice: number; share: number }>(row: T): T => {
+      const share = row.share === 1 ? 0.5 : 1
+      return { ...row, share, basePrice: priceForShare(row.fullPrice, share) }
+    }
+    if (id === 'festiveRegent') setFestiveRegent(flip)
+    else if (id === 'regent') setRegent(flip)
+    else if (id === 'reader') setReader(flip)
+    else if (id.startsWith('f:')) {
+      const mid = id.slice(2)
+      setFestiveRows((prev) => prev.map((r) => r.memberId === mid ? flip(r) : r))
+    } else if (id.startsWith('w:')) {
+      const key = id.slice(2)
+      setWeekdayRows((prev) => prev.map((r) => r.key === key ? flip(r) : r))
+    }
+    void name
   }
 
   /* ─── JSX переиспользуемые части ─── */
@@ -794,11 +885,80 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     )
   }
 
-  function PriceInputs({ id, name, basePrice, bonus, fine }: {
-    id: string; name: string; basePrice: number; bonus: number; fine: number
+  const sharePressRef = useRef(false)
+  const shareTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  /** Бейдж доли выхода: тап — половина/целое, долгий тап — своя доля */
+  function ShareBadge({ id, name, share }: { id: string; name: string; share: number }) {
+    const isActive = activeNumpad?.id === id && activeNumpad?.field === 'share'
+    const half = share !== 1
+    // Флаги держим в рефах модалки: сам ShareBadge пересоздаётся при каждой
+    // перерисовке, и собственные рефы обнулялись бы прямо во время удержания
+    const longPress = sharePressRef
+    const timer = shareTimerRef
+
+    const openNumpad = () => {
+      longPress.current = true
+      setActiveNumpad({ id, field: 'share', label: `${name} · ${FIELD_LABELS.share}` })
+    }
+
+    return (
+      <div className="flex flex-col items-center">
+        <span className="text-[10px] text-warm-400">доля</span>
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.stopPropagation()
+            longPress.current = false
+            timer.current = setTimeout(openNumpad, 500)
+          }}
+          onPointerUp={(e) => {
+            e.stopPropagation()
+            if (timer.current) clearTimeout(timer.current)
+            if (!longPress.current) toggleShare(id, name)
+          }}
+          onPointerCancel={() => { if (timer.current) clearTimeout(timer.current) }}
+          onClick={(e) => e.stopPropagation()}
+          title="Нажмите — половина выхода, удерживайте — своя доля"
+          className={`rounded-lg px-2 py-1 text-sm font-medium border transition-all ${
+            half ? 'bg-[#f5ece3] border-[#bd9673] text-[#7d5e42]' : 'bg-white border-warm-200 text-warm-300'
+          } ${isActive ? 'ring-2 ring-[#bd9673] border-[#bd9673]' : ''}`}
+          style={{ minWidth: 34 }}
+        >
+          {shareLabel(share)}
+        </button>
+      </div>
+    )
+  }
+
+  /** Особая цена сразу всем певчим этого выхода */
+  function AllPriceButton() {
+    const isActive = activeNumpad?.id === 'all'
+    const has = choirType === 'weekday'
+      ? weekdayRows.some((r) => r.memberId)
+      : festiveRows.some((r) => r.checked)
+    if (!has) return null
+    return (
+      <button
+        type="button"
+        onClick={() => setActiveNumpad(isActive ? null : { id: 'all', field: 'basePrice', label: 'Цена всем певчим' })}
+        className={`text-[11px] font-slab font-semibold rounded-lg px-2 py-1 border transition-all ${
+          isActive
+            ? 'bg-[#f5ece3] border-[#bd9673] text-[#7d5e42] ring-2 ring-[#bd9673]'
+            : 'bg-white border-warm-200 text-warm-600 active:bg-warm-50'
+        }`}
+      >
+        ₽ всем
+      </button>
+    )
+  }
+
+  function PriceInputs({ id, name, basePrice, bonus, fine, share }: {
+    id: string; name: string; basePrice: number; bonus: number; fine: number; share: number
   }) {
     return (
       <div className="flex items-center gap-1.5">
+        <ShareBadge id={id} name={name} share={share} />
         <PriceButton id={id} field="basePrice" name={name} value={basePrice} tone="base" />
         <PriceButton id={id} field="bonus" name={name} value={bonus} tone="bonus" />
         <PriceButton id={id} field="fine" name={name} value={fine} tone="fine" />
@@ -941,7 +1101,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                 <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(festiveRegent.memberName)}</span>
                                 <PriceInputs
                                   id="festiveRegent" name={shortName(festiveRegent.memberName)}
-                                  basePrice={festiveRegent.basePrice} bonus={festiveRegent.bonus} fine={festiveRegent.fine}
+                                  basePrice={festiveRegent.basePrice} bonus={festiveRegent.bonus} fine={festiveRegent.fine} share={festiveRegent.share}
                                 />
                                 <button onClick={() => setFestiveRegent(emptySlot())} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
@@ -974,7 +1134,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                             )}
                           </div>
 
-                          <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide mb-1">Певчие</p>
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide">Певчие</p>
+                            <AllPriceButton />
+                          </div>
 
                           {festiveRows.map((row) => {
                             const isRegent = row.memberId === festiveRegent.memberId && !!festiveRegent.memberId
@@ -1019,7 +1182,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   <div onClick={(e) => e.stopPropagation()}>
                                     <PriceInputs
                                       id={`f:${row.memberId}`} name={shortName(row.memberName)}
-                                      basePrice={row.basePrice} bonus={row.bonus} fine={row.fine}
+                                      basePrice={row.basePrice} bonus={row.bonus} fine={row.fine} share={row.share}
                                     />
                                   </div>
                                 )}
@@ -1041,7 +1204,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                 <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(regent.memberName)}</span>
                                 <PriceInputs
                                   id="regent" name={shortName(regent.memberName)}
-                                  basePrice={regent.basePrice} bonus={regent.bonus} fine={regent.fine}
+                                  basePrice={regent.basePrice} bonus={regent.bonus} fine={regent.fine} share={regent.share}
                                 />
                                 <button onClick={clearRegent} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
@@ -1084,7 +1247,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                 <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(reader.memberName)}</span>
                                 <PriceInputs
                                   id="reader" name={shortName(reader.memberName)}
-                                  basePrice={reader.basePrice} bonus={reader.bonus} fine={reader.fine}
+                                  basePrice={reader.basePrice} bonus={reader.bonus} fine={reader.fine} share={reader.share}
                                 />
                                 <button onClick={clearReader} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
@@ -1122,7 +1285,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                           <div>
                             <div className="flex items-center justify-between mb-2">
                               <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide">Певчие</p>
-                              <span className="text-xs text-warm-400">{weekdayRows.filter((r) => r.memberId).length} чел.</span>
+                              <div className="flex items-center gap-2">
+                                <AllPriceButton />
+                                <span className="text-xs text-warm-400">{weekdayRows.filter((r) => r.memberId).length} чел.</span>
+                              </div>
                             </div>
 
                             <div className="flex flex-col gap-2">
@@ -1133,7 +1299,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                       <span className="flex-1 text-sm text-warm-900 font-medium">{shortName(row.memberName)}</span>
                                       <PriceInputs
                                         id={`w:${row.key}`} name={shortName(row.memberName)}
-                                        basePrice={row.basePrice} bonus={row.bonus} fine={row.fine}
+                                        basePrice={row.basePrice} bonus={row.bonus} fine={row.fine} share={row.share}
                                       />
                                       <button
                                         onClick={() => removeSingerRow(row.key)}

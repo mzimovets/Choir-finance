@@ -54,6 +54,12 @@ export interface Attendance {
   fine?: number
   isRegent?: boolean
   isReader?: boolean
+  /**
+   * Доля выхода: 0.5 — пришёл на половину, 1 (или поле отсутствует) — целиком.
+   * basePrice уже посчитан с учётом доли, поле нужно для пометки в карточке
+   * выхода и чтобы вернуть полную ставку при редактировании.
+   */
+  share?: number
 }
 
 export interface ChoirEvent {

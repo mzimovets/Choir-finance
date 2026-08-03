@@ -65,10 +65,21 @@ function IconGrip() {
   )
 }
 
-function AttRow({ name, price, bonus, fine, badge, highlight }: {
+/** «½», «⅓», «60%» — доля выхода, если человек был не весь выход */
+function shareLabel(share: number): string {
+  if (Math.abs(share - 0.5) < 0.001) return '\u00bd'
+  if (Math.abs(share - 1 / 3) < 0.005) return '\u2153'
+  if (Math.abs(share - 0.25) < 0.001) return '\u00bc'
+  if (Math.abs(share - 0.75) < 0.001) return '\u00be'
+  return `${Math.round(share * 100)}%`
+}
+
+function AttRow({ name, price, bonus, fine, badge, highlight, share }: {
   name: string; price: number; bonus: number; fine?: number; badge?: React.ReactNode
   /** Подсветить строку — переход из «Итогов»/табеля к этому певчему */
   highlight?: boolean
+  /** Доля выхода: меньше 1 — был не весь выход */
+  share?: number
 }) {
   // Итоговая сумма к выплате; цвет — по совокупному эффекту доплат и штрафов
   const adj = (bonus || 0) - (fine || 0)
@@ -83,6 +94,14 @@ function AttRow({ name, price, bonus, fine, badge, highlight }: {
       <div className="flex items-center gap-2">
         {badge}
         <span className="text-sm text-warm-800">{shortName(name)}</span>
+        {share !== undefined && share !== 1 && (
+          <span
+            className="text-[11px] font-slab font-semibold text-[#7d5e42] bg-[#f5ece3] border border-[#e4d3c0] rounded-md px-1.5 leading-5"
+            title="Был не весь выход"
+          >
+            {shareLabel(share)}
+          </span>
+        )}
       </div>
       <span className={`text-sm font-medium tabular-nums ${tone}`} title={hint}>
         {total.toLocaleString('ru-RU')} ₽
@@ -216,6 +235,7 @@ export function EventCard({ event, onEdit, onDelete, defaultExpanded = false, hi
                 price={regent.basePrice}
                 bonus={regent.bonus}
                 fine={regent.fine}
+                share={regent.share}
                 highlight={regent.memberId === highlightMemberId}
               />
             </>
@@ -230,6 +250,7 @@ export function EventCard({ event, onEdit, onDelete, defaultExpanded = false, hi
                 price={reader.basePrice}
                 bonus={reader.bonus}
                 fine={reader.fine}
+                share={reader.share}
                 highlight={reader.memberId === highlightMemberId}
               />
             </>
@@ -240,7 +261,7 @@ export function EventCard({ event, onEdit, onDelete, defaultExpanded = false, hi
             <>
               {hasGroups && <SectionLabel label="Певчие" />}
               {singers.map((a, i) => (
-                <AttRow key={i} name={a.memberName} price={a.basePrice} bonus={a.bonus} fine={a.fine} highlight={a.memberId === highlightMemberId} />
+                <AttRow key={i} name={a.memberName} price={a.basePrice} bonus={a.bonus} fine={a.fine} share={a.share} highlight={a.memberId === highlightMemberId} />
               ))}
             </>
           )}
