@@ -134,8 +134,12 @@ export default function ExportPage() {
     const filename = match ? decodeURIComponent(match[1]) : fallback;
 
     // iOS/PWA: обычное скачивание <a download> не работает в standalone-режиме.
-    // На сенсорных устройствах отдаём файл через системный лист «Поделиться»
-    // (там есть «Сохранить в Файлы»). На десктопе — привычное скачивание.
+    // На сенсорных устройствах пробуем системный лист «Поделиться», а если он
+    // недоступен или не сработал (после await fetch/blob браузер мог посчитать,
+    // что вызов уже не «от пользователя», и молча отказать) — переходим на файл
+    // прямо в этой вкладке: для типов, которые Safari не умеет показывать сам
+    // (xlsx/docx), это надёжно открывает системный лист «Открыть в…», даже
+    // в установленном приложении. На десктопе — привычное скачивание.
     const isTouch = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0);
     if (isTouch) {
       try {
@@ -148,12 +152,16 @@ export default function ExportPage() {
           return;
         }
       } catch (e) {
-        // Пользователь отменил лист «Поделиться» — не падаем на скачивание
+        // Пользователь отменил лист «Поделиться» — не пытаемся скачать следом
         if ((e as { name?: string })?.name === "AbortError") return;
       }
+      const objectUrl = URL.createObjectURL(blob);
+      window.location.href = objectUrl;
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+      return;
     }
 
-    // Десктоп (и запасной вариант): обычное скачивание
+    // Десктоп: обычное скачивание
     const objectUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = objectUrl;

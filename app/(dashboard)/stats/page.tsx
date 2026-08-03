@@ -214,8 +214,11 @@ async function downloadMemberPng(
   if (!blob) return
 
   // iOS/PWA: обычное скачивание <a download> в standalone-режиме не срабатывает.
-  // На сенсорных устройствах отдаём картинку через системный лист «Поделиться»
-  // (там есть «Сохранить в Фото» / «Сохранить в Файлы»). На десктопе — как обычно.
+  // На сенсорных устройствах пробуем системный лист «Поделиться» (там есть
+  // «Сохранить в Фото» / «Сохранить в Файлы»). Если он недоступен или не сработал
+  // (после ожидания canvas.toBlob браузер мог решить, что вызов уже не «от
+  // пользователя», и молча отказать) — переходим на файл прямо в этой вкладке,
+  // это тоже открывает системный лист сохранения даже в установленном приложении.
   const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0
   if (isTouch) {
     try {
@@ -227,9 +230,13 @@ async function downloadMemberPng(
         return
       }
     } catch (e) {
-      // Пользователь закрыл лист «Поделиться» — не подсовываем ему скачивание
+      // Пользователь закрыл лист «Поделиться» — не пытаемся скачать следом
       if ((e as { name?: string })?.name === "AbortError") return
     }
+    const url = URL.createObjectURL(blob)
+    window.location.href = url
+    setTimeout(() => URL.revokeObjectURL(url), 30000)
+    return
   }
 
   const url = URL.createObjectURL(blob)
