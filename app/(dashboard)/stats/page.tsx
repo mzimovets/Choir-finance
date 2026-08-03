@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Drawer,
   DrawerContent,
@@ -253,11 +254,12 @@ interface MemberStat {
   member: Member;
   events: number;
   total: number;
-  rows: { date: string; eventType: string; basePrice: number; bonus: number; fine: number }[];
+  rows: { eventId: string; date: string; eventType: string; basePrice: number; bonus: number; fine: number }[];
 }
 
 export default function StatsPage() {
   const { session } = useSession();
+  const router = useRouter();
   const [month, setMonth] = useState(currentMonthStr);
   const [stats, setStats] = useState<MemberStat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -289,6 +291,7 @@ export default function StatsPage() {
         s.events++;
         s.total += a.basePrice + a.bonus - (a.fine ?? 0);
         s.rows.push({
+          eventId: ev._id,
           date: ev.date,
           eventType: ev.eventType,
           basePrice: a.basePrice,
@@ -318,6 +321,25 @@ export default function StatsPage() {
   function openDetail(s: MemberStat) {
     setSelected(s);
     setDrawerOpen(true);
+  }
+
+  // Переход к выходу в разделе «Табель».
+  // Нажатие засчитываем только если палец почти не сместился и не задержался:
+  // иначе это прокрутка списка или свайп по шторке, а не осознанный тап.
+  const tapRef = useRef<{ x: number; y: number; t: number } | null>(null);
+
+  function handleRowPointerDown(e: React.PointerEvent) {
+    tapRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+  }
+
+  function handleRowPointerUp(e: React.PointerEvent, row: { eventId: string; date: string }) {
+    const start = tapRef.current;
+    tapRef.current = null;
+    if (!start) return;
+    if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) return;
+    if (Date.now() - start.t > 700) return;
+    setDrawerOpen(false);
+    router.push(`/day?date=${row.date}&event=${encodeURIComponent(row.eventId)}`);
   }
 
   const [y, mo] = month.split("-").map(Number);
@@ -611,7 +633,14 @@ export default function StatsPage() {
                         .map((r, i) => {
                           const [, , d] = r.date.split("-").map(Number);
                           return (
-                            <tr key={i}>
+                            <tr
+                              key={i}
+                              onPointerDown={handleRowPointerDown}
+                              onPointerUp={(e) => handleRowPointerUp(e, r)}
+                              onPointerCancel={() => { tapRef.current = null; }}
+                              className="cursor-pointer active:bg-warm-50 transition-colors"
+                              title="Открыть выход в табеле"
+                            >
                               <td className="text-warm-500 text-xs tabular-nums whitespace-nowrap">
                                 {d}{" "}
                                 {MONTHS_RU[mo - 1].toLowerCase().slice(0, 3)}

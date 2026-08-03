@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { ChoirEvent } from '@/lib/types'
@@ -11,6 +11,8 @@ interface Props {
   event: ChoirEvent
   onEdit: () => void
   onDelete: () => void
+  /** Открыть карточку сразу — переход из «Итогов» к конкретному выходу */
+  defaultExpanded?: boolean
 }
 
 function IconArrow({ expanded }: { expanded: boolean }) {
@@ -93,8 +95,20 @@ function SectionLabel({ label }: { label: string }) {
   )
 }
 
-export function EventCard({ event, onEdit, onDelete }: Props) {
-  const [expanded, setExpanded] = useState(false)
+export function EventCard({ event, onEdit, onDelete, defaultExpanded = false }: Props) {
+  const [expanded, setExpanded] = useState(defaultExpanded)
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  // Пришли из «Итогов» — подвести раскрытую карточку к глазам
+  useEffect(() => {
+    if (!defaultExpanded) return
+    setExpanded(true)
+    const t = setTimeout(
+      () => cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+      120,
+    )
+    return () => clearTimeout(t)
+  }, [defaultExpanded])
 
   const {
     attributes, listeners, setNodeRef,
@@ -128,7 +142,11 @@ export function EventCard({ event, onEdit, onDelete }: Props) {
   const hasGroups = isWeekday && (regent || reader)
 
   return (
-    <div ref={setNodeRef} style={style} className="warm-card overflow-hidden">
+    <div
+      ref={(node) => { setNodeRef(node); cardRef.current = node }}
+      style={style}
+      className="warm-card overflow-hidden"
+    >
       {/* Header row */}
       <div className="flex items-center gap-2 p-3.5">
         <button

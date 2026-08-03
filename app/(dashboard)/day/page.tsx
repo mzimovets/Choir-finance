@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Calendar } from '@heroui/react'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { I18nProvider } from '@react-aria/i18n'
@@ -49,9 +50,32 @@ function formatShort(d: string) {
   })
 }
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
 export default function DayPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-page">
+        <LoadingSpinner size="lg" color="#9b7653" />
+      </div>
+    }>
+      <DayPageInner />
+    </Suspense>
+  )
+}
+
+function DayPageInner() {
   const { session, loading: sessionLoading } = useSession()
-  const [date, setDate] = useState(todayStr)
+  const searchParams = useSearchParams()
+  // Переход из «Итогов»: ?date=YYYY-MM-DD&event=<id> — открыть тот день
+  // и сразу раскрыть нужный выход
+  const [date, setDate] = useState(() => {
+    const d = searchParams.get('date')
+    return d && DATE_RE.test(d) ? d : todayStr()
+  })
+  const [expandEventId, setExpandEventId] = useState<string | null>(
+    () => searchParams.get('event'),
+  )
   const [calOpen, setCalOpen] = useState(false)
   const [events, setEvents] = useState<ChoirEvent[]>([])
   const [loading, setLoading] = useState(false)
@@ -78,6 +102,14 @@ export default function DayPage() {
   }, [date])
 
   useEffect(() => { loadEvents() }, [loadEvents])
+
+  // Повторный переход из «Итогов», когда страница уже открыта
+  useEffect(() => {
+    const d = searchParams.get('date')
+    if (d && DATE_RE.test(d)) setDate(d)
+    const ev = searchParams.get('event')
+    if (ev) setExpandEventId(ev)
+  }, [searchParams])
 
   function changeDate(delta: number) {
     const d = new Date(date + 'T00:00:00')
@@ -401,6 +433,7 @@ export default function DayPage() {
                   <EventCard
                     key={ev._id}
                     event={ev}
+                    defaultExpanded={ev._id === expandEventId}
                     onEdit={() => openEdit(ev)}
                     onDelete={() => setDeleteConfirmEvent(ev)}
                   />
