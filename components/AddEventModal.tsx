@@ -322,8 +322,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
      CSS-переменные (см. .kb-aware-wrapper в globals.css). */
   const [vvHeight, setVvHeight] = useState(0)
   const [keyboardOpen, setKeyboardOpen] = useState(false)
-  // ВРЕМЕННО: замеры для диагностики просвета над клавиатурой
-  const [kbDebug, setKbDebug] = useState('')
 
   useEffect(() => {
     if (!isOpen) { setVvHeight(0); setKeyboardOpen(false); return }
@@ -339,22 +337,14 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       if (kbOpen) {
         root.style.setProperty('--kb-top', `${vv!.offsetTop}px`)
         root.style.setProperty('--kb-height', `${vv!.height}px`)
+        // Высота области под видимой частью: клавиатура вместе с системной
+        // панелью ⌃⌄. Панель полупрозрачная, и сквозь неё видно страницу —
+        // поэтому продолжаем под ней фон шторки
+        root.style.setProperty('--kb-gap', `${Math.max(0, window.innerHeight - vv!.height - vv!.offsetTop)}px`)
       } else {
         root.style.removeProperty('--kb-top')
         root.style.removeProperty('--kb-height')
-      }
-
-      // ВРЕМЕННО: снимаем фактические координаты, чтобы понять, откуда просвет
-      if (kbOpen) {
-        const wrap = document.querySelector('.kb-aware-wrapper') as HTMLElement | null
-        const baseEl = wrap?.querySelector('[role="dialog"]') as HTMLElement | null
-        const w = wrap?.getBoundingClientRect()
-        const b = baseEl?.getBoundingClientRect()
-        const r = (n?: number) => (n === undefined ? '?' : Math.round(n))
-        setKbDebug(
-          `ih${r(window.innerHeight)} vh${r(vv!.height)} vtop${r(vv!.offsetTop)} sy${r(window.scrollY)} ` +
-          `w${r(w?.top)}→${r(w?.bottom)} b${r(b?.top)}→${r(b?.bottom)}`,
-        )
+        root.style.removeProperty('--kb-gap')
       }
 
       const shrink = lastHeight - vv!.height
@@ -379,6 +369,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       vv.removeEventListener('scroll', sync)
       root.style.removeProperty('--kb-top')
       root.style.removeProperty('--kb-height')
+      root.style.removeProperty('--kb-gap')
     }
   }, [isOpen])
 
@@ -836,10 +827,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         {(closeDrawer) => (
           <>
             <DrawerHeader className="flex-col gap-0">
-              {/* ВРЕМЕННО: диагностика просвета над клавиатурой */}
-              {keyboardOpen && kbDebug && (
-                <p className="w-full text-[10px] leading-tight text-red-500 font-mono break-all">{kbDebug}</p>
-              )}
               <DrawerHandle onClose={closeDrawer} interceptClose={requestCloseDrawer} />
               <div className="flex items-center gap-2 w-full">
                 {step === 'members' && !editingEvent && (

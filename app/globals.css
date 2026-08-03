@@ -260,3 +260,17 @@ input[type="number"] {
   top: var(--kb-top, 0px) !important;
   height: var(--kb-height, 100dvh) !important;
 }
+/* Системная панель iOS над клавиатурой (⌃ ⌄ ✓) полупрозрачная, и сквозь неё
+   просвечивало содержимое страницы — казалось, что между шторкой и
+   клавиатурой дыра. Продолжаем фон шторки под панель: клавиатура его всё
+   равно закрывает, а сквозь панель теперь виден тот же белый фон. */
+.kb-aware-wrapper::after {
+  content: '';
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: calc(var(--kb-top, 0px) + var(--kb-height, 100dvh));
+  height: var(--kb-gap, 0px);
+  background: #ffffff;
+  pointer-events: none;
+}
