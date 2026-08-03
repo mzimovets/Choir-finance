@@ -246,3 +246,12 @@ input[type="number"] {
   45%  { opacity: 1; }
   100% { transform: scale(1.06); opacity: 1; }
 }
+
+/* Обёртка шторки добавления выхода — точно по видимой области экрана.
+   Пока клавиатура закрыта, переменных нет и работает обычное поведение
+   HeroUI; при открытой клавиатуре JS проставляет их по visualViewport,
+   иначе между шторкой и клавиатурой остаётся просвет. */
+.kb-aware-wrapper {
+  top: var(--kb-top, 0px) !important;
+  height: var(--kb-height, 100dvh) !important;
+}

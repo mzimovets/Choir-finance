@@ -314,25 +314,33 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }
 
   /* ── Подгонка шторки под клавиатуру ──
-     HeroUI задаёт обёртке высоту visual viewport, но она прижата к верху
-     layout viewport, а iOS при фокусе дополнительно сдвигает страницу вверх
-     (visualViewport.offsetTop). На эту величину низ шторки не доставал до
-     клавиатуры — там и зияла дыра со сквозящей страницей. Опускаем шторку
-     на offsetTop и ограничиваем высоту видимой областью. */
-  const [vvOffsetTop, setVvOffsetTop] = useState(0)
+     Обёртку модалки HeroUI прижимает к верху layout viewport, а тот при
+     открытой клавиатуре не совпадает с видимой областью: iOS сдвигает
+     страницу (visualViewport.offsetTop) и урезает высоту. Из-за расхождения
+     низ шторки не доходил до клавиатуры — там и зияла дыра со сквозящей
+     страницей. Прикладываем обёртку ровно к visual viewport через
+     CSS-переменные (см. .kb-aware-wrapper в globals.css). */
   const [vvHeight, setVvHeight] = useState(0)
   const [keyboardOpen, setKeyboardOpen] = useState(false)
 
   useEffect(() => {
-    if (!isOpen) { setVvOffsetTop(0); setVvHeight(0); setKeyboardOpen(false); return }
+    if (!isOpen) { setVvHeight(0); setKeyboardOpen(false); return }
     const vv = window.visualViewport
     if (!vv) return
+    const root = document.documentElement
     let lastHeight = vv.height
     function sync() {
-      setVvOffsetTop(vv!.offsetTop)
       setVvHeight(vv!.height)
       // Клавиатура занимает заметную часть экрана — по этому её и определяем
-      setKeyboardOpen(window.innerHeight - vv!.height > 120)
+      const kbOpen = window.innerHeight - vv!.height > 120
+      setKeyboardOpen(kbOpen)
+      if (kbOpen) {
+        root.style.setProperty('--kb-top', `${vv!.offsetTop}px`)
+        root.style.setProperty('--kb-height', `${vv!.height}px`)
+      } else {
+        root.style.removeProperty('--kb-top')
+        root.style.removeProperty('--kb-height')
+      }
 
       const shrink = lastHeight - vv!.height
       lastHeight = vv!.height
@@ -354,6 +362,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     return () => {
       vv.removeEventListener('resize', sync)
       vv.removeEventListener('scroll', sync)
+      root.style.removeProperty('--kb-top')
+      root.style.removeProperty('--kb-height')
     }
   }, [isOpen])
 
@@ -624,33 +634,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       ...weekdayRows.filter((r) => r.key !== key && r.memberId).map((r) => r.memberId),
     ].filter(Boolean)
     const results = searchMembers(q, excludeIds)
-    // Список только что раскрылся? Прокручиваем один раз — иначе каждый
-    // набранный символ дёргал бы контейнер и уводил инпут наверх
-    const hadResults = (weekdayRows.find((r) => r.key === key)?.results.length ?? 0) > 0
+    // Список подсказок намеренно ничего не прокручивает: любой автоскролл
+    // здесь дёргает экран под пальцами. Список показывается там, где он есть.
     setWeekdayRows((prev) => prev.map((r) => r.key === key ? { ...r, search: q, results } : r))
-
-    // Автопрокрутка: показать список подсказок под инпутом
-    if (results.length > 0 && !hadResults) {
-      setTimeout(() => {
-        const input = newRowInputRefs.current.get(key)
-        if (!input) return
-        // Найти ближайший scrollable-контейнер через getComputedStyle
-        let el: HTMLElement | null = input.parentElement
-        while (el) {
-          const { overflow, overflowY } = getComputedStyle(el)
-          if (/auto|scroll/.test(overflow + overflowY)) break
-          el = el.parentElement
-        }
-        if (!el) return
-        const inputTop = input.getBoundingClientRect().top
-        const containerTop = el.getBoundingClientRect().top
-        const delta = inputTop - containerTop - 12
-        // Мелкие поправки не стоят рывка — и вверх не тянем, пользователь
-        // мог сам прокрутить список
-        if (delta < 24) return
-        el.scrollBy({ top: delta, behavior: 'smooth' })
-      }, 60)
-    }
   }
 
   function selectSingerMember(key: string, m: Member) {
@@ -802,6 +788,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       scrollBehavior="inside"
       isDismissable={!discardOpen}
       classNames={{
+        wrapper: 'kb-aware-wrapper',
         base: 'bg-white rounded-t-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
         header: 'border-b border-warm-200 px-4 pt-2 pb-3 shrink-0',
         body: 'overflow-y-auto px-4 py-4',
@@ -809,9 +796,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         closeButton: 'hidden',
       }}
     >
-      <DrawerContent
-        style={keyboardOpen ? { bottom: -vvOffsetTop, maxHeight: vvHeight } : undefined}
-      >
+      <DrawerContent style={keyboardOpen ? { maxHeight: vvHeight } : undefined}>
         {(closeDrawer) => (
           <>
             <DrawerHeader className="flex-col gap-0">
