@@ -314,14 +314,18 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }
 
   /* ── Скролл к активному инпуту при появлении клавиатуры ── */
+  const [keyboardOpen, setKeyboardOpen] = useState(false)
+
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) { setKeyboardOpen(false); return }
     const vv = window.visualViewport
     if (!vv) return
     let lastHeight = vv.height
     function onResize() {
       const shrink = lastHeight - vv!.height
       lastHeight = vv!.height
+      // Клавиатура занимает заметную часть экрана — по этому и определяем
+      setKeyboardOpen(window.innerHeight - vv!.height > 120)
       // Реагируем только на выехавшую клавиатуру. Без этого порога iOS шлёт
       // resize при каждой мелочи (схлопывание панелей Safari, набор текста),
       // и страница дёргается на ровном месте.
@@ -1185,6 +1189,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
               </div>
             )}
 
+            {/* Пока набирают певчих и открыта клавиатура, кнопки всё равно
+                оказались бы под ней — прячем, чтобы не занимали экран */}
+            {!(keyboardOpen && step === 'members') && (
             <DrawerFooter style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
               {emptyError && step === 'members' && (
                 <p className="w-full text-center text-sm text-red-500 pb-1">
@@ -1219,6 +1226,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                 </button>
               )}
             </DrawerFooter>
+            )}
           </>
         )}
       </DrawerContent>
