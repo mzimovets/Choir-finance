@@ -322,6 +322,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
      CSS-переменные (см. .kb-aware-wrapper в globals.css). */
   const [vvHeight, setVvHeight] = useState(0)
   const [keyboardOpen, setKeyboardOpen] = useState(false)
+  // ВРЕМЕННО: замеры для диагностики просвета над клавиатурой
+  const [kbDebug, setKbDebug] = useState('')
 
   useEffect(() => {
     if (!isOpen) { setVvHeight(0); setKeyboardOpen(false); return }
@@ -340,6 +342,19 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       } else {
         root.style.removeProperty('--kb-top')
         root.style.removeProperty('--kb-height')
+      }
+
+      // ВРЕМЕННО: снимаем фактические координаты, чтобы понять, откуда просвет
+      if (kbOpen) {
+        const wrap = document.querySelector('.kb-aware-wrapper') as HTMLElement | null
+        const baseEl = wrap?.querySelector('[role="dialog"]') as HTMLElement | null
+        const w = wrap?.getBoundingClientRect()
+        const b = baseEl?.getBoundingClientRect()
+        const r = (n?: number) => (n === undefined ? '?' : Math.round(n))
+        setKbDebug(
+          `ih${r(window.innerHeight)} vh${r(vv!.height)} vtop${r(vv!.offsetTop)} sy${r(window.scrollY)} ` +
+          `w${r(w?.top)}→${r(w?.bottom)} b${r(b?.top)}→${r(b?.bottom)}`,
+        )
       }
 
       const shrink = lastHeight - vv!.height
@@ -634,9 +649,30 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       ...weekdayRows.filter((r) => r.key !== key && r.memberId).map((r) => r.memberId),
     ].filter(Boolean)
     const results = searchMembers(q, excludeIds)
-    // Список подсказок намеренно ничего не прокручивает: любой автоскролл
-    // здесь дёргает экран под пальцами. Список показывается там, где он есть.
+    // Прокручиваем один раз — когда список подсказок раскрылся, а не на
+    // каждый набранный символ
+    const hadResults = (weekdayRows.find((r) => r.key === key)?.results.length ?? 0) > 0
     setWeekdayRows((prev) => prev.map((r) => r.key === key ? { ...r, search: q, results } : r))
+
+    if (results.length > 0 && !hadResults) {
+      setTimeout(() => {
+        const input = newRowInputRefs.current.get(key)
+        if (!input) return
+        // Найти ближайший scrollable-контейнер через getComputedStyle
+        let el: HTMLElement | null = input.parentElement
+        while (el) {
+          const { overflow, overflowY } = getComputedStyle(el)
+          if (/auto|scroll/.test(overflow + overflowY)) break
+          el = el.parentElement
+        }
+        if (!el) return
+        const inputTop = input.getBoundingClientRect().top
+        const containerTop = el.getBoundingClientRect().top
+        const delta = inputTop - containerTop - 12
+        if (delta < 24) return
+        el.scrollBy({ top: delta, behavior: 'smooth' })
+      }, 60)
+    }
   }
 
   function selectSingerMember(key: string, m: Member) {
@@ -800,6 +836,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         {(closeDrawer) => (
           <>
             <DrawerHeader className="flex-col gap-0">
+              {/* ВРЕМЕННО: диагностика просвета над клавиатурой */}
+              {keyboardOpen && kbDebug && (
+                <p className="w-full text-[10px] leading-tight text-red-500 font-mono break-all">{kbDebug}</p>
+              )}
               <DrawerHandle onClose={closeDrawer} interceptClose={requestCloseDrawer} />
               <div className="flex items-center gap-2 w-full">
                 {step === 'members' && !editingEvent && (
