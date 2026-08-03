@@ -313,20 +313,30 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     setActiveNumpad(null)
   }
 
-  /* ── Скролл к активному инпуту при появлении клавиатуры ── */
+  /* ── Подгонка шторки под клавиатуру ──
+     HeroUI задаёт обёртке высоту visual viewport, но она прижата к верху
+     layout viewport, а iOS при фокусе дополнительно сдвигает страницу вверх
+     (visualViewport.offsetTop). На эту величину низ шторки не доставал до
+     клавиатуры — там и зияла дыра со сквозящей страницей. Опускаем шторку
+     на offsetTop и ограничиваем высоту видимой областью. */
+  const [vvOffsetTop, setVvOffsetTop] = useState(0)
+  const [vvHeight, setVvHeight] = useState(0)
   const [keyboardOpen, setKeyboardOpen] = useState(false)
 
   useEffect(() => {
-    if (!isOpen) { setKeyboardOpen(false); return }
+    if (!isOpen) { setVvOffsetTop(0); setVvHeight(0); setKeyboardOpen(false); return }
     const vv = window.visualViewport
     if (!vv) return
     let lastHeight = vv.height
-    function onResize() {
+    function sync() {
+      setVvOffsetTop(vv!.offsetTop)
+      setVvHeight(vv!.height)
+      // Клавиатура занимает заметную часть экрана — по этому её и определяем
+      setKeyboardOpen(window.innerHeight - vv!.height > 120)
+
       const shrink = lastHeight - vv!.height
       lastHeight = vv!.height
-      // Клавиатура занимает заметную часть экрана — по этому и определяем
-      setKeyboardOpen(window.innerHeight - vv!.height > 120)
-      // Реагируем только на выехавшую клавиатуру. Без этого порога iOS шлёт
+      // Скроллим только на выехавшую клавиатуру. Без этого порога iOS шлёт
       // resize при каждой мелочи (схлопывание панелей Safari, набор текста),
       // и страница дёргается на ровном месте.
       if (shrink < 120) return
@@ -338,8 +348,13 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       // видно, иначе инпут уплывает в середину экрана
       el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
-    vv.addEventListener('resize', onResize)
-    return () => vv.removeEventListener('resize', onResize)
+    sync()
+    vv.addEventListener('resize', sync)
+    vv.addEventListener('scroll', sync)
+    return () => {
+      vv.removeEventListener('resize', sync)
+      vv.removeEventListener('scroll', sync)
+    }
   }, [isOpen])
 
   /* ── Загрузка данных + инициализация формы ── */
@@ -794,7 +809,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         closeButton: 'hidden',
       }}
     >
-      <DrawerContent>
+      <DrawerContent
+        style={keyboardOpen ? { bottom: -vvOffsetTop, maxHeight: vvHeight } : undefined}
+      >
         {(closeDrawer) => (
           <>
             <DrawerHeader className="flex-col gap-0">
