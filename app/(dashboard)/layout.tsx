@@ -207,33 +207,46 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => document.removeEventListener('visibilitychange', handler)
   }, [])
 
+  // Под экраном PIN страница остаётся смонтированной — не даём её листать
+  useEffect(() => {
+    const lock = pinState === 'locked' || pinState === 'setup' || pinState === 'loading'
+    if (!lock) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [pinState])
+
   const dragStart = useRef<{ x: number; idx: number } | null>(null)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const wasDragging = useRef(false)
 
-  if (pinState === 'loading') {
-    return <div className="fixed inset-0 bg-[#F7F4F1]" />
-  }
-  if (pinState === 'locked') {
-    return (
-      <PinLock
-        onUnlock={() => { markPinVerified(); setPinState('unlocked') }}
-        onForgotPin={async () => {
-          clearPin()
-          await fetch('/api/auth/logout', { method: 'POST' })
-          localStorage.removeItem('cf_session_backup')
-          localStorage.removeItem('cf_pw_hint')
-          router.replace('/login')
-        }}
-      />
-    )
-  }
-  if (pinState === 'setup') {
-    return <PinSetup onDone={() => { markPinVerified(); setPinState('unlocked') }} />
-  }
+  /* Экран PIN — поверх приложения, а не вместо него.
+     Если размонтировать children, то после разблокировки страница соберётся
+     заново: незаполненная форма выхода пропадёт, дата вернётся на сегодня. */
+  const pinOverlay = (
+    <>
+      {pinState === 'loading' && <div className="fixed inset-0 z-[100] bg-[#F7F4F1]" />}
+      {pinState === 'locked' && (
+        <PinLock
+          onUnlock={() => { markPinVerified(); setPinState('unlocked') }}
+          onForgotPin={async () => {
+            clearPin()
+            await fetch('/api/auth/logout', { method: 'POST' })
+            localStorage.removeItem('cf_session_backup')
+            localStorage.removeItem('cf_pw_hint')
+            router.replace('/login')
+          }}
+        />
+      )}
+      {pinState === 'setup' && (
+        <PinSetup onDone={() => { markPinVerified(); setPinState('unlocked') }} />
+      )}
+    </>
+  )
 
   return (
     <div className="min-h-screen bg-page flex flex-col">
+      {pinOverlay}
       {/* Без overflow-auto: у <main> нет ограничения высоты (родитель — min-h-screen,
           не height), поэтому сам <main> никогда не скроллится — реально скроллит body.
           Но overflow != visible всё равно делает элемент точкой привязки для

@@ -217,3 +217,32 @@ input[type="number"] {
   100% { background-color: transparent; }
 }
 .att-row-flash { animation: att-row-flash 1.4s ease-in-out 0.25s 1 both; }
+
+/* Заставка при запуске приложения */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #F7F4F1;
+  /* Только для установленной на главный экран PWA — в обычной вкладке
+     браузера заставка не нужна и не показывается */
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.4s ease;
+}
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .splash { display: flex; }
+}
+.splash-hide { opacity: 0; pointer-events: none; }
+.splash-icon {
+  width: 112px;
+  height: 112px;
+  border-radius: 26px;
+  animation: splash-grow 1.2s cubic-bezier(0.22, 0.68, 0.3, 1) both;
+}
+@keyframes splash-grow {
+  0%   { transform: scale(0.82); opacity: 0; }
+  45%  { opacity: 1; }
+  100% { transform: scale(1.06); opacity: 1; }
+}

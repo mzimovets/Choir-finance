@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { Providers } from './providers'
+import { SplashScreen } from '@/components/SplashScreen'
 
 export const metadata: Metadata = {
   title: 'Хор — Учёт',
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="bg-page min-h-screen">
+        <SplashScreen />
         <Providers>{children}</Providers>
       </body>
     </html>
