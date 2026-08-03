@@ -5,6 +5,8 @@ interface Props {
   value: string
   onChange: (v: string) => void
   onClose: () => void
+  /** Единица измерения рядом с числом: рубли или проценты для доли выхода */
+  unit?: string
 }
 
 function fmt(v: string) {
@@ -12,7 +14,7 @@ function fmt(v: string) {
   return isNaN(n) ? '0' : n.toLocaleString('ru-RU')
 }
 
-export function InlineNumpad({ role, value, onChange, onClose }: Props) {
+export function InlineNumpad({ role, value, onChange, onClose, unit = '₽' }: Props) {
   function raw() { return value.replace(/\D/g, '') || '0' }
 
   function press(d: string) {
@@ -39,7 +41,7 @@ export function InlineNumpad({ role, value, onChange, onClose }: Props) {
         </span>
         <span>
           <span style={{ fontSize: 22, fontWeight: 700, color: '#2c1a0e', fontFamily: "'Roboto Slab', serif" }}>{fmt(value)}</span>
-          <span style={{ fontSize: 14, color: '#b8a08a', marginLeft: 3, fontFamily: "'Roboto Slab', serif" }}> ₽</span>
+          <span style={{ fontSize: 14, color: '#b8a08a', marginLeft: 3, fontFamily: "'Roboto Slab', serif" }}> {unit}</span>
         </span>
       </div>
 

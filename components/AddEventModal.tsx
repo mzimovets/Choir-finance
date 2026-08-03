@@ -271,13 +271,18 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     if (!activeNumpad) return
     const { id } = activeNumpad
     let visible = false
-    if (id === 'festiveRegent') visible = !!festiveRegent.memberId
+    if (id === 'all') {
+      visible = choirType === 'weekday'
+        ? weekdayRows.some((r) => r.memberId)
+        : festiveRows.some((r) => r.checked)
+    }
+    else if (id === 'festiveRegent') visible = !!festiveRegent.memberId
     else if (id === 'regent') visible = !!regent.memberId
     else if (id === 'reader') visible = !!reader.memberId
     else if (id.startsWith('f:')) visible = festiveRows.find((r) => r.memberId === id.slice(2))?.checked ?? false
     else if (id.startsWith('w:')) visible = !!weekdayRows.find((r) => r.key === id.slice(2))?.memberId
     if (!visible) setActiveNumpad(null)
-  }, [activeNumpad, festiveRegent, regent, reader, festiveRows, weekdayRows])
+  }, [activeNumpad, festiveRegent, regent, reader, festiveRows, weekdayRows, choirType])
 
   const resolvedType = eventType === 'Другое' ? customType.trim() : eventType
 
@@ -778,20 +783,12 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     const { id, field } = activeNumpad
     // Цена всем — поле общее, стартуем с чистого листа
     if (id === 'all') return 0
-    const pct = (v: number) => Math.round(v * 100)
-    if (id === 'festiveRegent') return field === 'share' ? pct(festiveRegent.share) : festiveRegent[field]
-    if (id === 'regent') return field === 'share' ? pct(regent.share) : regent[field]
-    if (id === 'reader') return field === 'share' ? pct(reader.share) : reader[field]
-    if (id.startsWith('f:')) {
-      const row = festiveRows.find((r) => r.memberId === id.slice(2))
-      if (!row) return 0
-      return field === 'share' ? pct(row.share) : row[field]
-    }
-    if (id.startsWith('w:')) {
-      const row = weekdayRows.find((r) => r.key === id.slice(2))
-      if (!row) return 0
-      return field === 'share' ? pct(row.share) : row[field]
-    }
+    if (field === 'share') return shareDraft
+    if (id === 'festiveRegent') return festiveRegent[field]
+    if (id === 'regent') return regent[field]
+    if (id === 'reader') return reader[field]
+    if (id.startsWith('f:')) return festiveRows.find((r) => r.memberId === id.slice(2))?.[field] ?? 0
+    if (id.startsWith('w:')) return weekdayRows.find((r) => r.key === id.slice(2))?.[field] ?? 0
     return 0
   }
 
@@ -815,6 +812,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     if (!activeNumpad) return
     const { id, field } = activeNumpad
     if (id === 'all') { applyPriceToAll(v); return }
+    if (field === 'share') {
+      if (v > 100) return   // больше целого выхода не бывает
+      setShareDraft(v)
+    }
     if (id === 'festiveRegent') setFestiveRegent((r) => applyField(r, field, v))
     else if (id === 'regent') setRegent((r) => applyField(r, field, v))
     else if (id === 'reader') setReader((r) => applyField(r, field, v))
@@ -885,6 +886,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     )
   }
 
+  // Доля набирается с чистого листа, а не поверх текущих 100%
+  const [shareDraft, setShareDraft] = useState(0)
   const sharePressRef = useRef(false)
   const shareTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -899,6 +902,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
     const openNumpad = () => {
       longPress.current = true
+      setShareDraft(0)
       setActiveNumpad({ id, field: 'share', label: `${name} · ${FIELD_LABELS.share}` })
     }
 
@@ -948,7 +952,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
             : 'bg-white border-warm-200 text-warm-600 active:bg-warm-50'
         }`}
       >
-        ₽ всем
+        другое
       </button>
     )
   }
@@ -1378,6 +1382,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                 <InlineNumpad
                   role={activeNumpad.label}
                   value={String(numpadValue())}
+                  unit={activeNumpad.field === 'share' ? '%' : '₽'}
                   onChange={(v) => applyNumpad(parseInt(v.replace(/\D/g, '')) || 0)}
                   onClose={() => setActiveNumpad(null)}
                 />
