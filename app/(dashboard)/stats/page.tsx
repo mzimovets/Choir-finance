@@ -339,7 +339,11 @@ export default function StatsPage() {
     if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) return;
     if (Date.now() - start.t > 700) return;
     setDrawerOpen(false);
-    router.push(`/day?date=${row.date}&event=${encodeURIComponent(row.eventId)}`);
+    const mb = selected?.member._id;
+    router.push(
+      `/day?date=${row.date}&event=${encodeURIComponent(row.eventId)}` +
+      (mb ? `&member=${encodeURIComponent(mb)}` : ""),
+    );
   }
 
   const [y, mo] = month.split("-").map(Number);

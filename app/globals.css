@@ -208,3 +208,12 @@ input[type="number"] {
   font-weight: 600;
   font-family: 'Roboto Slab', serif;
 }
+
+/* Переход из «Итогов»/табеля к выходу — один раз мигнуть строкой певчего */
+@keyframes att-row-flash {
+  0%   { background-color: transparent; }
+  25%  { background-color: rgba(239, 68, 68, 0.22); }
+  60%  { background-color: rgba(239, 68, 68, 0.22); }
+  100% { background-color: transparent; }
+}
+.att-row-flash { animation: att-row-flash 1.4s ease-in-out 0.25s 1 both; }

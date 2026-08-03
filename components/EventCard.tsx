@@ -13,6 +13,8 @@ interface Props {
   onDelete: () => void
   /** Открыть карточку сразу — переход из «Итогов» к конкретному выходу */
   defaultExpanded?: boolean
+  /** Мигнуть строкой этого певчего внутри раскрытой карточки */
+  highlightMemberId?: string | null
 }
 
 function IconArrow({ expanded }: { expanded: boolean }) {
@@ -63,8 +65,10 @@ function IconGrip() {
   )
 }
 
-function AttRow({ name, price, bonus, fine, badge }: {
+function AttRow({ name, price, bonus, fine, badge, highlight }: {
   name: string; price: number; bonus: number; fine?: number; badge?: React.ReactNode
+  /** Подсветить строку — переход из «Итогов»/табеля к этому певчему */
+  highlight?: boolean
 }) {
   // Итоговая сумма к выплате; цвет — по совокупному эффекту доплат и штрафов
   const adj = (bonus || 0) - (fine || 0)
@@ -75,7 +79,7 @@ function AttRow({ name, price, bonus, fine, badge }: {
     : undefined
 
   return (
-    <div className="flex items-center justify-between px-4 py-2 border-b border-warm-50 last:border-b-0">
+    <div className={`flex items-center justify-between px-4 py-2 border-b border-warm-50 last:border-b-0${highlight ? ' att-row-flash' : ''}`}>
       <div className="flex items-center gap-2">
         {badge}
         <span className="text-sm text-warm-800">{shortName(name)}</span>
@@ -95,7 +99,7 @@ function SectionLabel({ label }: { label: string }) {
   )
 }
 
-export function EventCard({ event, onEdit, onDelete, defaultExpanded = false }: Props) {
+export function EventCard({ event, onEdit, onDelete, defaultExpanded = false, highlightMemberId = null }: Props) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const cardRef = useRef<HTMLDivElement>(null)
 
@@ -212,6 +216,7 @@ export function EventCard({ event, onEdit, onDelete, defaultExpanded = false }: 
                 price={regent.basePrice}
                 bonus={regent.bonus}
                 fine={regent.fine}
+                highlight={regent.memberId === highlightMemberId}
               />
             </>
           )}
@@ -225,6 +230,7 @@ export function EventCard({ event, onEdit, onDelete, defaultExpanded = false }: 
                 price={reader.basePrice}
                 bonus={reader.bonus}
                 fine={reader.fine}
+                highlight={reader.memberId === highlightMemberId}
               />
             </>
           )}
@@ -234,7 +240,7 @@ export function EventCard({ event, onEdit, onDelete, defaultExpanded = false }: 
             <>
               {hasGroups && <SectionLabel label="Певчие" />}
               {singers.map((a, i) => (
-                <AttRow key={i} name={a.memberName} price={a.basePrice} bonus={a.bonus} fine={a.fine} />
+                <AttRow key={i} name={a.memberName} price={a.basePrice} bonus={a.bonus} fine={a.fine} highlight={a.memberId === highlightMemberId} />
               ))}
             </>
           )}

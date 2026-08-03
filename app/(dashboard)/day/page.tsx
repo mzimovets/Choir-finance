@@ -76,6 +76,9 @@ function DayPageInner() {
   const [expandEventId, setExpandEventId] = useState<string | null>(
     () => searchParams.get('event'),
   )
+  const [highlightMemberId, setHighlightMemberId] = useState<string | null>(
+    () => searchParams.get('member'),
+  )
   const [calOpen, setCalOpen] = useState(false)
   const [events, setEvents] = useState<ChoirEvent[]>([])
   const [loading, setLoading] = useState(false)
@@ -109,6 +112,8 @@ function DayPageInner() {
     if (d && DATE_RE.test(d)) setDate(d)
     const ev = searchParams.get('event')
     if (ev) setExpandEventId(ev)
+    const mb = searchParams.get('member')
+    if (mb) setHighlightMemberId(mb)
   }, [searchParams])
 
   function changeDate(delta: number) {
@@ -434,6 +439,7 @@ function DayPageInner() {
                     key={ev._id}
                     event={ev}
                     defaultExpanded={ev._id === expandEventId}
+                    highlightMemberId={ev._id === expandEventId ? highlightMemberId : null}
                     onEdit={() => openEdit(ev)}
                     onDelete={() => setDeleteConfirmEvent(ev)}
                   />
