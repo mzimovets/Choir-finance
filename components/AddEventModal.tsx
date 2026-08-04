@@ -953,7 +953,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       scrollBehavior="inside"
       isDismissable={!discardOpen}
       classNames={{
-        wrapper: 'kb-aware-wrapper',
+        // Подгонка под клавиатуру нужна только пока она открыта: иначе
+        // застрявшая высота обёртки отрывает шторку от низа экрана
+        wrapper: keyboardOpen ? 'kb-aware-wrapper' : '',
         base: 'bg-white rounded-t-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
         header: 'border-b border-warm-200 px-4 pt-2 pb-3 shrink-0',
         body: 'overflow-y-auto px-4 py-4',
