@@ -1320,10 +1320,10 @@ export default function ExportPage() {
                   <span style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", transition: "all 0.15s" }} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-slab font-semibold text-warm-900">Скрывать без выплат</p>
+                  <p className="text-sm font-slab font-semibold text-warm-900">Отключить нулевые суммы</p>
                   <p className="text-xs text-warm-500 leading-snug mt-0.5">
-                    Певчие с нулём за месяц не попадут в табель и ведомость — ни здесь, ни в
-                    выгрузке. В «Итогах» они остаются. Как только появятся деньги, вернутся сами.
+                    Певчие с нулевой суммой не будут показываться в таблице и в экспортируемом
+                    xlsx файле
                   </p>
                 </div>
               </button>
