@@ -216,6 +216,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => { document.body.style.overflow = prev }
   }, [pinState])
 
+  const [unlockShield, setUnlockShield] = useState(false)
   const dragStart = useRef<{ x: number; idx: number } | null>(null)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const wasDragging = useRef(false)
@@ -225,10 +226,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
      заново: незаполненная форма выхода пропадёт, дата вернётся на сегодня. */
   const pinOverlay = (
     <>
+      {/* Палец ещё не оторван от последней цифры PIN: держим щит, иначе
+          завершение того же тапа проваливается на страницу под замком */}
+      {unlockShield && <div className="fixed inset-0 z-[110]" />}
       {pinState === 'loading' && <div className="fixed inset-0 z-[100] bg-[#F7F4F1]" />}
       {pinState === 'locked' && (
         <PinLock
-          onUnlock={() => { markPinVerified(); setPinState('unlocked') }}
+          onUnlock={() => {
+            markPinVerified()
+            setPinState('unlocked')
+            setUnlockShield(true)
+            setTimeout(() => setUnlockShield(false), 500)
+          }}
           onForgotPin={async () => {
             clearPin()
             await fetch('/api/auth/logout', { method: 'POST' })
