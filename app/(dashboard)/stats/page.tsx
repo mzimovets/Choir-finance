@@ -515,7 +515,7 @@ export default function StatsPage() {
         placement="bottom"
         scrollBehavior="inside"
         classNames={{
-          base: "bg-white rounded-t-2xl max-h-[80dvh] flex flex-col overflow-hidden shadow-[0_-8px_40px_rgba(0,0,0,0.15)]",
+          base: "bg-white rounded-t-2xl max-h-[80dvh] flex flex-col overflow-hidden drawer-sheet",
           header: "border-b border-warm-200 px-4 pt-2 pb-3 shrink-0",
           body: "overflow-y-auto px-0 py-0",
           closeButton: "hidden",

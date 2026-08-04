@@ -6,6 +6,7 @@ import {
 } from 'docx'
 import { getSession } from '@/lib/auth'
 import { db, dbFind } from '@/lib/db'
+import { getSettings } from '@/lib/settings'
 import type { ChoirEvent, Member } from '@/lib/types'
 import { shortName } from '@/lib/nameFormat'
 
@@ -191,8 +192,18 @@ export async function GET(req: NextRequest) {
     }, 0)
   }
 
-  const singers = members.filter(m => m.role !== 'reader')
-  const readers = members.filter(m => m.role === 'reader')
+  // Настройка «скрывать без выплат» — та же, что в табеле
+  const settings = await getSettings(session.choirType)
+  const monthTotal = (mid: string) => events.reduce((sum, ev) => {
+    const att = ev.attendances.find(a => a.memberId === mid)
+    return sum + (att ? (att.basePrice || 0) + (att.bonus || 0) - (att.fine || 0) : 0)
+  }, 0)
+  const listedMembers = settings.hideZeroMembers
+    ? members.filter(m => monthTotal(m._id) !== 0)
+    : members
+
+  const singers = listedMembers.filter(m => m.role !== 'reader')
+  const readers = listedMembers.filter(m => m.role === 'reader')
   const singerTotal = singers.reduce((s, m) => s + memberTotal(m), 0)
   const readerTotal = readers.reduce((s, m) => s + memberTotal(m), 0)
   const grandTotal = singerTotal + readerTotal

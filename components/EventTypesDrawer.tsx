@@ -243,7 +243,7 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
            HeroUI игнорирует shouldCloseOnInteractOutside, поэтому используем isDismissable */
         isDismissable={!deleteTarget && !discardOpen}
         classNames={{
-          base: 'bg-white rounded-t-2xl shadow-[0_-8px_40px_rgba(0,0,0,0.15)]',
+          base: 'bg-white rounded-t-2xl drawer-sheet',
           header: 'bg-white border-b border-warm-200 px-4 pt-2 pb-3',
           body: 'px-0 py-0',
           footer: 'bg-white border-t border-warm-200 px-4 py-3',

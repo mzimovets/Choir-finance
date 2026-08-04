@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import ExcelJS from 'exceljs'
 import { getSession } from '@/lib/auth'
 import { db, dbFind } from '@/lib/db'
+import { getSettings } from '@/lib/settings'
 import type { ChoirEvent, Member } from '@/lib/types'
 import { shortName } from '@/lib/nameFormat'
 
@@ -86,6 +87,17 @@ export async function GET(req: NextRequest) {
     return a.createdAt.localeCompare(b.createdAt)
   })
   members.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+
+  // Настройка «скрывать без выплат»: убираем из табеля тех, у кого за месяц
+  // не набралось ни рубля. Появятся деньги — вернутся сами.
+  const settings = await getSettings(session.choirType)
+  const monthTotal = (memberId2: string) => events.reduce((sum, ev) => {
+    const att = ev.attendances.find(a => a.memberId === memberId2)
+    return sum + (att ? (att.basePrice || 0) + (att.bonus || 0) - (att.fine || 0) : 0)
+  }, 0)
+  const listedMembers = settings.hideZeroMembers
+    ? members.filter(m => monthTotal(m._id) !== 0)
+    : members
 
   // Персональный табель для одного певчего — тот же формат, что основной
   if (memberId) {
@@ -397,8 +409,8 @@ export async function GET(req: NextRequest) {
   }
 
   // ── Singer rows (start at row 5) ─────────────────────────────
-  const singers = members.filter(m => m.role !== 'reader')
-  const readers = members.filter(m => m.role === 'reader')
+  const singers = listedMembers.filter(m => m.role !== 'reader')
+  const readers = listedMembers.filter(m => m.role === 'reader')
   const memberTabRow = new Map<string, number>()
   const fineFillWs1: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE4EC' } }
   const sumColLetter = ws1.getColumn(sumColNum).letter

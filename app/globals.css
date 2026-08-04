@@ -274,3 +274,11 @@ input[type="number"] {
   background: #ffffff;
   pointer-events: none;
 }
+
+/* Тень над шторкой. Safari после анимации входа иногда перестаёт
+   перерисовывать box-shadow, и край шторки сливается со страницей —
+   поэтому дублируем разделение тонкой линией, которая видна всегда. */
+.drawer-sheet {
+  box-shadow: 0 -10px 34px rgba(44, 26, 14, 0.18);
+  border-top: 1px solid rgba(44, 26, 14, 0.08);
+}
