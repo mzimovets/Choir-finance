@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { Providers } from './providers'
 import { SplashScreen } from '@/components/SplashScreen'
-import { RotateNotice } from '@/components/RotateNotice'
+import { OrientationLock } from '@/components/OrientationLock'
 
 export const metadata: Metadata = {
   title: 'Табель',
@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-page min-h-screen">
         <SplashScreen />
-        <RotateNotice />
+        <OrientationLock />
         <Providers>{children}</Providers>
       </body>
     </html>
