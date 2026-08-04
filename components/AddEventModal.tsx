@@ -424,7 +424,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   useEffect(() => {
     if (!isOpen) return
     setActiveNumpad(null)
-    scrolledRowsRef.current.clear()
     setCopyDone(false)
     setPasteDone(false)
     // Загрузим скопированный список, чтобы показать кнопку «Вставить»
@@ -650,8 +649,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   /* ── Будние певчие ── */
   const regentInputRef = useRef<HTMLInputElement>(null)
   const newRowInputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
-  /** Строки, к которым уже подтягивали список подсказок */
-  const scrolledRowsRef = useRef<Set<string>>(new Set())
 
   function addSingerRow() {
     // Не плодим пустые строки: если незаполненная уже есть — просто ставим в неё курсор
@@ -676,31 +673,36 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       ...weekdayRows.filter((r) => r.key !== key && r.memberId).map((r) => r.memberId),
     ].filter(Boolean)
     const results = searchMembers(q, excludeIds)
-    // Прокручиваем один раз на строку: список раскрывается заново при каждом
-    // стирании и повторном вводе, и подтягивание превращалось в дёрганье
-    const hadResults = scrolledRowsRef.current.has(key)
     setWeekdayRows((prev) => prev.map((r) => r.key === key ? { ...r, search: q, results } : r))
 
-    if (results.length > 0 && !hadResults) {
-      scrolledRowsRef.current.add(key)
-      setTimeout(() => {
-        const input = newRowInputRefs.current.get(key)
-        if (!input) return
-        // Найти ближайший scrollable-контейнер через getComputedStyle
-        let el: HTMLElement | null = input.parentElement
-        while (el) {
-          const { overflow, overflowY } = getComputedStyle(el)
-          if (/auto|scroll/.test(overflow + overflowY)) break
-          el = el.parentElement
-        }
-        if (!el) return
-        const inputTop = input.getBoundingClientRect().top
-        const containerTop = el.getBoundingClientRect().top
-        const delta = inputTop - containerTop - 12
-        if (delta < 24) return
-        el.scrollBy({ top: delta, behavior: 'smooth' })
-      }, 60)
-    }
+    // Подтягиваем список, только если он не влезает на экран, и ровно на
+    // столько, сколько не хватает. Когда список и так виден целиком —
+    // ничего не двигаем, иначе каждое стирание и повторный ввод дёргали экран.
+    if (results.length === 0) return
+    setTimeout(() => {
+      const input = newRowInputRefs.current.get(key)
+      if (!input) return
+      const list = input.closest('.relative')?.querySelector('[data-suggest]') as HTMLElement | null
+      if (!list) return
+
+      let el: HTMLElement | null = input.parentElement
+      while (el) {
+        const { overflow, overflowY } = getComputedStyle(el)
+        if (/auto|scroll/.test(overflow + overflowY)) break
+        el = el.parentElement
+      }
+      if (!el) return
+
+      const visibleBottom = Math.min(
+        el.getBoundingClientRect().bottom,
+        window.visualViewport?.height ?? window.innerHeight,
+      )
+      const overflowPx = list.getBoundingClientRect().bottom - visibleBottom + 12
+      if (overflowPx < 8) return
+      // Не утаскиваем сам инпут за верх контейнера
+      const maxShift = input.getBoundingClientRect().top - el.getBoundingClientRect().top - 12
+      el.scrollBy({ top: Math.min(overflowPx, Math.max(maxShift, 0)), behavior: 'smooth' })
+    }, 60)
   }
 
   function selectSingerMember(key: string, m: Member) {
@@ -1316,7 +1318,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                         </button>
                                       </div>
                                       {row.results.length > 0 && (
-                                        <div className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56" style={{ right: '44px' }}>
+                                        <div data-suggest="1" className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56" style={{ right: '44px' }}>
                                           {row.results.map((m) => (
                                             <button
                                               key={m._id}
