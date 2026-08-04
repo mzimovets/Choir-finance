@@ -41,13 +41,16 @@ function priceFormulaPart(att: { basePrice?: number; share?: number }): string {
   const price = att.basePrice || 0
   const share = att.share ?? 1
   if (share === 1 || share <= 0) return String(price)
+
   const full = Math.round(price / share)
   const divisor = 1 / share
-  // Ровные доли (½, ⅓, ¼) пишем делением — но только если деление сходится
-  if (Math.abs(divisor - Math.round(divisor)) < 0.001 && Math.round(full / Math.round(divisor)) === price) {
-    return `${full}/${Math.round(divisor)}`
-  }
-  return String(price)
+  const isSimple = Math.abs(divisor - Math.round(divisor)) < 0.001
+  // Ровные доли (½, ⅓, ¼) — делением, произвольные — умножением на долю
+  const expr = isSimple ? `${full}/${Math.round(divisor)}` : `${full}*${share}`
+  const exact = isSimple ? full / Math.round(divisor) : full * share
+  // Если делится нацело — оставляем как есть, иначе округляем, чтобы значение
+  // в ячейке совпало с суммой, которую видит бухгалтерия
+  return Math.abs(exact - price) < 0.001 ? expr : `ROUND(${expr},0)`
 }
 
 
