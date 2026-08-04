@@ -424,6 +424,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   useEffect(() => {
     if (!isOpen) return
     setActiveNumpad(null)
+    scrolledRowsRef.current.clear()
     setCopyDone(false)
     setPasteDone(false)
     // Загрузим скопированный список, чтобы показать кнопку «Вставить»
@@ -649,6 +650,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   /* ── Будние певчие ── */
   const regentInputRef = useRef<HTMLInputElement>(null)
   const newRowInputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
+  /** Строки, к которым уже подтягивали список подсказок */
+  const scrolledRowsRef = useRef<Set<string>>(new Set())
 
   function addSingerRow() {
     // Не плодим пустые строки: если незаполненная уже есть — просто ставим в неё курсор
@@ -673,12 +676,13 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       ...weekdayRows.filter((r) => r.key !== key && r.memberId).map((r) => r.memberId),
     ].filter(Boolean)
     const results = searchMembers(q, excludeIds)
-    // Прокручиваем один раз — когда список подсказок раскрылся, а не на
-    // каждый набранный символ
-    const hadResults = (weekdayRows.find((r) => r.key === key)?.results.length ?? 0) > 0
+    // Прокручиваем один раз на строку: список раскрывается заново при каждом
+    // стирании и повторном вводе, и подтягивание превращалось в дёрганье
+    const hadResults = scrolledRowsRef.current.has(key)
     setWeekdayRows((prev) => prev.map((r) => r.key === key ? { ...r, search: q, results } : r))
 
     if (results.length > 0 && !hadResults) {
+      scrolledRowsRef.current.add(key)
       setTimeout(() => {
         const input = newRowInputRefs.current.get(key)
         if (!input) return
@@ -776,13 +780,17 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     : (regent.memberId ? 1 : 0) + (reader.memberId ? 1 : 0) + weekdayRows.filter((r) => r.memberId).length
 
   /* ─── Нампад: чтение и запись значения активного поля ─── */
+  // Доля и общая цена набираются с чистого листа — держим их черновики
+  const [shareDraft, setShareDraft] = useState(0)
+  const [allPriceDraft, setAllPriceDraft] = useState(0)
+
   const FIELD_LABELS: Record<PriceField, string> = { basePrice: 'цена', bonus: 'доплата', fine: 'штраф', share: 'доля, %' }
 
   function numpadValue(): number {
     if (!activeNumpad) return 0
     const { id, field } = activeNumpad
     // Цена всем — поле общее, стартуем с чистого листа
-    if (id === 'all') return 0
+    if (id === 'all') return allPriceDraft
     if (field === 'share') return shareDraft
     if (id === 'festiveRegent') return festiveRegent[field]
     if (id === 'regent') return regent[field]
@@ -811,7 +819,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   function applyNumpad(v: number) {
     if (!activeNumpad) return
     const { id, field } = activeNumpad
-    if (id === 'all') { applyPriceToAll(v); return }
+    if (id === 'all') { setAllPriceDraft(v); applyPriceToAll(v); return }
     if (field === 'share') {
       if (v > 100) return   // больше целого выхода не бывает
       setShareDraft(v)
@@ -839,38 +847,75 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     }
   }
 
-  /** Бейдж доли: короткое нажатие — половина/целое, долгое — своя доля */
-  function toggleShare(id: string, name: string) {
-    const flip = <T extends { basePrice: number; fullPrice: number; share: number }>(row: T): T => {
-      const share = row.share === 1 ? 0.5 : 1
-      return { ...row, share, basePrice: priceForShare(row.fullPrice, share) }
-    }
-    if (id === 'festiveRegent') setFestiveRegent(flip)
-    else if (id === 'regent') setRegent(flip)
-    else if (id === 'reader') setReader(flip)
+  /** Доля выхода у слота/строки по id нампада */
+  function currentShare(id: string): number {
+    if (id === 'festiveRegent') return festiveRegent.share
+    if (id === 'regent') return regent.share
+    if (id === 'reader') return reader.share
+    if (id.startsWith('f:')) return festiveRows.find((r) => r.memberId === id.slice(2))?.share ?? 1
+    if (id.startsWith('w:')) return weekdayRows.find((r) => r.key === id.slice(2))?.share ?? 1
+    return 1
+  }
+
+  /** Поставить долю и пересчитать цену от полной ставки */
+  function setShareFor(id: string, share: number) {
+    const set = <T extends { basePrice: number; fullPrice: number; share: number }>(row: T): T =>
+      ({ ...row, share, basePrice: priceForShare(row.fullPrice, share) })
+    if (id === 'festiveRegent') setFestiveRegent(set)
+    else if (id === 'regent') setRegent(set)
+    else if (id === 'reader') setReader(set)
     else if (id.startsWith('f:')) {
       const mid = id.slice(2)
-      setFestiveRows((prev) => prev.map((r) => r.memberId === mid ? flip(r) : r))
+      setFestiveRows((prev) => prev.map((r) => r.memberId === mid ? set(r) : r))
     } else if (id.startsWith('w:')) {
       const key = id.slice(2)
-      setWeekdayRows((prev) => prev.map((r) => r.key === key ? flip(r) : r))
+      setWeekdayRows((prev) => prev.map((r) => r.key === key ? set(r) : r))
     }
-    void name
+  }
+
+  /** Особая цена сразу всем певчим этого выхода */
+  function AllPriceButton() {
+    const isActive = activeNumpad?.id === 'all'
+    const has = choirType === 'weekday'
+      ? weekdayRows.some((r) => r.memberId)
+      : festiveRows.some((r) => r.checked)
+    if (!has) return null
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          if (isActive) { setActiveNumpad(null); return }
+          setAllPriceDraft(0)
+          setActiveNumpad({ id: 'all', field: 'basePrice', label: 'Цена всем певчим' })
+        }}
+        className={`text-[11px] font-slab font-semibold rounded-lg px-2 py-1 border transition-all ${
+          isActive
+            ? 'bg-[#f5ece3] border-[#bd9673] text-[#7d5e42] ring-2 ring-[#bd9673]'
+            : 'bg-white border-warm-200 text-warm-600 active:bg-warm-50'
+        }`}
+      >
+        другое
+      </button>
+    )
   }
 
   /* ─── JSX переиспользуемые части ─── */
-  function PriceButton({ id, field, name, value, tone }: {
+  function PriceButton({ id, field, name, value, tone, share }: {
     id: string; field: PriceField; name: string; value: number; tone: 'base' | 'bonus' | 'fine'
+    share?: number
   }) {
     const isActive = activeNumpad?.id === id && activeNumpad?.field === field
-    const labelText = field === 'basePrice' ? 'цена' : field === 'bonus' ? '+доп' : '−штраф'
+    const partial = share !== undefined && share !== 1
+    const labelText = field === 'basePrice'
+      ? (partial ? `цена · ${shareLabel(share)}` : 'цена')
+      : field === 'bonus' ? '+доп' : '−штраф'
     const toneClass =
       tone === 'fine' ? 'bg-red-50 border-red-200 text-red-600'
       : tone === 'bonus' ? 'bg-white border-warm-200 text-green-700'
       : 'bg-white border-warm-200 text-warm-900'
     return (
       <div className="flex flex-col items-end">
-        <span className={`text-[10px] ${tone === 'fine' ? 'text-red-400' : 'text-warm-400'}`}>{labelText}</span>
+        <span className={`text-[10px] ${tone === 'fine' ? 'text-red-400' : partial ? 'text-[#7d5e42] font-semibold' : 'text-warm-400'}`}>{labelText}</span>
         <button
           type="button"
           onClick={(e) => {
@@ -886,84 +931,12 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     )
   }
 
-  // Доля набирается с чистого листа, а не поверх текущих 100%
-  const [shareDraft, setShareDraft] = useState(0)
-  const sharePressRef = useRef(false)
-  const shareTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  /** Бейдж доли выхода: тап — половина/целое, долгий тап — своя доля */
-  function ShareBadge({ id, name, share }: { id: string; name: string; share: number }) {
-    const isActive = activeNumpad?.id === id && activeNumpad?.field === 'share'
-    const half = share !== 1
-    // Флаги держим в рефах модалки: сам ShareBadge пересоздаётся при каждой
-    // перерисовке, и собственные рефы обнулялись бы прямо во время удержания
-    const longPress = sharePressRef
-    const timer = shareTimerRef
-
-    const openNumpad = () => {
-      longPress.current = true
-      setShareDraft(0)
-      setActiveNumpad({ id, field: 'share', label: `${name} · ${FIELD_LABELS.share}` })
-    }
-
-    return (
-      <div className="flex flex-col items-center">
-        <span className="text-[10px] text-warm-400">доля</span>
-        <button
-          type="button"
-          onPointerDown={(e) => {
-            e.stopPropagation()
-            longPress.current = false
-            timer.current = setTimeout(openNumpad, 500)
-          }}
-          onPointerUp={(e) => {
-            e.stopPropagation()
-            if (timer.current) clearTimeout(timer.current)
-            if (!longPress.current) toggleShare(id, name)
-          }}
-          onPointerCancel={() => { if (timer.current) clearTimeout(timer.current) }}
-          onClick={(e) => e.stopPropagation()}
-          title="Нажмите — половина выхода, удерживайте — своя доля"
-          className={`rounded-lg px-2 py-1 text-sm font-medium border transition-all ${
-            half ? 'bg-[#f5ece3] border-[#bd9673] text-[#7d5e42]' : 'bg-white border-warm-200 text-warm-300'
-          } ${isActive ? 'ring-2 ring-[#bd9673] border-[#bd9673]' : ''}`}
-          style={{ minWidth: 34 }}
-        >
-          {shareLabel(share)}
-        </button>
-      </div>
-    )
-  }
-
-  /** Особая цена сразу всем певчим этого выхода */
-  function AllPriceButton() {
-    const isActive = activeNumpad?.id === 'all'
-    const has = choirType === 'weekday'
-      ? weekdayRows.some((r) => r.memberId)
-      : festiveRows.some((r) => r.checked)
-    if (!has) return null
-    return (
-      <button
-        type="button"
-        onClick={() => setActiveNumpad(isActive ? null : { id: 'all', field: 'basePrice', label: 'Цена всем певчим' })}
-        className={`text-[11px] font-slab font-semibold rounded-lg px-2 py-1 border transition-all ${
-          isActive
-            ? 'bg-[#f5ece3] border-[#bd9673] text-[#7d5e42] ring-2 ring-[#bd9673]'
-            : 'bg-white border-warm-200 text-warm-600 active:bg-warm-50'
-        }`}
-      >
-        другое
-      </button>
-    )
-  }
-
   function PriceInputs({ id, name, basePrice, bonus, fine, share }: {
     id: string; name: string; basePrice: number; bonus: number; fine: number; share: number
   }) {
     return (
       <div className="flex items-center gap-1.5">
-        <ShareBadge id={id} name={name} share={share} />
-        <PriceButton id={id} field="basePrice" name={name} value={basePrice} tone="base" />
+        <PriceButton id={id} field="basePrice" name={name} value={basePrice} tone="base" share={share} />
         <PriceButton id={id} field="bonus" name={name} value={bonus} tone="bonus" />
         <PriceButton id={id} field="fine" name={name} value={fine} tone="fine" />
       </div>
@@ -1078,6 +1051,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                       <input
                         className="warm-input"
                         placeholder="Введите название выхода"
+                        onFocus={() => setActiveNumpad(null)}
                         value={customType}
                         onChange={(e) => setCustomType(e.target.value)}
                         autoFocus
@@ -1116,6 +1090,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                 <input
                                   className="warm-input"
                                   placeholder="Поиск по фамилии..."
+                                  onFocus={() => setActiveNumpad(null)}
                                   value={festiveRegent.search}
                                   onChange={(e) => handleFestiveRegentSearch(e.target.value)}
                                   autoComplete="off"
@@ -1220,6 +1195,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   ref={regentInputRef}
                                   className="warm-input"
                                   placeholder="Поиск по фамилии..."
+                                  onFocus={() => setActiveNumpad(null)}
                                   value={regent.search}
                                   onChange={(e) => handleRegentSearch(e.target.value)}
                                   autoComplete="off"
@@ -1262,6 +1238,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                 <input
                                   className="warm-input"
                                   placeholder="Поиск по фамилии..."
+                                  onFocus={() => setActiveNumpad(null)}
                                   value={reader.search}
                                   onChange={(e) => handleReaderSearch(e.target.value)}
                                   autoComplete="off"
@@ -1324,6 +1301,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                           }}
                                           className="warm-input flex-1"
                                           placeholder="Поиск по фамилии..."
+                                  onFocus={() => setActiveNumpad(null)}
                                           value={row.search}
                                           onChange={(e) => updateSingerRowSearch(row.key, e.target.value)}
                                           autoComplete="off"
@@ -1385,6 +1363,16 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                   unit={activeNumpad.field === 'share' ? '%' : '₽'}
                   onChange={(v) => applyNumpad(parseInt(v.replace(/\D/g, '')) || 0)}
                   onClose={() => setActiveNumpad(null)}
+                  share={activeNumpad.field === 'basePrice' && activeNumpad.id !== 'all'
+                    ? {
+                        value: currentShare(activeNumpad.id),
+                        onPick: (sh) => setShareFor(activeNumpad.id, sh),
+                        onCustom: () => {
+                          setShareDraft(0)
+                          setActiveNumpad({ ...activeNumpad, field: 'share', label: `${activeNumpad.label.split(' · ')[0]} · ${FIELD_LABELS.share}` })
+                        },
+                      }
+                    : undefined}
                 />
               </div>
             )}

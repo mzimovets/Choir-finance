@@ -7,14 +7,23 @@ interface Props {
   onClose: () => void
   /** Единица измерения рядом с числом: рубли или проценты для доли выхода */
   unit?: string
+  /** Доля выхода — показывается при вводе цены участника */
+  share?: { value: number; onPick: (share: number) => void; onCustom: () => void }
 }
+
+const SHARE_CHIPS: { label: string; value: number }[] = [
+  { label: '1', value: 1 },
+  { label: '\u00bd', value: 0.5 },
+  { label: '\u2153', value: 1 / 3 },
+  { label: '\u00bc', value: 0.25 },
+]
 
 function fmt(v: string) {
   const n = parseInt(v.replace(/\D/g, '') || '0', 10)
   return isNaN(n) ? '0' : n.toLocaleString('ru-RU')
 }
 
-export function InlineNumpad({ role, value, onChange, onClose, unit = '₽' }: Props) {
+export function InlineNumpad({ role, value, onChange, onClose, unit = '₽', share }: Props) {
   function raw() { return value.replace(/\D/g, '') || '0' }
 
   function press(d: string) {
@@ -44,6 +53,44 @@ export function InlineNumpad({ role, value, onChange, onClose, unit = '₽' }: P
           <span style={{ fontSize: 14, color: '#b8a08a', marginLeft: 3, fontFamily: "'Roboto Slab', serif" }}> {unit}</span>
         </span>
       </div>
+
+      {share && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 14px 8px' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#b8a08a', textTransform: 'uppercase', letterSpacing: '.06em', fontFamily: "'Roboto Slab', serif" }}>
+            доля
+          </span>
+          {SHARE_CHIPS.map((c) => {
+            const active = Math.abs(share.value - c.value) < 0.005
+            return (
+              <button
+                key={c.label}
+                type="button"
+                onPointerDown={(e) => { e.preventDefault(); share.onPick(c.value) }}
+                style={{
+                  minWidth: 38, height: 30, borderRadius: 9,
+                  background: active ? '#7d5e42' : '#fff',
+                  border: `1px solid ${active ? '#7d5e42' : '#e5d9cc'}`,
+                  color: active ? '#fff' : '#2c1a0e',
+                  fontSize: 14, fontWeight: 600, fontFamily: "'Roboto Slab', serif",
+                  cursor: 'pointer', WebkitTapHighlightColor: 'transparent', userSelect: 'none',
+                }}
+              >{c.label}</button>
+            )
+          })}
+          <button
+            type="button"
+            onPointerDown={(e) => { e.preventDefault(); share.onCustom() }}
+            style={{
+              minWidth: 44, height: 30, borderRadius: 9,
+              background: SHARE_CHIPS.every((c) => Math.abs(share.value - c.value) >= 0.005) ? '#7d5e42' : '#fff',
+              border: `1px solid ${SHARE_CHIPS.every((c) => Math.abs(share.value - c.value) >= 0.005) ? '#7d5e42' : '#e5d9cc'}`,
+              color: SHARE_CHIPS.every((c) => Math.abs(share.value - c.value) >= 0.005) ? '#fff' : '#9b7653',
+              fontSize: 12, fontWeight: 700, fontFamily: "'Roboto Slab', serif",
+              cursor: 'pointer', WebkitTapHighlightColor: 'transparent', userSelect: 'none',
+            }}
+          >своя</button>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, padding: '0 10px', paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))' }}>
         {keys.map(d => (
