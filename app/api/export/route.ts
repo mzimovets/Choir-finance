@@ -37,12 +37,14 @@ function localDate(isoStr: string): Date {
  * Как показать цену в формуле: при доле выхода — делением от полной ставки
  * («1000/2»), чтобы в табеле было видно, почему сумма меньше.
  */
-function priceFormulaPart(att: { basePrice?: number; share?: number }): string {
+function priceFormulaPart(att: { basePrice?: number; share?: number; fullPrice?: number }): string {
   const price = att.basePrice || 0
   const share = att.share ?? 1
   if (share === 1 || share <= 0) return String(price)
 
-  const full = Math.round(price / share)
+  // Настоящая ставка, если она сохранена; у старых записей её нет —
+  // тогда восстанавливаем обратным делением
+  const full = att.fullPrice ?? Math.round(price / share)
   const divisor = 1 / share
   const isSimple = Math.abs(divisor - Math.round(divisor)) < 0.001
   // Ровные доли (½, ⅓, ¼) — делением, произвольные — умножением на долю

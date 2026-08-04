@@ -342,13 +342,13 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }
 
   /** Слот из сохранённой записи: восстанавливаем полную ставку по доле */
-  function slotFromAtt(a: { memberId: string; memberName: string; basePrice: number; bonus: number; fine?: number; share?: number }): SlotState {
+  function slotFromAtt(a: { memberId: string; memberName: string; basePrice: number; bonus: number; fine?: number; share?: number; fullPrice?: number }): SlotState {
     const share = a.share ?? 1
     return {
       memberId: a.memberId, memberName: a.memberName,
       basePrice: a.basePrice, bonus: a.bonus, fine: a.fine ?? 0,
       search: '', results: [],
-      fullPrice: share === 1 ? a.basePrice : Math.round(a.basePrice / share),
+      fullPrice: a.fullPrice ?? (share === 1 ? a.basePrice : Math.round(a.basePrice / share)),
       share,
     }
   }
@@ -577,7 +577,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
           bonus: existing?.bonus ?? 0,
           fine: existing?.fine ?? 0,
           checked: !!existing,
-          fullPrice: share === 1 ? basePrice : Math.round(basePrice / share),
+          fullPrice: existing?.fullPrice ?? (share === 1 ? basePrice : Math.round(basePrice / share)),
           share,
         }
       })
@@ -732,23 +732,23 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     if (choirType === 'festive') {
       const singerAtts = festiveRows
         .filter((r) => r.checked)
-        .map((r) => ({ memberId: r.memberId, memberName: r.memberName, basePrice: r.basePrice, bonus: r.bonus, ...(r.fine ? { fine: r.fine } : {}), ...(r.share !== 1 ? { share: r.share } : {}) }))
+        .map((r) => ({ memberId: r.memberId, memberName: r.memberName, basePrice: r.basePrice, bonus: r.bonus, ...(r.fine ? { fine: r.fine } : {}), ...(r.share !== 1 ? { share: r.share, fullPrice: r.fullPrice } : {}) }))
       attendances = [
         ...(festiveRegent.memberId
-          ? [{ memberId: festiveRegent.memberId, memberName: festiveRegent.memberName, basePrice: festiveRegent.basePrice, bonus: festiveRegent.bonus, ...(festiveRegent.fine ? { fine: festiveRegent.fine } : {}), ...(festiveRegent.share !== 1 ? { share: festiveRegent.share } : {}), isRegent: true as const }]
+          ? [{ memberId: festiveRegent.memberId, memberName: festiveRegent.memberName, basePrice: festiveRegent.basePrice, bonus: festiveRegent.bonus, ...(festiveRegent.fine ? { fine: festiveRegent.fine } : {}), ...(festiveRegent.share !== 1 ? { share: festiveRegent.share, fullPrice: festiveRegent.fullPrice } : {}), isRegent: true as const }]
           : []),
         ...singerAtts,
       ]
     } else {
       const singerAtts = weekdayRows
         .filter((r) => r.memberId)
-        .map((r) => ({ memberId: r.memberId, memberName: r.memberName, basePrice: r.basePrice, bonus: r.bonus, ...(r.fine ? { fine: r.fine } : {}), ...(r.share !== 1 ? { share: r.share } : {}) }))
+        .map((r) => ({ memberId: r.memberId, memberName: r.memberName, basePrice: r.basePrice, bonus: r.bonus, ...(r.fine ? { fine: r.fine } : {}), ...(r.share !== 1 ? { share: r.share, fullPrice: r.fullPrice } : {}) }))
       attendances = [
         ...(regent.memberId
-          ? [{ memberId: regent.memberId, memberName: regent.memberName, basePrice: regent.basePrice, bonus: regent.bonus, ...(regent.fine ? { fine: regent.fine } : {}), ...(regent.share !== 1 ? { share: regent.share } : {}), isRegent: true as const }]
+          ? [{ memberId: regent.memberId, memberName: regent.memberName, basePrice: regent.basePrice, bonus: regent.bonus, ...(regent.fine ? { fine: regent.fine } : {}), ...(regent.share !== 1 ? { share: regent.share, fullPrice: regent.fullPrice } : {}), isRegent: true as const }]
           : []),
         ...(reader.memberId
-          ? [{ memberId: reader.memberId, memberName: reader.memberName, basePrice: reader.basePrice, bonus: reader.bonus, ...(reader.fine ? { fine: reader.fine } : {}), ...(reader.share !== 1 ? { share: reader.share } : {}), isReader: true as const }]
+          ? [{ memberId: reader.memberId, memberName: reader.memberName, basePrice: reader.basePrice, bonus: reader.bonus, ...(reader.fine ? { fine: reader.fine } : {}), ...(reader.share !== 1 ? { share: reader.share, fullPrice: reader.fullPrice } : {}), isReader: true as const }]
           : []),
         ...singerAtts,
       ]
