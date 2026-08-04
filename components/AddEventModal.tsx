@@ -673,12 +673,14 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       ...weekdayRows.filter((r) => r.key !== key && r.memberId).map((r) => r.memberId),
     ].filter(Boolean)
     const results = searchMembers(q, excludeIds)
+    // Список раскрылся только что? Пока набирают дальше, он то длиннее, то
+    // короче — двигать экран на каждом символе нельзя
+    const justOpened = (weekdayRows.find((r) => r.key === key)?.results.length ?? 0) === 0
     setWeekdayRows((prev) => prev.map((r) => r.key === key ? { ...r, search: q, results } : r))
 
-    // Подтягиваем список, только если он не влезает на экран, и ровно на
-    // столько, сколько не хватает. Когда список и так виден целиком —
-    // ничего не двигаем, иначе каждое стирание и повторный ввод дёргали экран.
-    if (results.length === 0) return
+    // И даже при раскрытии подтягиваем, только если список не влезает на
+    // экран — ровно на столько, сколько не хватает
+    if (results.length === 0 || !justOpened) return
     setTimeout(() => {
       const input = newRowInputRefs.current.get(key)
       if (!input) return
