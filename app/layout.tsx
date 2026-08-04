@@ -4,13 +4,13 @@ import { Providers } from './providers'
 import { SplashScreen } from '@/components/SplashScreen'
 
 export const metadata: Metadata = {
-  title: 'Хор — Учёт',
+  title: 'Табель',
   description: 'Учёт посещений и расчёт зарплаты хора',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Хор',
+    title: 'Табель',
   },
 }
 

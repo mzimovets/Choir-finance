@@ -1,6 +1,6 @@
 {
-  "name": "Хор — Учёт",
-  "short_name": "Хор",
+  "name": "Табель",
+  "short_name": "Табель",
   "description": "Учёт посещений и расчёт зарплаты хора",
   "start_url": "/",
   "display": "standalone",
