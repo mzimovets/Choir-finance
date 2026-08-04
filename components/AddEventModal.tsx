@@ -420,6 +420,50 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     }
   }, [isOpen])
 
+  /* ── Списки подсказок: вписываем в свободное место ──
+     Экран при вводе не прокручиваем (это дёргало страницу), поэтому список
+     сам ужимается по высоте, а если снизу тесно — раскрывается вверх. */
+  useEffect(() => {
+    const lists = document.querySelectorAll<HTMLElement>('[data-suggest]')
+    lists.forEach((list) => {
+      const wrap = list.parentElement
+      const input = wrap?.querySelector('input')
+      if (!wrap || !input) return
+
+      let scroller: HTMLElement | null = wrap
+      while (scroller) {
+        const { overflow, overflowY } = getComputedStyle(scroller)
+        if (/auto|scroll/.test(overflow + overflowY)) break
+        scroller = scroller.parentElement
+      }
+
+      const inputBox = input.getBoundingClientRect()
+      const viewportBottom = window.visualViewport?.height ?? window.innerHeight
+      const bottomLimit = Math.min(scroller?.getBoundingClientRect().bottom ?? viewportBottom, viewportBottom)
+      const topLimit = Math.max(scroller?.getBoundingClientRect().top ?? 0, 0)
+
+      const spaceBelow = bottomLimit - inputBox.bottom - 10
+      const spaceAbove = inputBox.top - topLimit - 10
+
+      // Разворачиваем вверх, только если снизу совсем мало, а сверху заметно больше
+      const flip = spaceBelow < 120 && spaceAbove > spaceBelow + 40
+      const room = Math.max(96, Math.floor(flip ? spaceAbove : spaceBelow))
+
+      list.style.maxHeight = `${Math.min(224, room)}px`
+      if (flip) {
+        list.style.top = 'auto'
+        list.style.bottom = '100%'
+        list.style.marginTop = '0'
+        list.style.marginBottom = '4px'
+      } else {
+        list.style.top = ''
+        list.style.bottom = ''
+        list.style.marginTop = ''
+        list.style.marginBottom = ''
+      }
+    })
+  })
+
   /* ── Загрузка данных + инициализация формы ── */
   useEffect(() => {
     if (!isOpen) return
@@ -594,24 +638,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     const excludeIds = [reader.memberId, ...weekdayRows.filter((r) => r.memberId).map((r) => r.memberId)].filter(Boolean)
     const results = searchMembers(q, excludeIds, 'regent')
     setRegent((r) => ({ ...r, search: q, results }))
-
-    // Автопрокрутка: инпут регента к верху скролл-контейнера
-    if (results.length > 0) {
-      setTimeout(() => {
-        const input = regentInputRef.current
-        if (!input) return
-        let el: HTMLElement | null = input.parentElement
-        while (el) {
-          const { overflow, overflowY } = getComputedStyle(el)
-          if (/auto|scroll/.test(overflow + overflowY)) break
-          el = el.parentElement
-        }
-        if (!el) return
-        const inputTop = input.getBoundingClientRect().top
-        const containerTop = el.getBoundingClientRect().top
-        el.scrollBy({ top: inputTop - containerTop - 12, behavior: 'smooth' })
-      }, 60)
-    }
   }
 
   function selectRegent(m: Member) {
@@ -673,38 +699,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       ...weekdayRows.filter((r) => r.key !== key && r.memberId).map((r) => r.memberId),
     ].filter(Boolean)
     const results = searchMembers(q, excludeIds)
-    // Список раскрылся только что? Пока набирают дальше, он то длиннее, то
-    // короче — двигать экран на каждом символе нельзя
-    const justOpened = (weekdayRows.find((r) => r.key === key)?.results.length ?? 0) === 0
+    // Экран намеренно не двигаем: список подсказок сам подстраивается под
+    // свободное место (см. эффект ниже), поэтому прокрутка не нужна
     setWeekdayRows((prev) => prev.map((r) => r.key === key ? { ...r, search: q, results } : r))
-
-    // И даже при раскрытии подтягиваем, только если список не влезает на
-    // экран — ровно на столько, сколько не хватает
-    if (results.length === 0 || !justOpened) return
-    setTimeout(() => {
-      const input = newRowInputRefs.current.get(key)
-      if (!input) return
-      const list = input.closest('.relative')?.querySelector('[data-suggest]') as HTMLElement | null
-      if (!list) return
-
-      let el: HTMLElement | null = input.parentElement
-      while (el) {
-        const { overflow, overflowY } = getComputedStyle(el)
-        if (/auto|scroll/.test(overflow + overflowY)) break
-        el = el.parentElement
-      }
-      if (!el) return
-
-      const visibleBottom = Math.min(
-        el.getBoundingClientRect().bottom,
-        window.visualViewport?.height ?? window.innerHeight,
-      )
-      const overflowPx = list.getBoundingClientRect().bottom - visibleBottom + 12
-      if (overflowPx < 8) return
-      // Не утаскиваем сам инпут за верх контейнера
-      const maxShift = input.getBoundingClientRect().top - el.getBoundingClientRect().top - 12
-      el.scrollBy({ top: Math.min(overflowPx, Math.max(maxShift, 0)), behavior: 'smooth' })
-    }, 60)
   }
 
   function selectSingerMember(key: string, m: Member) {
@@ -1100,7 +1097,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   autoComplete="off"
                                 />
                                 {festiveRegent.results.length > 0 && (
-                                  <div className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56">
+                                  <div data-suggest="1" className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56">
                                     {festiveRegent.results.map((m) => (
                                       <button
                                         key={m._id}
@@ -1205,7 +1202,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   autoComplete="off"
                                 />
                                 {regent.results.length > 0 && (
-                                  <div className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56">
+                                  <div data-suggest="1" className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56">
                                     {regent.results.map((m) => (
                                       <button
                                         key={m._id}
@@ -1248,7 +1245,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   autoComplete="off"
                                 />
                                 {reader.results.length > 0 && (
-                                  <div className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56">
+                                  <div data-suggest="1" className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56">
                                     {reader.results.map((m) => (
                                       <button
                                         key={m._id}
