@@ -548,6 +548,7 @@ export default function StatsPage() {
                                 return `${formatRowDate(r.date)} — ${r.eventType}: ${sum.toLocaleString("ru-RU")} ₽`
                               })
                             const text = [
+                              session?.choirType === "festive" ? "Праздничный хор" : "Будний хор",
                               `${selected.member.name} · ${monthLabel}`,
                               "",
                               ...lines,
