@@ -178,7 +178,7 @@ export async function GET(req: NextRequest) {
         const total = (att.basePrice || 0) + (att.bonus || 0) - fine
         const priceStr = priceFormulaPart(att)
         const parts = [priceStr, ...(att.bonus > 0 ? [`+${att.bonus}`] : []), ...(fine > 0 ? [`-${fine}`] : [])]
-        if (att.bonus > 0 || fine > 0 || priceStr.includes('/')) ws.getCell(5, c).value = { formula: parts.join(''), result: total }
+        if (att.bonus > 0 || fine > 0 || priceStr !== String(att.basePrice || 0)) ws.getCell(5, c).value = { formula: parts.join(''), result: total }
         else if (total > 0) ws.getCell(5, c).value = total
         if (fine > 0) ws.getCell(5, c).fill = fineFill
       }
@@ -263,7 +263,7 @@ export async function GET(req: NextRequest) {
       wsG.getCell(rn, 1).value = mi + 1; wsG.getCell(rn, 1).alignment = { horizontal: 'center', vertical: 'middle' }; wsG.getCell(rn, 1).border = allBorders()
       wsG.getCell(rn, 2).value = shortName(mb.name, mb.patronymic); wsG.getCell(rn, 2).alignment = { horizontal: 'left', vertical: 'middle' }; wsG.getCell(rn, 2).border = allBorders()
       const fineFillG: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE4EC' } }
-      events.forEach((ev, evIdx) => { const c = 3 + evIdx; const att = ev.attendances.find(a => a.memberId === mb._id); if (att) { const fine = att.fine || 0; const t = (att.basePrice || 0) + (att.bonus || 0) - fine; const priceStr = priceFormulaPart(att); const parts = [priceStr, ...(att.bonus > 0 ? [`+${att.bonus}`] : []), ...(fine > 0 ? [`-${fine}`] : [])]; wsG.getCell(rn, c).value = (att.bonus > 0 || fine > 0 || priceStr.includes('/')) ? { formula: parts.join(''), result: t } : t > 0 ? t : undefined; if (fine > 0) wsG.getCell(rn, c).fill = fineFillG } wsG.getCell(rn, c).alignment = { horizontal: 'center', vertical: 'middle' }; wsG.getCell(rn, c).border = allBorders() })
+      events.forEach((ev, evIdx) => { const c = 3 + evIdx; const att = ev.attendances.find(a => a.memberId === mb._id); if (att) { const fine = att.fine || 0; const t = (att.basePrice || 0) + (att.bonus || 0) - fine; const priceStr = priceFormulaPart(att); const parts = [priceStr, ...(att.bonus > 0 ? [`+${att.bonus}`] : []), ...(fine > 0 ? [`-${fine}`] : [])]; wsG.getCell(rn, c).value = (att.bonus > 0 || fine > 0 || priceStr !== String(att.basePrice || 0)) ? { formula: parts.join(''), result: t } : t > 0 ? t : undefined; if (fine > 0) wsG.getCell(rn, c).fill = fineFillG } wsG.getCell(rn, c).alignment = { horizontal: 'center', vertical: 'middle' }; wsG.getCell(rn, c).border = allBorders() })
       if (numEv2 > 0) wsG.getCell(rn, sumColG).value = { formula: `SUM(${wsG.getColumn(3).letter}${rn}:${wsG.getColumn(2 + numEv2).letter}${rn})`, result: grpTotal(mb._id) }
       wsG.getCell(rn, sumColG).fill = sumFillG; wsG.getCell(rn, sumColG).font = { bold: true, size: 11, name: 'Calibri' }; wsG.getCell(rn, sumColG).alignment = { horizontal: 'right', vertical: 'middle' }; wsG.getCell(rn, sumColG).border = allBorders()
       wsG.getRow(rn).height = 18
@@ -429,7 +429,7 @@ export async function GET(req: NextRequest) {
         const total = (att.basePrice || 0) + (att.bonus || 0) - fine
         const priceStr = priceFormulaPart(att)
         const parts = [priceStr, ...(att.bonus > 0 ? [`+${att.bonus}`] : []), ...(fine > 0 ? [`-${fine}`] : [])]
-        if (att.bonus > 0 || fine > 0 || priceStr.includes('/')) row.getCell(c).value = { formula: parts.join(''), result: total }
+        if (att.bonus > 0 || fine > 0 || priceStr !== String(att.basePrice || 0)) row.getCell(c).value = { formula: parts.join(''), result: total }
         else if (total > 0) row.getCell(c).value = total
         if (fine > 0) row.getCell(c).fill = fineFillWs1
       }
