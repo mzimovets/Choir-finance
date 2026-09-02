@@ -13,15 +13,20 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
   const memberId: string | undefined = typeof body.memberId === 'string' ? body.memberId : undefined
-  const includePrevMonth = body.includePrevMonth === true
+  const currentMonth = body.currentMonth === true
+  const prevMonth = body.prevMonth === true
 
-  const updated = await recalcEvents({
-    choirType: session.choirType,
-    memberId,
-    from: monthStart(includePrevMonth ? -1 : 0),
-  })
+  if (!currentMonth && !prevMonth) return Response.json({ ok: true, updated: 0 })
 
-  const period = includePrevMonth ? 'с прошлого месяца' : 'с текущего месяца'
+  // Прошлый месяц без текущего — берём только его, поэтому нужна верхняя граница
+  const from = monthStart(prevMonth ? -1 : 0)
+  const until = prevMonth && !currentMonth ? monthStart(0) : undefined
+
+  const updated = await recalcEvents({ choirType: session.choirType, memberId, from, until })
+
+  const period = currentMonth && prevMonth ? 'за прошлый и текущий месяц'
+    : prevMonth ? 'за прошлый месяц'
+    : 'с текущего месяца'
   const scope = memberId ? 'одного певчего' : 'всех участников'
   await logAction('update_member', `Пересчёт выходов ${scope} ${period}: обновлено ${updated}`)
 

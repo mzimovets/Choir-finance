@@ -236,11 +236,11 @@ export default function SingersPage() {
         open={recalcMemberId !== null}
         scope="цены этого певчего"
         onClose={() => setRecalcMemberId(null)}
-        onConfirm={async (includePrevMonth) => {
+        onConfirm={async (months) => {
           const res = await fetch('/api/recalc', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ memberId: recalcMemberId, includePrevMonth }),
+            body: JSON.stringify({ memberId: recalcMemberId, ...months }),
           })
           const data = res.ok ? await res.json() : { updated: 0 }
           load()

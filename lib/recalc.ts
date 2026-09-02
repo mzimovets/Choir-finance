@@ -15,6 +15,8 @@ interface RecalcOptions {
   memberId?: string
   /** Не трогать выходы раньше этой даты (YYYY-MM-DD) */
   from: string
+  /** Не трогать выходы с этой даты и позже — чтобы взять только прошлый месяц */
+  until?: string
 }
 
 /**
@@ -22,7 +24,7 @@ interface RecalcOptions {
  * Доплаты, штрафы и доли выхода сохраняются: доля применяется к новой
  * ставке, поэтому «половина» остаётся половиной и после смены цены.
  */
-export async function recalcEvents({ choirType, memberId, from }: RecalcOptions): Promise<number> {
+export async function recalcEvents({ choirType, memberId, from, until }: RecalcOptions): Promise<number> {
   const [events, types, members] = await Promise.all([
     dbFind<ChoirEvent>(db.events, { choirType }),
     dbFind<EventTypeDoc>(db.eventTypes, { choirType }),
@@ -34,6 +36,7 @@ export async function recalcEvents({ choirType, memberId, from }: RecalcOptions)
 
   for (const ev of events) {
     if (ev.date < from) continue
+    if (until && ev.date >= until) continue
 
     let changed = false
     const attendances = ev.attendances.map((att) => {

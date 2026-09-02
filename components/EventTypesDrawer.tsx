@@ -376,11 +376,11 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
         open={recalcAsk}
         scope="цены всех участников"
         onClose={() => setRecalcAsk(false)}
-        onConfirm={async (includePrevMonth) => {
+        onConfirm={async (months) => {
           const res = await fetch('/api/recalc', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ includePrevMonth }),
+            body: JSON.stringify(months),
           })
           const data = res.ok ? await res.json() : { updated: 0 }
           notifyDataChanged()

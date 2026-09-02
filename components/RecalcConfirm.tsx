@@ -8,24 +8,27 @@ interface Props {
   /** Кого касается пересчёт — для пояснения в тексте */
   scope: string
   onClose: () => void
-  /** Запустить пересчёт; includePrevMonth — захватить и прошлый месяц */
-  onConfirm: (includePrevMonth: boolean) => Promise<number>
+  /** Запустить пересчёт за выбранные месяцы */
+  onConfirm: (months: { currentMonth: boolean; prevMonth: boolean }) => Promise<number>
 }
 
 /**
  * Вопрос после смены цены: пересчитывать ли уже созданные выходы.
- * По умолчанию берётся текущий месяц; прошлый — только по флажку, потому
- * что он обычно уже выгружен и оплачен.
+ * Месяцы выбираются независимо — можно обновить только прошлый, если
+ * текущий трогать не нужно. Снятые оба флажка означают, что новая цена
+ * пойдёт только на будущие выходы.
  */
 export function RecalcConfirm({ open, scope, onClose, onConfirm }: Props) {
-  const [withPrevMonth, setWithPrevMonth] = useState(false)
+  const [currentMonth, setCurrentMonth] = useState(true)
+  const [prevMonth, setPrevMonth] = useState(false)
   const [running, setRunning] = useState(false)
   const [done, setDone] = useState<number | null>(null)
 
   if (!open) return null
 
   function close() {
-    setWithPrevMonth(false)
+    setCurrentMonth(true)
+    setPrevMonth(false)
     setDone(null)
     onClose()
   }
@@ -33,7 +36,7 @@ export function RecalcConfirm({ open, scope, onClose, onConfirm }: Props) {
   async function run() {
     setRunning(true)
     try {
-      setDone(await onConfirm(withPrevMonth))
+      setDone(await onConfirm({ currentMonth, prevMonth }))
     } finally {
       setRunning(false)
     }
@@ -51,36 +54,52 @@ export function RecalcConfirm({ open, scope, onClose, onConfirm }: Props) {
                   Пересчитать выходы?
                 </h2>
                 <p className="text-sm text-warm-500 leading-relaxed">
-                  Цена изменилась. Можно обновить {scope} в уже созданных выходах —
-                  доплаты, штрафы и доли останутся прежними.
+                  Цена изменилась. Отметьте месяцы, где нужно обновить {scope} в уже
+                  созданных выходах — доплаты, штрафы и доли останутся прежними.
                 </p>
               </div>
 
-              <button
-                onClick={() => setWithPrevMonth((v) => !v)}
-                className="w-full px-5 pb-4 flex items-center gap-3 text-left"
-              >
-                <span
-                  className="shrink-0 rounded-md border-2 flex items-center justify-center"
-                  style={{
-                    width: 22, height: 22,
-                    borderColor: withPrevMonth ? '#9b7653' : '#d4c0ac',
-                    background: withPrevMonth ? '#9b7653' : 'white',
-                  }}
-                >
-                  {withPrevMonth && (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                      <path d="M20 6L9 17L4 12" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </span>
-                <span className="text-sm text-warm-700">
-                  За прошлый месяц
-                  <span className="block text-xs text-warm-400 leading-snug">
-                    Иначе пересчитается только текущий месяц и дальше
-                  </span>
-                </span>
-              </button>
+              <div className="pb-2">
+                {([
+                  {
+                    checked: currentMonth,
+                    toggle: () => setCurrentMonth((v) => !v),
+                    title: 'Текущий месяц',
+                    hint: 'Без него уже проставленные выходы останутся с прежней ценой',
+                  },
+                  {
+                    checked: prevMonth,
+                    toggle: () => setPrevMonth((v) => !v),
+                    title: 'Прошлый месяц',
+                    hint: 'Если табель за него ещё не сдан',
+                  },
+                ]).map((row) => (
+                  <button
+                    key={row.title}
+                    onClick={row.toggle}
+                    className="w-full px-5 py-2 flex items-center gap-3 text-left active:bg-warm-50"
+                  >
+                    <span
+                      className="shrink-0 rounded-md border-2 flex items-center justify-center"
+                      style={{
+                        width: 22, height: 22,
+                        borderColor: row.checked ? '#9b7653' : '#d4c0ac',
+                        background: row.checked ? '#9b7653' : 'white',
+                      }}
+                    >
+                      {row.checked && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                          <path d="M20 6L9 17L4 12" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                    </span>
+                    <span className="text-sm text-warm-700">
+                      {row.title}
+                      <span className="block text-xs text-warm-400 leading-snug">{row.hint}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
 
               <div className="flex border-t border-warm-100">
                 <button
@@ -92,7 +111,7 @@ export function RecalcConfirm({ open, scope, onClose, onConfirm }: Props) {
                 </button>
                 <button
                   onClick={run}
-                  disabled={running}
+                  disabled={running || (!currentMonth && !prevMonth)}
                   className="flex-1 py-3.5 text-sm font-slab font-semibold text-[#7d5e42] active:bg-warm-50 disabled:opacity-40 flex items-center justify-center gap-2"
                 >
                   {running && <LoadingSpinner size="sm" color="#7d5e42" />}
