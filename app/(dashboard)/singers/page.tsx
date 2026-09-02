@@ -15,6 +15,7 @@ import { splitName } from '@/lib/nameFormat'
 import { PageHeader } from '@/components/PageHeader'
 import { useSession } from '@/hooks/useSession'
 import { notifyDataChanged, onDataChanged } from '@/lib/dataSignal'
+import { RecalcConfirm } from '@/components/RecalcConfirm'
 
 const ROLES: { value: MemberRole; label: string }[] = [
   { value: 'singer',  label: 'Певчий'  },
@@ -80,6 +81,8 @@ export default function SingersPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [activeNumpad, setActiveNumpad] = useState<string | null>(null)
   const [recalcNotice, setRecalcNotice] = useState('')
+  // Кого пересчитывать после смены цены — спрашиваем сразу после сохранения
+  const [recalcMemberId, setRecalcMemberId] = useState<string | null>(null)
   const [discardOpen, setDiscardOpen] = useState(false)
 
   // Снимок формы на момент открытия — для определения несохранённых изменений
@@ -129,6 +132,9 @@ export default function SingersPage() {
     setDrawerOpen(true)
   }
 
+  /** Слепок цен на момент открытия карточки — с ним сверяемся при сохранении */
+  const pricesOnOpen = useRef('')
+
   function openEdit(m: Member) {
     setEditing(m)
     setName(m.name)
@@ -137,6 +143,7 @@ export default function SingersPage() {
     const stored = pricesToMap(m.defaultPrices)
     const pr = { ...buildDefaultPrices(m.role, eventTypeDocs), ...stored }
     setPrices(pr)
+    pricesOnOpen.current = JSON.stringify([pr, m.halvedEventTypes ?? [], m.role])
     const dis = m.disabledEventTypes ?? []
     const hal = m.halvedEventTypes ?? []
     setDisabledEventTypes(dis)
@@ -188,14 +195,16 @@ export default function SingersPage() {
       disabledEventTypes,
       halvedEventTypes,
     }
-    let recalculated = 0
     if (editing) {
       const res = await fetch(`/api/members/${editing._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      if (res.ok) recalculated = (await res.json()).recalculated ?? 0
+      // Цены изменились — спросим, обновлять ли уже созданные выходы
+      if (res.ok && JSON.stringify([prices, halvedEventTypes, role]) !== pricesOnOpen.current) {
+        setRecalcMemberId(editing._id)
+      }
     } else {
       await fetch('/api/members', {
         method: 'POST',
@@ -205,10 +214,6 @@ export default function SingersPage() {
     }
     setSaving(false)
     setDrawerOpen(false)
-    if (recalculated > 0) {
-      setRecalcNotice(`Пересчитано выходов: ${recalculated}`)
-      setTimeout(() => setRecalcNotice(''), 4000)
-    }
     load()
     notifyDataChanged()
   }
@@ -227,6 +232,23 @@ export default function SingersPage() {
 
   return (
     <div className="max-w-lg mx-auto">
+      <RecalcConfirm
+        open={recalcMemberId !== null}
+        scope="цены этого певчего"
+        onClose={() => setRecalcMemberId(null)}
+        onConfirm={async (includePrevMonth) => {
+          const res = await fetch('/api/recalc', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ memberId: recalcMemberId, includePrevMonth }),
+          })
+          const data = res.ok ? await res.json() : { updated: 0 }
+          load()
+          notifyDataChanged()
+          return data.updated ?? 0
+        }}
+      />
+
       {recalcNotice && (
         <div className="fixed left-1/2 -translate-x-1/2 z-[70] px-4 py-2.5 rounded-xl shadow-lg text-white text-sm font-slab font-semibold"
              style={{ bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))', background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}>

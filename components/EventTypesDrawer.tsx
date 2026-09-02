@@ -7,6 +7,7 @@ import {
 import { InlineNumpad } from '@/components/InlineNumpad'
 import { DrawerHandle } from '@/components/DrawerHandle'
 import { DiscardConfirm } from '@/components/DiscardConfirm'
+import { RecalcConfirm } from '@/components/RecalcConfirm'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -144,6 +145,9 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormState>(emptyForm())
+  // Смена тарифа касается всех участников — спрашиваем про пересчёт
+  const [recalcAsk, setRecalcAsk] = useState(false)
+  const pricesOnOpen = useRef('')
   const [deleteTarget, setDeleteTarget] = useState<EventTypeDoc | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [activeNumpad, setActiveNumpad] = useState<'singer' | 'soloist' | 'regent' | 'reader' | null>(null)
@@ -170,7 +174,7 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
   }, [isOpen, load])
 
   function openNew() { const f = emptyForm(); setEditingId(null); setForm(f); formSnapshot.current = JSON.stringify(f); setActiveNumpad(null); setShowForm(true) }
-  function openEdit(t: EventTypeDoc) { const f = typeToForm(t); setEditingId(t._id); setForm(f); formSnapshot.current = JSON.stringify(f); setActiveNumpad(null); setShowForm(true) }
+  function openEdit(t: EventTypeDoc) { const f = typeToForm(t); setEditingId(t._id); setForm(f); formSnapshot.current = JSON.stringify(f); pricesOnOpen.current = JSON.stringify([f.singer, f.soloist, f.regent, f.reader]); setActiveNumpad(null); setShowForm(true) }
   function closeForm() { setShowForm(false); setEditingId(null); setActiveNumpad(null) }
 
   // Перехват закрытия дравера свайпом: если в форме есть изменения — спросить
@@ -212,9 +216,12 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
         ? await fetch(`/api/event-types/${editingId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
         : await fetch('/api/event-types', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       if (!res.ok) return
+      const pricesChanged = JSON.stringify([form.singer, form.soloist, form.regent, form.reader]) !== pricesOnOpen.current
       closeForm()
       await load()
       notifyDataChanged()
+      // Тариф поменялся у существующего типа — предложим обновить выходы
+      if (editingId && pricesChanged) setRecalcAsk(true)
     } finally {
       setSaving(false)
     }
@@ -364,6 +371,22 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
           )}
         </DrawerContent>
       </Drawer>
+
+      <RecalcConfirm
+        open={recalcAsk}
+        scope="цены всех участников"
+        onClose={() => setRecalcAsk(false)}
+        onConfirm={async (includePrevMonth) => {
+          const res = await fetch('/api/recalc', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ includePrevMonth }),
+          })
+          const data = res.ok ? await res.json() : { updated: 0 }
+          notifyDataChanged()
+          return data.updated ?? 0
+        }}
+      />
 
       <DiscardConfirm
         open={discardOpen}
