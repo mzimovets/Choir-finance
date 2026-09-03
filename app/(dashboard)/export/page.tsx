@@ -106,6 +106,20 @@ export default function ExportPage() {
       .catch(() => {});
   }, []);
 
+  /**
+   * Готовые пометки для заголовка: нажатие добавляет строку, повторное —
+   * убирает. Работает с тем заголовком, который сейчас открыт.
+   */
+  function toggleTitleLine(text: string, fallbackTitle: string) {
+    const isXlsxTab = activeDocTab === "xlsx";
+    const current = ((isXlsxTab ? exportTitle : docxTitle) || fallbackTitle).trim();
+    const has = current.includes(text);
+    const next = has
+      ? current.replace(text, "").replace(/\s{2,}/g, " ").trim()
+      : `${current} ${text}`.trim();
+    if (isXlsxTab) setExportTitle(next); else setDocxTitle(next);
+  }
+
   async function updateHideZero(next: boolean) {
     setHideZeroMembers(next);
     await fetch("/api/settings", {
@@ -856,11 +870,62 @@ export default function ExportPage() {
                           {tab.label}
                         </button>
                       ))}
+                      {(() => {
+                        const fallback = isXlsx ? defaultXlsxTitle : defaultDocxTitle;
+                        const current = ((isXlsx ? exportTitle : docxTitle) || fallback);
+                        const marks = [
+                          {
+                            key: "bishop",
+                            text: "(Службу возглавляет митрополит ФЕОДОР)",
+                            title: "Добавить в заголовок: службу возглавляет митрополит",
+                            icon: (
+                              <svg width="19" height="19" viewBox="0 0 497.218 497.218" fill="currentColor">
+                                <path d="M200.859,290.218c56.61,0,102.666-46.056,102.666-102.667V49.677L200.859,0L98.192,49.677v137.875C98.192,244.162,144.249,290.218,200.859,290.218z M200.859,44.437l62.666,30.323v70.007H138.192V74.759L200.859,44.437z M138.255,184.766h125.208c0.042,0.928,0.063,1.857,0.063,2.786c0,34.554-28.112,62.667-62.666,62.667c-34.555,0-62.667-28.112-62.667-62.667C138.192,186.623,138.213,185.694,138.255,184.766z"/>
+                                <polygon points="465.359,270.718 427.859,270.718 427.859,230.718 387.859,230.718 387.859,270.718 350.359,270.718 350.359,310.718 387.859,310.718 387.859,497.218 427.859,497.218 427.859,310.718 465.359,310.718"/>
+                                <path d="M200.859,308.218c-93.187,0-169,75.813-169,169v20h338v-20C369.859,384.031,294.046,308.218,200.859,308.218z M73.407,457.218c9.637-61.671,63.12-109,127.452-109s117.815,47.329,127.452,109H73.407z"/>
+                              </svg>
+                            ),
+                          },
+                          {
+                            key: "knight",
+                            text: "Вечернее богослужение. Акафист св. благоверному князю Александру Невскому",
+                            title: "Добавить в заголовок: вечернее богослужение, акафист",
+                            icon: (
+                              <svg width="19" height="19" viewBox="-20 0 190 190" fill="currentColor">
+                                <path fillRule="evenodd" clipRule="evenodd" d="M116.8 96.88L104.91 84.88L104.33 102.53L92.0001 114.71L90.9101 147.71H85.9101L81.6101 117.35L68.6701 117.54L68.0001 58.89C70.1201 58.89 72.7201 58.83 75.6601 58.83C82.6601 58.83 85.9801 62.98 89.0901 70.76C95.3501 64.13 105.21 60.18 118.88 66.32L122 94L116.8 96.88ZM72.2201 54.37C72.2201 54.37 67.8801 51.5 67.2201 46.59C66.0001 36.2 82.7801 34.14 82.7801 45.8C82.8391 48.6631 82.6315 51.5254 82.1601 54.35L72.2201 54.37ZM63.6201 86.61C62.2501 85.53 57.6201 81.88 56.2801 80.79C55.3752 79.982 54.643 78.9995 54.1274 77.9014C53.6119 76.8033 53.3236 75.6123 53.2801 74.4L58.5701 65.33L58.7901 31.5L55.0901 26.73L60.3901 2.43999L61.6801 1.64999L65.8501 21.2L63.4801 23.78L63.6201 86.61ZM63.6201 89.42L63.7401 147.48L58.0001 147.58L58.1801 120.85L51.1801 127.33L49.4801 147.27L44.3101 147.44L42.4801 122.7L49.8001 106.64L49.8801 93.12C46.0501 90.99 40.2101 91.25 40.2101 108.58L28.6301 111.4C24.0001 82.75 46.3201 81.22 53.7701 89.3L63.6201 89.42ZM102.11 147.25L97.1101 147.63L95.2001 117.87L104.35 109.57L102.11 147.25Z"/>
+                              </svg>
+                            ),
+                          },
+                        ];
+                        return (
+                          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center" }}>
+                            {marks.map((mark) => {
+                              const on = current.includes(mark.text);
+                              return (
+                                <button
+                                  key={mark.key}
+                                  onClick={() => toggleTitleLine(mark.text, fallback)}
+                                  title={mark.title}
+                                  style={{
+                                    width: 32, height: 32, borderRadius: 9,
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    color: on ? C_ACCENT : C_MUTED,
+                                    background: on ? "#f5ece3" : "transparent",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {mark.icon}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                       <button
                         onClick={() => setSettingsOpen(true)}
                         title="Настройки"
                         style={{
-                          marginLeft: "auto", marginRight: 10,
+                          marginRight: 10,
                           width: 32, height: 32, borderRadius: 9,
                           display: "flex", alignItems: "center", justifyContent: "center",
                           color: C_MUTED, background: "transparent", flexShrink: 0,
