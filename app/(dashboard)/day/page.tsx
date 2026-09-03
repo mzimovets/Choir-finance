@@ -216,7 +216,25 @@ function DayPageInner() {
       // HeroUI Calendar: <td data-slot="cell"><span data-outside-month? ...>{formattedDate}</span></td>
       const cellButtons = calWrapRef.current.querySelectorAll<HTMLElement>('td[data-slot="cell"] > span')
 
-      cellButtons.forEach(span => {
+      const dayKey = (d: Date) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+      // Седмица выбранного дня: с воскресенья по субботу
+      const [sy, sm, sd] = date.split('-').map(Number)
+      const weekStart = new Date(sy, sm - 1, sd)
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay())   // getDay(): 0 — воскресенье
+      const weekEnd = new Date(weekStart)
+      weekEnd.setDate(weekStart.getDate() + 6)
+      const weekFrom = dayKey(weekStart)
+      const weekTo = dayKey(weekEnd)
+
+      // Дата каждой ячейки — по её месту в сетке: первая клетка это понедельник
+      // недели, в которую попадает 1-е число (локаль ru-RU начинает с понедельника)
+      const [cy, cm] = (ym || '').split('-').map(Number)
+      const firstOfMonth = cy ? new Date(cy, cm - 1, 1) : null
+      const gridOffset = firstOfMonth ? (firstOfMonth.getDay() + 6) % 7 : 0
+
+      cellButtons.forEach((span, cellIdx) => {
         // Сброс наших инлайновых стилей (при перерисовке)
         span.style.boxShadow = ''
         span.style.background = ''
@@ -224,27 +242,38 @@ function DayPageInner() {
         span.style.borderRadius = ''
         span.style.fontWeight = ''
 
-        // Пропускаем дни соседних месяцев
-        if (span.hasAttribute('data-outside-month')) return
-
+        const outside = span.hasAttribute('data-outside-month')
         const selected = span.hasAttribute('data-selected')
         const today = span.hasAttribute('data-today')
 
         // Единая форма для всех — скруглённый квадрат (база HeroUI — круг)
         span.style.borderRadius = '10px'
         span.style.position = 'relative'
+
+        // Седмица подсвечивается целиком, включая её хвост в соседнем месяце
+        const cellDate = firstOfMonth
+          ? dayKey(new Date(cy, cm - 1, 1 - gridOffset + cellIdx))
+          : ''
+        const inWeek = !!cellDate && cellDate >= weekFrom && cellDate <= weekTo
+
         if (selected) {
           // Выбранный день — сплошная заливка акцентом, белый текст
           span.style.background = '#9b7653'
           span.style.color = '#ffffff'
           span.style.fontWeight = '600'
-        } else if (today) {
+        } else if (inWeek) {
+          // Остальные дни седмицы — мягкая заливка
+          span.style.background = '#f0e2d0'
+          span.style.fontWeight = '600'
+        }
+        if (today && !selected) {
           // Сегодня — обводка, без заливки (не прячет точку)
           span.style.boxShadow = 'inset 0 0 0 2px #bd9673'
           span.style.fontWeight = '700'
         }
 
-        // Точка «есть выход»
+        // Точка «есть выход» — только для дней отображаемого месяца
+        if (outside) return
         const day = parseInt(span.textContent?.trim() || '0')
         if (!ym || !day || day > 31) return
         const ds = `${ym}-${String(day).padStart(2, '0')}`
