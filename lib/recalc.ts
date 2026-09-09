@@ -54,6 +54,12 @@ export async function recalcEvents({ choirType, memberId, from, until }: RecalcO
       const tariff = (etDoc?.prices as Record<string, number> | undefined)?.[role] ?? 0
       const own = pricesToMap(member.defaultPrices)[ev.eventType]
       const base = own !== undefined && own > 0 ? own : tariff
+
+      // Тариф не нашёлся: тип выхода переименовали или удалили из справочника,
+      // либо у роли (чтец, солист) для него не задана цена. Это не повод
+      // обнулять уже проставленную сумму — оставляем выход нетронутым.
+      if (base <= 0) return att
+
       const full = applyHalf(base, (member.halvedEventTypes ?? []).includes(ev.eventType))
 
       const share = att.share ?? 1
