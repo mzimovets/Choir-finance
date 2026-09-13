@@ -137,7 +137,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   // Будний хор
   const [regent, setRegent] = useState<SlotState>(emptySlot())
-  const [reader, setReader] = useState<SlotState>(emptySlot())
+  // Чтецов в выходе может быть несколько — держим списком, как певчих
+  const [readerRows, setReaderRows] = useState<WeekdayRow[]>([])
   const [weekdayRows, setWeekdayRows] = useState<WeekdayRow[]>([])
 
   // Активное поле нампада: id слота/строки + поле (цена/доплата/штраф)
@@ -153,11 +154,12 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     const slot = (s: SlotState) => s.memberId ? [s.memberId, s.basePrice, s.bonus, s.fine, s.share] : null
     return JSON.stringify({
       type: eventType, custom: customType.trim(),
-      fReg: slot(festiveRegent), reg: slot(regent), rdr: slot(reader),
+      fReg: slot(festiveRegent), reg: slot(regent),
+      rdr: readerRows.filter((r) => r.memberId).map((r) => [r.memberId, r.basePrice, r.bonus, r.fine, r.share]),
       fRows: festiveRows.filter((r) => r.checked).map((r) => [r.memberId, r.basePrice, r.bonus, r.fine, r.share]),
       wRows: weekdayRows.filter((r) => r.memberId).map((r) => [r.memberId, r.basePrice, r.bonus, r.fine, r.share]),
     })
-  }, [eventType, customType, festiveRegent, regent, reader, festiveRows, weekdayRows])
+  }, [eventType, customType, festiveRegent, regent, readerRows, festiveRows, weekdayRows])
 
   // Всегда держим ссылку на свежую версию (для чтения из отложенного снимка)
   const serializeRef = useRef(serializeForm)
@@ -192,7 +194,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         .forEach((r) => items.push({ memberId: r.memberId, role: 'singer' }))
     } else {
       if (regent.memberId) items.push({ memberId: regent.memberId, role: 'regent' })
-      if (reader.memberId) items.push({ memberId: reader.memberId, role: 'reader' })
+      readerRows.filter((r) => r.memberId).forEach((r) => items.push({ memberId: r.memberId, role: 'reader' }))
       weekdayRows.filter((r) => r.memberId).forEach((r) => items.push({ memberId: r.memberId, role: 'singer' }))
     }
     if (items.length === 0) return
@@ -233,18 +235,25 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       }))
     } else {
       const reg = clipboard.items.find((i) => i.role === 'regent')
-      const rdr = clipboard.items.find((i) => i.role === 'reader')
       const regM = reg && byId(reg.memberId)
-      const rdrM = rdr && byId(rdr.memberId)
       if (regM) setRegent({
         memberId: regM._id, memberName: buildMemberName(regM.name, regM.patronymic),
         basePrice: getPriceForMember(regM, resolvedType, 'regent'), bonus: 0, fine: 0, search: '', results: [],
         fullPrice: getPriceForMember(regM, resolvedType, 'regent'), share: 1,
       })
-      if (rdrM) setReader({
-        memberId: rdrM._id, memberName: buildMemberName(rdrM.name, rdrM.patronymic),
-        basePrice: getPriceForMember(rdrM, resolvedType, 'reader'), bonus: 0, fine: 0, search: '', results: [],
-        fullPrice: getPriceForMember(rdrM, resolvedType, 'reader'), share: 1,
+      const rdrRows: WeekdayRow[] = clipboard.items.filter((i) => i.role === 'reader').flatMap((i) => {
+        const m = byId(i.memberId)
+        if (!m) return []
+        const price = getPriceForMember(m, resolvedType, 'reader')
+        return [{
+          key: nextKey(), memberId: m._id, memberName: buildMemberName(m.name, m.patronymic),
+          basePrice: price, bonus: 0, fine: 0, search: '', results: [],
+          fullPrice: price, share: 1,
+        }]
+      })
+      if (rdrRows.length) setReaderRows((prev) => {
+        const existing = new Set(prev.filter((r) => r.memberId).map((r) => r.memberId))
+        return [...prev.filter((r) => r.memberId), ...rdrRows.filter((r) => !existing.has(r.memberId))]
       })
       const rows: WeekdayRow[] = clipboard.items.filter((i) => i.role === 'singer').flatMap((i) => {
         const m = byId(i.memberId)
@@ -278,11 +287,11 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     }
     else if (id === 'festiveRegent') visible = !!festiveRegent.memberId
     else if (id === 'regent') visible = !!regent.memberId
-    else if (id === 'reader') visible = !!reader.memberId
+    else if (id.startsWith('r:')) visible = !!readerRows.find((r) => r.key === id.slice(2))?.memberId
     else if (id.startsWith('f:')) visible = festiveRows.find((r) => r.memberId === id.slice(2))?.checked ?? false
     else if (id.startsWith('w:')) visible = !!weekdayRows.find((r) => r.key === id.slice(2))?.memberId
     if (!visible) setActiveNumpad(null)
-  }, [activeNumpad, festiveRegent, regent, reader, festiveRows, weekdayRows, choirType])
+  }, [activeNumpad, festiveRegent, regent, readerRows, festiveRows, weekdayRows, choirType])
 
   const resolvedType = eventType === 'Другое' ? customType.trim() : eventType
 
@@ -330,14 +339,14 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     // Обновить цену чтеца под выбранный тип выхода (или сбросить, если отключён)
     if (choirType === 'weekday' && !editingEvent) {
       const rt = eventType === 'Другое' ? customType.trim() : eventType
-      setReader((cur) => {
-        if (!cur.memberId) return cur
+      setReaderRows((prev) => prev.flatMap((cur) => {
+        if (!cur.memberId) return [cur]
         const readerMember = members.find((m) => m._id === cur.memberId)
-        if (!readerMember) return cur
-        if (isMemberDisabled(readerMember, rt)) return emptySlot()
+        if (!readerMember) return [cur]
+        if (isMemberDisabled(readerMember, rt)) return []
         const full = getPriceForMember(readerMember, rt, 'reader')
-        return { ...cur, fullPrice: full, basePrice: priceForShare(full, cur.share) }
-      })
+        return [{ ...cur, fullPrice: full, basePrice: priceForShare(full, cur.share) }]
+      }))
     }
   }
 
@@ -512,13 +521,13 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
           // подставлялся первый участник списка — и после сохранения человек
           // без спроса становился регентом
           const regentAtt = editingEvent.attendances.find((a) => a.isRegent)
-          const readerAtt = editingEvent.attendances.find((a) => a.isReader)
+          const readerAtts = editingEvent.attendances.filter((a) => a.isReader)
           const singerAtts = editingEvent.attendances.filter(
-            (a) => a !== regentAtt && a !== readerAtt
+            (a) => a !== regentAtt && !readerAtts.includes(a)
           )
 
           setRegent(regentAtt ? slotFromAtt(regentAtt) : emptySlot())
-          setReader(readerAtt ? slotFromAtt(readerAtt) : emptySlot())
+          setReaderRows(readerAtts.map((a) => ({ key: nextKey(), ...slotFromAtt(a) })))
           setWeekdayRows(singerAtts.map((a) => ({ key: nextKey(), ...slotFromAtt(a) })))
         }
       } else {
@@ -545,12 +554,12 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         // Автозаполнить чтеца для буднего хора (если он не отключён для нового типа)
         if (choirType === 'weekday') {
           const defaultReader = (membersData as Member[]).find((m) => m.role === 'reader')
-          setReader(emptySlot()) // basePrice выставим позже в goToMembers, когда тип будет известен
-          if (defaultReader) {
-            setReader({ memberId: defaultReader._id, memberName: buildMemberName(defaultReader.name, defaultReader.patronymic), basePrice: 0, bonus: 0, fine: 0, search: '', results: [], fullPrice: 0, share: 1 })
-          }
+          // basePrice выставим позже в goToMembers, когда тип будет известен
+          setReaderRows(defaultReader
+            ? [{ key: nextKey(), memberId: defaultReader._id, memberName: buildMemberName(defaultReader.name, defaultReader.patronymic), basePrice: 0, bonus: 0, fine: 0, search: '', results: [], fullPrice: 0, share: 1 }]
+            : [])
         } else {
-          setReader(emptySlot())
+          setReaderRows([])
         }
       }
     })
@@ -637,7 +646,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   /* ── Регент ── */
   function handleRegentSearch(q: string) {
-    const excludeIds = [reader.memberId, ...weekdayRows.filter((r) => r.memberId).map((r) => r.memberId)].filter(Boolean)
+    const excludeIds = [...readerRows.filter((r) => r.memberId).map((r) => r.memberId), ...weekdayRows.filter((r) => r.memberId).map((r) => r.memberId)].filter(Boolean)
     const results = searchMembers(q, excludeIds, 'regent')
     setRegent((r) => ({ ...r, search: q, results }))
   }
@@ -660,19 +669,49 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     setFestiveRegent({ memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [], fullPrice: price, share: 1 })
   }
 
-  /* ── Чтец ── */
-  function handleReaderSearch(q: string) {
-    const excludeIds = [regent.memberId, ...weekdayRows.filter((r) => r.memberId).map((r) => r.memberId)].filter(Boolean)
+  /* ── Чтецы ──
+     Их может быть несколько, и тот же человек может в этом же выходе петь:
+     певчие из списка чтецов не исключаются, только сами чтецы между собой. */
+  const readerInputRefs = useRef<Map<string, HTMLInputElement>>(new Map())
+
+  function addReaderRow() {
+    const empty = readerRows.find((r) => !r.memberId && !r.search.trim())
+    if (empty) {
+      readerInputRefs.current.get(empty.key)?.focus()
+      return
+    }
+    const key = nextKey()
+    // flushSync — чтобы инпут появился сразу и focus() остался внутри жеста,
+    // иначе iOS не покажет клавиатуру
+    flushSync(() => {
+      setReaderRows((prev) => [...prev, { key, memberId: '', memberName: '', basePrice: 0, bonus: 0, fine: 0, search: '', results: [], fullPrice: 0, share: 1 }])
+    })
+    readerInputRefs.current.get(key)?.focus()
+  }
+
+  function updateReaderRowSearch(key: string, q: string) {
+    const excludeIds = [
+      regent.memberId,
+      ...readerRows.filter((r) => r.key !== key && r.memberId).map((r) => r.memberId),
+    ].filter(Boolean)
     const results = searchMembers(q, excludeIds, 'reader')
-    setReader((r) => ({ ...r, search: q, results }))
+    setReaderRows((prev) => prev.map((r) => r.key === key ? { ...r, search: q, results } : r))
   }
 
-  function selectReader(m: Member) {
+  function selectReaderMember(key: string, m: Member) {
     const price = getPriceForMember(m, resolvedType, 'reader')   // слот = чтец
-    setReader({ memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [], fullPrice: price, share: 1 })
+    setEmptyError(false)
+    setReaderRows((prev) =>
+      prev.map((r) => r.key === key
+        ? { ...r, memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [], fullPrice: price, share: 1 }
+        : r
+      )
+    )
   }
 
-  function clearReader() { setReader(emptySlot()) }
+  function removeReaderRow(key: string) {
+    setReaderRows((prev) => prev.filter((r) => r.key !== key))
+  }
 
   /* ── Будние певчие ── */
   const regentInputRef = useRef<HTMLInputElement>(null)
@@ -695,9 +734,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }
 
   function updateSingerRowSearch(key: string, q: string) {
+    // Чтецы не исключаются: чтец может в этом же выходе ещё и петь
     const excludeIds = [
       regent.memberId,
-      reader.memberId,
       ...weekdayRows.filter((r) => r.key !== key && r.memberId).map((r) => r.memberId),
     ].filter(Boolean)
     const results = searchMembers(q, excludeIds)
@@ -749,9 +788,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         ...(regent.memberId
           ? [{ memberId: regent.memberId, memberName: regent.memberName, basePrice: regent.basePrice, bonus: regent.bonus, ...(regent.fine ? { fine: regent.fine } : {}), ...(regent.share !== 1 ? { share: regent.share, fullPrice: regent.fullPrice } : {}), isRegent: true as const }]
           : []),
-        ...(reader.memberId
-          ? [{ memberId: reader.memberId, memberName: reader.memberName, basePrice: reader.basePrice, bonus: reader.bonus, ...(reader.fine ? { fine: reader.fine } : {}), ...(reader.share !== 1 ? { share: reader.share, fullPrice: reader.fullPrice } : {}), isReader: true as const }]
-          : []),
+        ...readerRows
+          .filter((r) => r.memberId)
+          .map((r) => ({ memberId: r.memberId, memberName: r.memberName, basePrice: r.basePrice, bonus: r.bonus, ...(r.fine ? { fine: r.fine } : {}), ...(r.share !== 1 ? { share: r.share, fullPrice: r.fullPrice } : {}), isReader: true as const })),
         ...singerAtts,
       ]
     }
@@ -780,7 +819,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   const checkedCount = choirType === 'festive'
     ? (festiveRegent.memberId ? 1 : 0) + festiveRows.filter((r) => r.checked).length
-    : (regent.memberId ? 1 : 0) + (reader.memberId ? 1 : 0) + weekdayRows.filter((r) => r.memberId).length
+    : (regent.memberId ? 1 : 0) + readerRows.filter((r) => r.memberId).length + weekdayRows.filter((r) => r.memberId).length
 
   /* ─── Нампад: чтение и запись значения активного поля ─── */
   // Доля и общая цена набираются с чистого листа — держим их черновики
@@ -797,7 +836,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     if (field === 'share') return shareDraft
     if (id === 'festiveRegent') return festiveRegent[field]
     if (id === 'regent') return regent[field]
-    if (id === 'reader') return reader[field]
+    if (id.startsWith('r:')) return readerRows.find((r) => r.key === id.slice(2))?.[field] ?? 0
     if (id.startsWith('f:')) return festiveRows.find((r) => r.memberId === id.slice(2))?.[field] ?? 0
     if (id.startsWith('w:')) return weekdayRows.find((r) => r.key === id.slice(2))?.[field] ?? 0
     return 0
@@ -829,7 +868,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     }
     if (id === 'festiveRegent') setFestiveRegent((r) => applyField(r, field, v))
     else if (id === 'regent') setRegent((r) => applyField(r, field, v))
-    else if (id === 'reader') setReader((r) => applyField(r, field, v))
+    else if (id.startsWith('r:')) {
+      const key = id.slice(2)
+      setReaderRows((prev) => prev.map((r) => r.key === key ? applyField(r, field, v) : r))
+    }
     else if (id.startsWith('f:')) {
       const mid = id.slice(2)
       setFestiveRows((prev) => prev.map((r) => r.memberId === mid ? applyField(r, field, v) : r))
@@ -861,7 +903,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     }
     if (id === 'festiveRegent') return festiveRegent.share
     if (id === 'regent') return regent.share
-    if (id === 'reader') return reader.share
+    if (id.startsWith('r:')) return readerRows.find((r) => r.key === id.slice(2))?.share ?? 1
     if (id.startsWith('f:')) return festiveRows.find((r) => r.memberId === id.slice(2))?.share ?? 1
     if (id.startsWith('w:')) return weekdayRows.find((r) => r.key === id.slice(2))?.share ?? 1
     return 1
@@ -881,7 +923,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     }
     if (id === 'festiveRegent') setFestiveRegent(set)
     else if (id === 'regent') setRegent(set)
-    else if (id === 'reader') setReader(set)
+    else if (id.startsWith('r:')) {
+      const key = id.slice(2)
+      setReaderRows((prev) => prev.map((r) => r.key === key ? set(r) : r))
+    }
     else if (id.startsWith('f:')) {
       const mid = id.slice(2)
       setFestiveRows((prev) => prev.map((r) => r.memberId === mid ? set(r) : r))
@@ -1239,47 +1284,81 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                             )}
                           </div>
 
-                          {/* ── Чтец ── */}
+                          {/* ── Чтецы ── */}
                           <div>
-                            <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide mb-2">Чтец</p>
-                            {reader.memberId ? (
-                              <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
-                                <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(reader.memberName)}</span>
-                                <PriceInputs
-                                  id="reader" name={shortName(reader.memberName)}
-                                  basePrice={reader.basePrice} bonus={reader.bonus} fine={reader.fine} share={reader.share}
-                                />
-                                <button onClick={clearReader} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
-                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="relative">
-                                <input
-                                  className="warm-input"
-                                  placeholder="Поиск по фамилии..."
-                                  onFocus={() => setActiveNumpad(null)}
-                                  value={reader.search}
-                                  onChange={(e) => handleReaderSearch(e.target.value)}
-                                  autoComplete="off"
-                                />
-                                {reader.results.length > 0 && (
-                                  <div data-suggest="1" className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56">
-                                    {reader.results.map((m) => (
-                                      <button
-                                        key={m._id}
-                                        className="w-full text-left px-4 py-3 text-sm border-b border-warm-100 last:border-b-0 active:bg-warm-50 flex items-center gap-2"
-                                        onClick={() => selectReader(m)}
-                                      >
-                                        <span className="font-semibold text-warm-900 flex-1">{memberDisplayName(m.name, m.patronymic)}</span>
-                                        {m.role === 'reader' && <span className="text-xs text-warm-400 shrink-0">Чтец</span>}
-                                        <span className="text-xs text-warm-400 shrink-0">{getPriceForMember(m, resolvedType, 'reader')} ₽</span>
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide">Чтецы</p>
+                              <span className="text-xs text-warm-400">{readerRows.filter((r) => r.memberId).length} чел.</span>
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                              {readerRows.map((row) => (
+                                <div key={row.key}>
+                                  {row.memberId ? (
+                                    <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
+                                      <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(row.memberName)}</span>
+                                      <PriceInputs
+                                        id={`r:${row.key}`} name={shortName(row.memberName)}
+                                        basePrice={row.basePrice} bonus={row.bonus} fine={row.fine} share={row.share}
+                                      />
+                                      <button onClick={() => removeReaderRow(row.key)} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                                       </button>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <div className="relative flex-1">
+                                        <input
+                                          ref={(el) => {
+                                            if (el) readerInputRefs.current.set(row.key, el)
+                                            else readerInputRefs.current.delete(row.key)
+                                          }}
+                                          className="warm-input"
+                                          placeholder="Поиск по фамилии..."
+                                          onFocus={() => setActiveNumpad(null)}
+                                          value={row.search}
+                                          onChange={(e) => updateReaderRowSearch(row.key, e.target.value)}
+                                          autoComplete="off"
+                                        />
+                                        {row.results.length > 0 && (
+                                          <div data-suggest="1" className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56">
+                                            {row.results.map((m) => (
+                                              <button
+                                                key={m._id}
+                                                className="w-full text-left px-4 py-3 text-sm border-b border-warm-100 last:border-b-0 active:bg-warm-50 flex items-center gap-2"
+                                                onClick={() => selectReaderMember(row.key, m)}
+                                              >
+                                                <span className="font-semibold text-warm-900 flex-1">{memberDisplayName(m.name, m.patronymic)}</span>
+                                                {m.role === 'reader' && <span className="text-xs text-warm-400 shrink-0">Чтец</span>}
+                                                <span className="text-xs text-warm-400 shrink-0">{getPriceForMember(m, resolvedType, 'reader')} ₽</span>
+                                              </button>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <button
+                                        onClick={() => removeReaderRow(row.key)}
+                                        className="w-9 h-9 rounded-xl bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100"
+                                      >
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                          <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+
+                              <button
+                                onClick={addReaderRow}
+                                className="w-full py-2.5 rounded-xl border border-dashed border-warm-300 text-warm-500 text-sm font-medium flex items-center justify-center gap-2 active:bg-warm-50 transition-colors"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                  <path fillRule="evenodd" clipRule="evenodd" d="M12 3.25C12.4142 3.25 12.75 3.58579 12.75 4V11.25H20C20.4142 11.25 20.75 11.5858 20.75 12C20.75 12.4142 20.4142 12.75 20 12.75H12.75V20C12.75 20.4142 12.4142 20.75 12 20.75C11.5858 20.75 11.25 20.4142 11.25 20V12.75H4C3.58579 12.75 3.25 12.4142 3.25 12C3.25 11.5858 3.58579 11.25 4 11.25H11.25V4C11.25 3.58579 11.5858 3.25 12 3.25Z" fill="currentColor"/>
+                                </svg>
+                                Добавить чтеца
+                              </button>
+                            </div>
                           </div>
 
                           {/* ── Певчие ── */}

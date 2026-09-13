@@ -5,6 +5,7 @@ import { db, dbFind } from '@/lib/db'
 import { getSettings } from '@/lib/settings'
 import type { ChoirEvent, Member } from '@/lib/types'
 import { shortName } from '@/lib/nameFormat'
+import { attendancesOf, sumAttendances } from '@/lib/types'
 
 const MONTHS_UPPER = [
   'ЯНВАРЬ', 'ФЕВРАЛЬ', 'МАРТ', 'АПРЕЛЬ', 'МАЙ', 'ИЮНЬ',
@@ -57,6 +58,25 @@ function priceFormulaPart(att: { basePrice?: number; share?: number; fullPrice?:
 }
 
 
+
+/**
+ * Содержимое ячейки «участник × выход». Записей может быть несколько — если
+ * человек в этом выходе и пел, и читал, — тогда суммы складываются, а формула
+ * показывает слагаемые.
+ */
+function cellValue(atts: { basePrice?: number; bonus: number; fine?: number; share?: number; fullPrice?: number }[]) {
+  const total = sumAttendances(atts as never)
+  const hasFine = atts.some((a) => (a.fine || 0) > 0)
+  const parts: string[] = []
+  for (const att of atts) {
+    parts.push((parts.length ? '+' : '') + priceFormulaPart(att))
+    if (att.bonus > 0) parts.push(`+${att.bonus}`)
+    if ((att.fine || 0) > 0) parts.push(`-${att.fine}`)
+  }
+  const plain = atts.length === 1 && parts.length === 1 && parts[0] === String(atts[0].basePrice || 0)
+  return { total, hasFine, formula: parts.join(''), isFormula: !plain }
+}
+
 export async function GET(req: NextRequest) {
   const session = await getSession()
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -91,10 +111,8 @@ export async function GET(req: NextRequest) {
   // Настройка «скрывать без выплат»: убираем из табеля тех, у кого за месяц
   // не набралось ни рубля. Появятся деньги — вернутся сами.
   const settings = await getSettings(session.choirType)
-  const monthTotal = (memberId2: string) => events.reduce((sum, ev) => {
-    const att = ev.attendances.find(a => a.memberId === memberId2)
-    return sum + (att ? (att.basePrice || 0) + (att.bonus || 0) - (att.fine || 0) : 0)
-  }, 0)
+  const monthTotal = (memberId2: string) =>
+    events.reduce((sum, ev) => sum + sumAttendances(attendancesOf(ev, memberId2)), 0)
   const listedMembers = settings.hideZeroMembers
     ? members.filter(m => monthTotal(m._id) !== 0)
     : members
@@ -184,21 +202,17 @@ export async function GET(req: NextRequest) {
     const fineFill: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE4EC' } }
     events.forEach((ev, evIdx) => {
       const c = 3 + evIdx
-      const att = ev.attendances.find(a => a.memberId === memberId)
-      if (att) {
-        const fine = att.fine || 0
-        const total = (att.basePrice || 0) + (att.bonus || 0) - fine
-        const priceStr = priceFormulaPart(att)
-        const parts = [priceStr, ...(att.bonus > 0 ? [`+${att.bonus}`] : []), ...(fine > 0 ? [`-${fine}`] : [])]
-        if (att.bonus > 0 || fine > 0 || priceStr !== String(att.basePrice || 0)) ws.getCell(5, c).value = { formula: parts.join(''), result: total }
-        else if (total > 0) ws.getCell(5, c).value = total
-        if (fine > 0) ws.getCell(5, c).fill = fineFill
+      const atts = attendancesOf(ev, memberId)
+      if (atts.length) {
+        const cell = cellValue(atts)
+        if (cell.isFormula) ws.getCell(5, c).value = { formula: cell.formula, result: cell.total }
+        else if (cell.total > 0) ws.getCell(5, c).value = cell.total
+        if (cell.hasFine) ws.getCell(5, c).fill = fineFill
       }
       ws.getCell(5, c).alignment = { horizontal: 'center', vertical: 'middle' }; ws.getCell(5, c).border = allBorders()
     })
     const memberTotal = events.reduce((s, ev) => {
-      const a = ev.attendances.find(x => x.memberId === memberId)
-      return s + (a ? (a.basePrice || 0) + (a.bonus || 0) - (a.fine || 0) : 0)
+      return s + sumAttendances(attendancesOf(ev, memberId))
     }, 0)
     if (numEv > 0) {
       ws.getCell(5, sumCol).value = { formula: `SUM(${ws.getColumn(3).letter}5:${ws.getColumn(2 + numEv).letter}5)`, result: memberTotal }
@@ -267,15 +281,14 @@ export async function GET(req: NextRequest) {
     const sumFillG: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDAE3F3' } }
     const totFillG: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFCCCC' } }
     const grpTotal = (memberId: string) => events.reduce((s, ev) => {
-      const a = ev.attendances.find(x => x.memberId === memberId)
-      return s + (a ? (a.basePrice || 0) + (a.bonus || 0) - (a.fine || 0) : 0)
+      return s + sumAttendances(attendancesOf(ev, memberId))
     }, 0)
     grpMembers.forEach((mb, mi) => {
       const rn = 5 + mi
       wsG.getCell(rn, 1).value = mi + 1; wsG.getCell(rn, 1).alignment = { horizontal: 'center', vertical: 'middle' }; wsG.getCell(rn, 1).border = allBorders()
       wsG.getCell(rn, 2).value = shortName(mb.name, mb.patronymic); wsG.getCell(rn, 2).alignment = { horizontal: 'left', vertical: 'middle' }; wsG.getCell(rn, 2).border = allBorders()
       const fineFillG: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE4EC' } }
-      events.forEach((ev, evIdx) => { const c = 3 + evIdx; const att = ev.attendances.find(a => a.memberId === mb._id); if (att) { const fine = att.fine || 0; const t = (att.basePrice || 0) + (att.bonus || 0) - fine; const priceStr = priceFormulaPart(att); const parts = [priceStr, ...(att.bonus > 0 ? [`+${att.bonus}`] : []), ...(fine > 0 ? [`-${fine}`] : [])]; wsG.getCell(rn, c).value = (att.bonus > 0 || fine > 0 || priceStr !== String(att.basePrice || 0)) ? { formula: parts.join(''), result: t } : t > 0 ? t : undefined; if (fine > 0) wsG.getCell(rn, c).fill = fineFillG } wsG.getCell(rn, c).alignment = { horizontal: 'center', vertical: 'middle' }; wsG.getCell(rn, c).border = allBorders() })
+      events.forEach((ev, evIdx) => { const c = 3 + evIdx; const atts = attendancesOf(ev, mb._id); if (atts.length) { const cell = cellValue(atts); wsG.getCell(rn, c).value = cell.isFormula ? { formula: cell.formula, result: cell.total } : cell.total > 0 ? cell.total : undefined; if (cell.hasFine) wsG.getCell(rn, c).fill = fineFillG } wsG.getCell(rn, c).alignment = { horizontal: 'center', vertical: 'middle' }; wsG.getCell(rn, c).border = allBorders() })
       if (numEv2 > 0) wsG.getCell(rn, sumColG).value = { formula: `SUM(${wsG.getColumn(3).letter}${rn}:${wsG.getColumn(2 + numEv2).letter}${rn})`, result: grpTotal(mb._id) }
       wsG.getCell(rn, sumColG).fill = sumFillG; wsG.getCell(rn, sumColG).font = { bold: true, size: 11, name: 'Calibri' }; wsG.getCell(rn, sumColG).alignment = { horizontal: 'right', vertical: 'middle' }; wsG.getCell(rn, sumColG).border = allBorders()
       wsG.getRow(rn).height = 18
@@ -418,8 +431,7 @@ export async function GET(req: NextRequest) {
   // Месячная сумма участника — для кэшированного result у формул (iOS Numbers/Файлы не пересчитывают)
   const memberMonthTotal = (memberId: string) =>
     events.reduce((s, ev) => {
-      const a = ev.attendances.find(x => x.memberId === memberId)
-      return s + (a ? (a.basePrice || 0) + (a.bonus || 0) - (a.fine || 0) : 0)
+      return s + sumAttendances(attendancesOf(ev, memberId))
     }, 0)
   const singersTotal = singers.reduce((s, m) => s + memberMonthTotal(m._id), 0)
   const readersTotal = readers.reduce((s, m) => s + memberMonthTotal(m._id), 0)
@@ -435,15 +447,12 @@ export async function GET(req: NextRequest) {
     row.getCell(2).border = allBorders()
     events.forEach((ev, evIdx) => {
       const c = 3 + evIdx
-      const att = ev.attendances.find(a => a.memberId === member._id)
-      if (att) {
-        const fine = att.fine || 0
-        const total = (att.basePrice || 0) + (att.bonus || 0) - fine
-        const priceStr = priceFormulaPart(att)
-        const parts = [priceStr, ...(att.bonus > 0 ? [`+${att.bonus}`] : []), ...(fine > 0 ? [`-${fine}`] : [])]
-        if (att.bonus > 0 || fine > 0 || priceStr !== String(att.basePrice || 0)) row.getCell(c).value = { formula: parts.join(''), result: total }
-        else if (total > 0) row.getCell(c).value = total
-        if (fine > 0) row.getCell(c).fill = fineFillWs1
+      const atts = attendancesOf(ev, member._id)
+      if (atts.length) {
+        const cell = cellValue(atts)
+        if (cell.isFormula) row.getCell(c).value = { formula: cell.formula, result: cell.total }
+        else if (cell.total > 0) row.getCell(c).value = cell.total
+        if (cell.hasFine) row.getCell(c).fill = fineFillWs1
       }
       row.getCell(c).alignment = { horizontal: 'center', vertical: 'middle' }
       row.getCell(c).border = allBorders()

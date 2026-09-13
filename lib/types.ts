@@ -123,3 +123,17 @@ export const DEFAULT_PRICES: Record<string, Record<MemberRole, number>> = {
   'Кр. ход':    { singer: 330,  soloist: 330,  regent: 330,  reader: 0 },
   'ПАСХА':      { singer: 2250, soloist: 2250, regent: 2250, reader: 0 },
 }
+
+/**
+ * Все записи участника в выходе. Человек может быть в одном выходе дважды —
+ * например, петь и читать, — поэтому искать «первую попавшуюся» нельзя:
+ * так терялась бы вторая сумма.
+ */
+export function attendancesOf(ev: { attendances: Attendance[] }, memberId: string): Attendance[] {
+  return ev.attendances.filter((a) => a.memberId === memberId)
+}
+
+/** Сумма к выплате по записям: цена плюс доплата минус штраф */
+export function sumAttendances(atts: Attendance[]): number {
+  return atts.reduce((s, a) => s + (a.basePrice || 0) + (a.bonus || 0) - (a.fine || 0), 0)
+}

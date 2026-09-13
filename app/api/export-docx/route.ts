@@ -7,6 +7,7 @@ import {
 import { getSession } from '@/lib/auth'
 import { db, dbFind } from '@/lib/db'
 import { getSettings } from '@/lib/settings'
+import { attendancesOf, sumAttendances } from '@/lib/types'
 import type { ChoirEvent, Member } from '@/lib/types'
 import { shortName } from '@/lib/nameFormat'
 
@@ -98,8 +99,7 @@ export async function GET(req: NextRequest) {
     if (!member) return Response.json({ error: 'Member not found' }, { status: 404 })
 
     const mbTotal = events.reduce((s, ev) => {
-      const att = ev.attendances.find(a => a.memberId === memberId)
-      return s + (att ? att.basePrice + att.bonus - (att.fine || 0) : 0)
+      return s + sumAttendances(attendancesOf(ev, memberId))
     }, 0)
 
     // Ширина = полная ширина текста страницы (Letter 12240 DXA − поля 720×2 = 10800)
@@ -171,7 +171,7 @@ export async function GET(req: NextRequest) {
     const grpMembers = members.filter(m => ids.includes(m._id))
     // Ширина = полная ширина текста страницы (Letter 12240 DXA − поля 720×2 = 10800)
     const W_NG = 1080, W_NAG = 6940, W_SG = 2780, W_TG = W_NG + W_NAG + W_SG
-    const grpMemberTotal = (m: Member) => events.reduce((ss, ev) => { const att = ev.attendances.find(a => a.memberId === m._id); return ss + (att ? att.basePrice + att.bonus - (att.fine || 0) : 0) }, 0)
+    const grpMemberTotal = (m: Member) => events.reduce((ss, ev) => { return ss + sumAttendances(attendancesOf(ev, m._id)) }, 0)
     const grpTotal = grpMembers.reduce((s, m) => s + grpMemberTotal(m), 0)
     const grpRows: TableRow[] = [
       new TableRow({ tableHeader: true, height: { value: 320, rule: HeightRule.ATLEAST }, children: [cell('№ п/п', { bold: true, align: AlignmentType.CENTER, width: W_NG }), cell('ФИО', { bold: true, align: AlignmentType.CENTER, width: W_NAG }), cell('Итого, руб.', { bold: true, align: AlignmentType.CENTER, width: W_SG })] }),
@@ -187,16 +187,14 @@ export async function GET(req: NextRequest) {
   // Сумма по певчему = сумма всех его выходов за месяц
   function memberTotal(member: Member): number {
     return events.reduce((s, ev) => {
-      const att = ev.attendances.find((a) => a.memberId === member._id)
-      return s + (att ? (att.basePrice || 0) + (att.bonus || 0) - (att.fine || 0) : 0)
+      return s + sumAttendances(attendancesOf(ev, member._id))
     }, 0)
   }
 
   // Настройка «скрывать без выплат» — та же, что в табеле
   const settings = await getSettings(session.choirType)
   const monthTotal = (mid: string) => events.reduce((sum, ev) => {
-    const att = ev.attendances.find(a => a.memberId === mid)
-    return sum + (att ? (att.basePrice || 0) + (att.bonus || 0) - (att.fine || 0) : 0)
+    return sum + sumAttendances(attendancesOf(ev, mid))
   }, 0)
   const listedMembers = settings.hideZeroMembers
     ? members.filter(m => monthTotal(m._id) !== 0)

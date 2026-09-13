@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Spinner } from "@heroui/react";
 import { useSession } from "@/hooks/useSession";
 import { PageHeader } from "@/components/PageHeader";
+import { attendancesOf, sumAttendances } from "@/lib/types";
 import type { ChoirEvent, Member } from "@/lib/types";
 import { plural, EVENT } from "@/lib/plural";
 import { shortName } from "@/lib/nameFormat";
@@ -329,8 +330,7 @@ export default function ExportPage() {
   });
 
   const monthTotalOf = (memberId: string) => events.reduce((sum, ev) => {
-    const att = ev.attendances.find((a) => a.memberId === memberId);
-    return sum + (att ? att.basePrice + att.bonus - (att.fine || 0) : 0);
+    return sum + sumAttendances(attendancesOf(ev, memberId));
   }, 0);
 
   const activeMembers = members
@@ -961,8 +961,7 @@ export default function ExportPage() {
                     const singers = activeMembers.filter(mb => mb.role !== "reader");
                     const readers = activeMembers.filter(mb => mb.role === "reader");
                     const memberTotal = (mb: typeof activeMembers[0]) => sortedEvents.reduce((s, ev) => {
-                      const att = ev.attendances.find((a) => a.memberId === mb._id);
-                      return s + (att ? att.basePrice + att.bonus - (att.fine || 0) : 0);
+                      return s + sumAttendances(attendancesOf(ev, mb._id));
                     }, 0);
                     const singerTotal = singers.reduce((s, mb) => s + memberTotal(mb), 0);
                     const readerTotal = readers.reduce((s, mb) => s + memberTotal(mb), 0);
@@ -985,9 +984,9 @@ export default function ExportPage() {
                             {shortName(mb.name, mb.patronymic)}
                           </td>
                           {sortedEvents.map((ev, idx) => {
-                            const att = ev.attendances.find((a) => a.memberId === mb._id);
-                            const fine = att?.fine || 0;
-                            const val = att ? att.basePrice + att.bonus - fine : null;
+                            const atts = attendancesOf(ev, mb._id);
+                            const fine = atts.reduce((s, a) => s + (a.fine || 0), 0);
+                            const val = atts.length ? sumAttendances(atts) : null;
                             let cumIdx = 0, isGroupEnd = false;
                             for (const g of dateGroups) { cumIdx += g.count; if (idx === cumIdx - 1) { isGroupEnd = true; break; } if (idx < cumIdx) break; }
                             return (
@@ -1062,8 +1061,7 @@ export default function ExportPage() {
                     const singers = activeMembers.filter(mb => mb.role !== "reader");
                     const readers = activeMembers.filter(mb => mb.role === "reader");
                     const memberTotal = (mb: typeof activeMembers[0]) => sortedEvents.reduce((s, ev) => {
-                      const att = ev.attendances.find((a) => a.memberId === mb._id);
-                      return s + (att ? att.basePrice + att.bonus - (att.fine || 0) : 0);
+                      return s + sumAttendances(attendancesOf(ev, mb._id));
                     }, 0);
                     const singerTotal = singers.reduce((s, mb) => s + memberTotal(mb), 0);
                     const readerTotal = readers.reduce((s, mb) => s + memberTotal(mb), 0);
@@ -1155,8 +1153,7 @@ export default function ExportPage() {
       {memberModal && (() => {
         const mbEvents = sortedEvents;
         const mbTotal = mbEvents.reduce((s, ev) => {
-          const att = ev.attendances.find(a => a.memberId === memberModal._id);
-          return s + (att ? att.basePrice + att.bonus - (att.fine || 0) : 0);
+          return s + sumAttendances(attendancesOf(ev, memberModal._id));
         }, 0);
 
         return (
@@ -1224,9 +1221,9 @@ export default function ExportPage() {
                         <td style={{ ...tdBase, ...stickyNum, color: C_MUTED, fontSize: 11 }}>1</td>
                         <td style={{ ...tdBase, ...stickyName, textAlign: "left", paddingLeft: 8, fontWeight: 600, fontSize: 12 }}>{shortName(memberModal.name, memberModal.patronymic)}</td>
                         {mbEvents.map((ev, idx) => {
-                          const att = ev.attendances.find(a => a.memberId === memberModal._id);
-                          const mbFine = att?.fine || 0;
-                          const val = att ? att.basePrice + att.bonus - mbFine : null;
+                          const atts = attendancesOf(ev, memberModal._id);
+                          const mbFine = atts.reduce((s, a) => s + (a.fine || 0), 0);
+                          const val = atts.length ? sumAttendances(atts) : null;
                           let cumIdx = 0, isGroupEnd = false;
                           for (const g of dateGroups) { cumIdx += g.count; if (idx === cumIdx - 1) { isGroupEnd = true; break; } if (idx < cumIdx) break; }
                           return <td key={ev._id} {...cellTapProps(ev, memberModal._id, val !== null)} style={{ ...tdBase, position: "relative", overflow: "hidden", fontWeight: val ? 600 : 400, color: val ? C_TEXT : "#d4c0ac", fontSize: 12, cursor: val !== null ? "pointer" : undefined, borderRight: isGroupEnd && idx < mbEvents.length - 1 ? `1px solid ${C_SEP}` : undefined }}>{mbFine > 0 &&<span style={{ position: "absolute", top: 10, right: -4, width: "400%", height: 6, background: "#ef4444", transformOrigin: "top right", transform: "rotate(45deg)", zIndex: 1 }}><span style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.25)", filter: "blur(3px)", transform: "rotate(12deg)" }} /></span>}{val !== null ? val.toLocaleString("ru-RU") : "—"}</td>;
@@ -1336,8 +1333,7 @@ export default function ExportPage() {
         const selectedMembers = activeMembers.filter(mb => snapshotIds.has(mb._id));
         const groupTotal = selectedMembers.reduce((sum, mb) =>
           sum + sortedEvents.reduce((s, ev) => {
-            const att = ev.attendances.find(a => a.memberId === mb._id);
-            return s + (att ? att.basePrice + att.bonus - (att.fine || 0) : 0);
+            return s + sumAttendances(attendancesOf(ev, mb._id));
           }, 0), 0);
 
         return (
@@ -1448,7 +1444,7 @@ export default function ExportPage() {
                     </thead>
                     <tbody>
                       {selectedMembers.map((mb, mi) => {
-                        const rowTotal = sortedEvents.reduce((s, ev) => { const att = ev.attendances.find(a => a.memberId === mb._id); return s + (att ? att.basePrice + att.bonus - (att.fine || 0) : 0); }, 0);
+                        const rowTotal = sortedEvents.reduce((s, ev) => s + sumAttendances(attendancesOf(ev, mb._id)), 0);
                         const evenRow = mi % 2 === 1;
                         return (
                           <tr key={mb._id}>
@@ -1457,8 +1453,8 @@ export default function ExportPage() {
                               {shortName(mb.name, mb.patronymic)}
                             </td>
                             {sortedEvents.map((ev, idx) => {
-                              const att = ev.attendances.find(a => a.memberId === mb._id);
-                              const val = att ? att.basePrice + att.bonus - (att.fine || 0) : null;
+                              const atts = attendancesOf(ev, mb._id);
+                              const val = atts.length ? sumAttendances(atts) : null;
                               let cumIdx = 0, isGroupEnd = false;
                               for (const g of dateGroups) { cumIdx += g.count; if (idx === cumIdx - 1) { isGroupEnd = true; break; } if (idx < cumIdx) break; }
                               return (
@@ -1495,7 +1491,7 @@ export default function ExportPage() {
                     </thead>
                     <tbody>
                       {selectedMembers.map((mb, mi) => {
-                        const rowTotal = sortedEvents.reduce((s, ev) => { const att = ev.attendances.find(a => a.memberId === mb._id); return s + (att ? att.basePrice + att.bonus - (att.fine || 0) : 0); }, 0);
+                        const rowTotal = sortedEvents.reduce((s, ev) => s + sumAttendances(attendancesOf(ev, mb._id)), 0);
                         const evenRow = mi % 2 === 1;
                         return (
                           <tr key={mb._id}>
