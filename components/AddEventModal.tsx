@@ -508,8 +508,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         }
 
         if (choirType === 'weekday') {
+          // Только явно помеченный регент. Раньше при его отсутствии в слот
+          // подставлялся первый участник списка — и после сохранения человек
+          // без спроса становился регентом
           const regentAtt = editingEvent.attendances.find((a) => a.isRegent)
-            ?? editingEvent.attendances[0]
           const readerAtt = editingEvent.attendances.find((a) => a.isReader)
           const singerAtts = editingEvent.attendances.filter(
             (a) => a !== regentAtt && a !== readerAtt
