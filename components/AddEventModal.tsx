@@ -850,6 +850,13 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   /** Доля выхода у слота/строки по id нампада */
   function currentShare(id: string): number {
+    if (id === 'all') {
+      const rows = choirType === 'weekday'
+        ? weekdayRows.filter((r) => r.memberId).map((r) => r.share)
+        : festiveRows.filter((r) => r.checked).map((r) => r.share)
+      if (!rows.length) return 1
+      return rows.every((sh) => sh === rows[0]) ? rows[0] : 1
+    }
     if (id === 'festiveRegent') return festiveRegent.share
     if (id === 'regent') return regent.share
     if (id === 'reader') return reader.share
@@ -862,6 +869,14 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   function setShareFor(id: string, share: number) {
     const set = <T extends { basePrice: number; fullPrice: number; share: number }>(row: T): T =>
       ({ ...row, share, basePrice: priceForShare(row.fullPrice, share) })
+    if (id === 'all') {
+      if (choirType === 'weekday') {
+        setWeekdayRows((prev) => prev.map((r) => (r.memberId ? set(r) : r)))
+      } else {
+        setFestiveRows((prev) => prev.map((r) => (r.checked ? set(r) : r)))
+      }
+      return
+    }
     if (id === 'festiveRegent') setFestiveRegent(set)
     else if (id === 'regent') setRegent(set)
     else if (id === 'reader') setReader(set)
@@ -1366,7 +1381,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                   unit={activeNumpad.field === 'share' ? '%' : '₽'}
                   onChange={(v) => applyNumpad(parseInt(v.replace(/\D/g, '')) || 0)}
                   onClose={() => setActiveNumpad(null)}
-                  share={activeNumpad.field === 'basePrice' && activeNumpad.id !== 'all'
+                  share={activeNumpad.field === 'basePrice'
                     ? {
                         value: currentShare(activeNumpad.id),
                         onPick: (sh) => setShareFor(activeNumpad.id, sh),
