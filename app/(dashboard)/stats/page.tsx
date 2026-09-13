@@ -52,7 +52,12 @@ interface MemberStat {
   member: Member;
   events: number;
   total: number;
-  rows: { eventId: string; date: string; eventType: string; basePrice: number; bonus: number; fine: number }[];
+  rows: {
+    eventId: string; date: string; eventType: string;
+    basePrice: number; bonus: number; fine: number;
+    /** Роль в этом выходе — показывается, когда человек был в нём в двух ролях */
+    role?: "певчий" | "чтец" | "регент";
+  }[];
 }
 
 export default function StatsPage() {
@@ -82,6 +87,12 @@ export default function StatsPage() {
     );
 
     events.forEach((ev) => {
+      // Один человек может быть в выходе дважды — например, петь и читать.
+      // Тогда у каждой строки подписываем роль, иначе выход выглядит
+      // повторяющимся без объяснения
+      const countIn = new Map<string, number>();
+      ev.attendances.forEach((a) => countIn.set(a.memberId, (countIn.get(a.memberId) ?? 0) + 1));
+
       ev.attendances.forEach((a) => {
         if (!map.has(a.memberId)) return;
         const s = map.get(a.memberId)!;
@@ -94,6 +105,9 @@ export default function StatsPage() {
           basePrice: a.basePrice,
           bonus: a.bonus,
           fine: a.fine ?? 0,
+          role: (countIn.get(a.memberId) ?? 0) > 1
+            ? (a.isRegent ? "регент" : a.isReader ? "чтец" : "певчий")
+            : undefined,
         });
       });
     });
@@ -342,7 +356,8 @@ export default function StatsPage() {
                               .sort((a, b) => a.date.localeCompare(b.date))
                               .map((r) => {
                                 const sum = r.basePrice + r.bonus - r.fine
-                                return `${formatRowDate(r.date)} — ${r.eventType}: ${sum.toLocaleString("ru-RU")} ₽`
+                                const role = r.role ? ` (${r.role})` : ""
+                                return `${formatRowDate(r.date)} — ${r.eventType}${role}: ${sum.toLocaleString("ru-RU")} ₽`
                               })
                             const text = [
                               session?.choirType === "festive" ? "Праздничный хор" : "Будний хор",
@@ -422,6 +437,11 @@ export default function StatsPage() {
                               </td>
                               <td className="text-center font-medium text-warm-700 text-xs">
                                 {r.eventType}
+                                {r.role && (
+                                  <span className="block text-[10px] font-normal text-warm-400 leading-tight">
+                                    {r.role}
+                                  </span>
+                                )}
                               </td>
                               <td
                                 className={`text-right tabular-nums font-medium ${
