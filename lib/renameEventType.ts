@@ -14,18 +14,28 @@ export interface RenameResult {
  * Без этого переноса переименование отвязывало уже проставленные выходы от
  * справочника: тариф для них переставал находиться, личные цены и половинные
  * ставки повисали на старом названии.
+ *
+ * Личные настройки певчих переносятся всегда — они не привязаны к месяцам.
+ * Выходы — только в пределах указанного периода.
  */
 export async function renameEventType(
   choirType: string,
   oldName: string,
   newName: string,
+  /** Границы по датам: выходы вне их останутся со старым названием */
+  range?: { from?: string; until?: string },
 ): Promise<RenameResult> {
   if (!oldName || !newName || oldName === newName) return { events: 0, members: 0 }
 
-  const [events, members] = await Promise.all([
+  const [allEvents, members] = await Promise.all([
     dbFind<ChoirEvent>(db.events, { choirType, eventType: oldName }),
     dbFind<Member>(db.members, { choirType }),
   ])
+
+  // Сданные месяцы обычно не трогают: там название должно остаться
+  // таким же, как в уже сданном табеле
+  const events = allEvents.filter((ev) =>
+    (!range?.from || ev.date >= range.from) && (!range?.until || ev.date < range.until))
 
   for (const ev of events) {
     await dbUpdate(db.events, { _id: ev._id }, { eventType: newName, updatedAt: new Date().toISOString() })

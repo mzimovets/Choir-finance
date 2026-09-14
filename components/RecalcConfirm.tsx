@@ -51,11 +51,11 @@ export function RecalcConfirm({ open, scope, onClose, onConfirm }: Props) {
             <>
               <div className="px-5 pt-6 pb-4 text-center">
                 <h2 className="text-base font-slab font-bold text-warm-900 leading-snug mb-1">
-                  Пересчитать выходы?
+                  Обновить уже созданные выходы?
                 </h2>
                 <p className="text-sm text-warm-500 leading-relaxed">
-                  Отметьте месяцы, где нужно привести {scope} в уже созданных выходах
-                  к действующим — доплаты, штрафы и доли останутся прежними.
+                  Отметьте месяцы, в которых нужно обновить {scope}. Невыбранные останутся
+                  как есть — доплаты, штрафы и доли не меняются.
                 </p>
               </div>
 
@@ -65,7 +65,7 @@ export function RecalcConfirm({ open, scope, onClose, onConfirm }: Props) {
                     checked: currentMonth,
                     toggle: () => setCurrentMonth((v) => !v),
                     title: 'Текущий месяц',
-                    hint: 'Без него уже проставленные выходы останутся с прежней ценой',
+                    hint: 'Без него уже проставленные выходы останутся как есть',
                   },
                   {
                     checked: prevMonth,

@@ -146,8 +146,10 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormState>(emptyForm())
   // Смена тарифа касается всех участников — спрашиваем про пересчёт
-  const [recalcAsk, setRecalcAsk] = useState(false)
+  // Что подтверждать после сохранения: перенос названия и/или пересчёт цен
+  const [recalcAsk, setRecalcAsk] = useState<{ renamedFrom: string | null; newName: string; prices: boolean } | null>(null)
   const pricesOnOpen = useRef('')
+  const nameOnOpen = useRef('')
   const [deleteTarget, setDeleteTarget] = useState<EventTypeDoc | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [activeNumpad, setActiveNumpad] = useState<'singer' | 'soloist' | 'regent' | 'reader' | null>(null)
@@ -174,7 +176,7 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
   }, [isOpen, load])
 
   function openNew() { const f = emptyForm(); setEditingId(null); setForm(f); formSnapshot.current = JSON.stringify(f); setActiveNumpad(null); setShowForm(true) }
-  function openEdit(t: EventTypeDoc) { const f = typeToForm(t); setEditingId(t._id); setForm(f); formSnapshot.current = JSON.stringify(f); pricesOnOpen.current = JSON.stringify([f.singer, f.soloist, f.regent, f.reader]); setActiveNumpad(null); setShowForm(true) }
+  function openEdit(t: EventTypeDoc) { const f = typeToForm(t); setEditingId(t._id); setForm(f); formSnapshot.current = JSON.stringify(f); pricesOnOpen.current = JSON.stringify([f.singer, f.soloist, f.regent, f.reader]); nameOnOpen.current = f.name; setActiveNumpad(null); setShowForm(true) }
   function closeForm() { setShowForm(false); setEditingId(null); setActiveNumpad(null) }
 
   // Перехват закрытия дравера свайпом: если в форме есть изменения — спросить
@@ -217,11 +219,17 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
         : await fetch('/api/event-types', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       if (!res.ok) return
       const pricesChanged = JSON.stringify([form.singer, form.soloist, form.regent, form.reader]) !== pricesOnOpen.current
+      const oldName = nameOnOpen.current
+      const newName = body.name
+      const renamedFrom = editingId && oldName && oldName !== newName ? oldName : null
       closeForm()
       await load()
       notifyDataChanged()
-      // Тариф поменялся у существующего типа — предложим обновить выходы
-      if (editingId && pricesChanged) setRecalcAsk(true)
+      // Название и цены переносятся на уже созданные выходы только с согласия:
+      // сданные месяцы должны остаться как есть
+      if (editingId && (pricesChanged || renamedFrom)) {
+        setRecalcAsk({ renamedFrom, newName, prices: pricesChanged })
+      }
     } finally {
       setSaving(false)
     }
@@ -373,18 +381,35 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
       </Drawer>
 
       <RecalcConfirm
-        open={recalcAsk}
-        scope="цены всех участников"
-        onClose={() => setRecalcAsk(false)}
+        open={recalcAsk !== null}
+        scope={recalcAsk?.renamedFrom
+          ? (recalcAsk.prices ? 'название и цены' : 'название')
+          : 'цены всех участников'}
+        onClose={() => setRecalcAsk(null)}
         onConfirm={async (months) => {
-          const res = await fetch('/api/recalc', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(months),
-          })
-          const data = res.ok ? await res.json() : { updated: 0 }
+          let touched = 0
+          // Сначала название — иначе пересчёт не найдёт выходы по новому типу
+          if (recalcAsk?.renamedFrom) {
+            const res = await fetch('/api/rename-events', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ from: recalcAsk.renamedFrom, to: recalcAsk.newName, ...months }),
+            })
+            if (res.ok) touched += (await res.json()).events ?? 0
+          }
+          // Пересчёт только если менялись цены: переименование само по себе
+          // суммы трогать не должно
+          if (recalcAsk?.prices) {
+            const res = await fetch('/api/recalc', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(months),
+            })
+            if (res.ok) touched = Math.max(touched, (await res.json()).updated ?? 0)
+          }
+          await load()
           notifyDataChanged()
-          return data.updated ?? 0
+          return touched
         }}
       />
 
