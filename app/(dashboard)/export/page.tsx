@@ -12,6 +12,7 @@ import { shortName } from "@/lib/nameFormat";
 import { IconEmpty } from "@/components/IconEmpty";
 import { MonthPicker, IconCalendar } from "@/components/MonthPicker";
 import { onDataChanged } from "@/lib/dataSignal";
+import { RecalcConfirm } from "@/components/RecalcConfirm";
 
 function monthStr() {
   const d = new Date();
@@ -77,6 +78,7 @@ export default function ExportPage() {
   const [groupDocxTitle, setGroupDocxTitle] = useState("");
   const [groupActiveTab, setGroupActiveTab] = useState<"xlsx" | "docx">("xlsx");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [recalcOpen, setRecalcOpen] = useState(false);
   const [hideZeroMembers, setHideZeroMembers] = useState(false);
   const calBtnRef = useRef<HTMLButtonElement>(null);
   const fsBtnTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1324,10 +1326,39 @@ export default function ExportPage() {
                   </p>
                 </div>
               </button>
+
+              <div className="border-t border-warm-100">
+                <button
+                  onClick={() => { setSettingsOpen(false); setRecalcOpen(true); }}
+                  className="w-full px-5 py-4 text-left active:bg-warm-50"
+                >
+                  <p className="text-sm font-slab font-semibold text-warm-900">Пересчитать выходы</p>
+                  <p className="text-xs text-warm-500 leading-snug mt-0.5">
+                    Привести суммы в уже созданных выходах к действующим ценам — например,
+                    после переноса выходов в другой тип
+                  </p>
+                </button>
+              </div>
             </div>
           </div>
         </>
       )}
+
+      <RecalcConfirm
+        open={recalcOpen}
+        scope="цены всех участников"
+        onClose={() => setRecalcOpen(false)}
+        onConfirm={async (months) => {
+          const res = await fetch("/api/recalc", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(months),
+          });
+          const data = res.ok ? await res.json() : { updated: 0 };
+          load();
+          return data.updated ?? 0;
+        }}
+      />
 
       {groupModal && (() => {
         const selectedMembers = activeMembers.filter(mb => snapshotIds.has(mb._id));
