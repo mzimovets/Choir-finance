@@ -31,6 +31,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (body.disabledEventTypes !== undefined) {
     update.disabledEventTypes = Array.isArray(body.disabledEventTypes) ? body.disabledEventTypes : []
   }
+  if (body.isPreferredReader !== undefined) {
+    update.isPreferredReader = !!body.isPreferredReader
+  }
   if (body.halvedEventTypes !== undefined) {
     update.halvedEventTypes = Array.isArray(body.halvedEventTypes) ? body.halvedEventTypes : []
   }

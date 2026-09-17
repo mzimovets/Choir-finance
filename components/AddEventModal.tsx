@@ -553,7 +553,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
         // Автозаполнить чтеца для буднего хора (если он не отключён для нового типа)
         if (choirType === 'weekday') {
-          const defaultReader = (membersData as Member[]).find((m) => m.role === 'reader')
+          // Подставляем только чтеца со звёздочкой. Нет звёздочки ни у кого —
+          // список чтецов остаётся пустым, выбирают вручную
+          const defaultReader = (membersData as Member[]).find((m) => m.role === 'reader' && m.isPreferredReader)
           // basePrice выставим позже в goToMembers, когда тип будет известен
           setReaderRows(defaultReader
             ? [{ key: nextKey(), memberId: defaultReader._id, memberName: buildMemberName(defaultReader.name, defaultReader.patronymic), basePrice: 0, bonus: 0, fine: 0, search: '', results: [], fullPrice: 0, share: 1 }]

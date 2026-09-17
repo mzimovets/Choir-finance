@@ -147,7 +147,8 @@ export function EventCard({ event, onEdit, onDelete, defaultExpanded = false, hi
 
   const isWeekday = event.choirType === 'weekday'
   const regent   = isWeekday ? event.attendances.find(a => a.isRegent) : undefined
-  const reader   = isWeekday ? event.attendances.find(a => a.isReader) : undefined
+  // Чтецов может быть несколько — показываем всех, кого проставили
+  const readers  = isWeekday ? event.attendances.filter(a => a.isReader) : []
   const singers  = isWeekday
     ? event.attendances.filter(a => !a.isRegent && !a.isReader)
     : event.attendances
@@ -157,12 +158,13 @@ export function EventCard({ event, onEdit, onDelete, defaultExpanded = false, hi
   // Подпись: "N певчих" (включая регента) + опционально " · чтец"
   const singerCount = singers.length + (regent ? 1 : 0)
   let subtitle = `${singerCount} ${plural(singerCount, SINGER)}`
-  if (reader) subtitle += ' · чтец'
+  if (readers.length === 1) subtitle += ' · чтец'
+  else if (readers.length > 1) subtitle += ` · ${readers.length} чтеца`
 
   // Цифра в значке — общее кол-во участников
   const badgeNum = event.attendances.length
 
-  const hasGroups = isWeekday && (regent || reader)
+  const hasGroups = isWeekday && (regent || readers.length > 0)
 
   return (
     <div
@@ -241,18 +243,21 @@ export function EventCard({ event, onEdit, onDelete, defaultExpanded = false, hi
             </>
           )}
 
-          {/* Чтец */}
-          {reader && (
+          {/* Чтецы */}
+          {readers.length > 0 && (
             <>
-              <SectionLabel label="Чтец" />
-              <AttRow
-                name={reader.memberName}
-                price={reader.basePrice}
-                bonus={reader.bonus}
-                fine={reader.fine}
-                share={reader.share}
-                highlight={reader.memberId === highlightMemberId}
-              />
+              <SectionLabel label={readers.length > 1 ? 'Чтецы' : 'Чтец'} />
+              {readers.map((reader, i) => (
+                <AttRow
+                  key={i}
+                  name={reader.memberName}
+                  price={reader.basePrice}
+                  bonus={reader.bonus}
+                  fine={reader.fine}
+                  share={reader.share}
+                  highlight={reader.memberId === highlightMemberId}
+                />
+              ))}
             </>
           )}
 

@@ -177,6 +177,36 @@ export default function SingersPage() {
     )
   }
 
+  /**
+   * Звёздочка у чтеца: он подставляется в новый выход сам.
+   * Звезда одна на хор — назначение нового снимает её с прежнего.
+   */
+  async function togglePreferredReader(target: Member) {
+    const next = !target.isPreferredReader
+    const others = next
+      ? members.filter((m) => m.role === 'reader' && m._id !== target._id && m.isPreferredReader)
+      : []
+
+    setMembers((prev) => prev.map((m) =>
+      m._id === target._id ? { ...m, isPreferredReader: next }
+        : others.some((o) => o._id === m._id) ? { ...m, isPreferredReader: false }
+        : m))
+
+    await Promise.all([
+      fetch(`/api/members/${target._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPreferredReader: next }),
+      }),
+      ...others.map((o) => fetch(`/api/members/${o._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPreferredReader: false }),
+      })),
+    ])
+    load()
+  }
+
   async function handleSave() {
     if (!name.trim()) return
     setSaving(true)
@@ -333,7 +363,25 @@ export default function SingersPage() {
                         const { lastName, firstName } = splitName(m.name)
                         return (
                           <tr key={m._id}>
-                            <td><span className="font-slab font-semibold text-warm-900">{lastName}</span></td>
+                            <td>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => togglePreferredReader(m)}
+                                  title={m.isPreferredReader
+                                    ? 'Подставляется в новый выход. Нажмите, чтобы убрать'
+                                    : 'Сделать чтецом по умолчанию'}
+                                  className="shrink-0 w-6 h-6 flex items-center justify-center"
+                                  style={{ color: m.isPreferredReader ? '#e0a23c' : '#d4c0ac' }}
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24"
+                                    fill={m.isPreferredReader ? 'currentColor' : 'none'}
+                                    stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+                                    <path d="M12 3.5l2.6 5.27 5.82.85-4.21 4.1.99 5.78L12 16.77l-5.2 2.73.99-5.78-4.21-4.1 5.82-.85L12 3.5z" />
+                                  </svg>
+                                </button>
+                                <span className="font-slab font-semibold text-warm-900">{lastName}</span>
+                              </div>
+                            </td>
                             <td className="text-center">
                               <span className="font-slab text-warm-700">
                                 {firstName}{m.patronymic ? <span className="text-warm-500"> {m.patronymic}.</span> : null}
