@@ -1,13 +1,15 @@
 import { NextRequest } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { db, dbFind, dbInsert, dbRemoveMany } from '@/lib/db'
+import { db, dbRemoveMany } from '@/lib/db'
 import { logAction } from '@/lib/audit'
-import type { ChoirEvent } from '@/lib/types'
+import { ensureMigrations } from '@/lib/migrate'
+import { findEvents, insertEvent } from '@/lib/secureStore'
 
 export async function GET(req: NextRequest) {
   const session = await getSession()
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
+  await ensureMigrations()
   const { searchParams } = req.nextUrl
   const date = searchParams.get('date')
   const month = searchParams.get('month')
@@ -19,7 +21,7 @@ export async function GET(req: NextRequest) {
     query.date = { $regex: new RegExp(`^${month}`) }
   }
 
-  const events = await dbFind<ChoirEvent>(db.events, query)
+  const events = await findEvents(query)
   events.sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date)
     const oa = a.order ?? Infinity, ob = b.order ?? Infinity
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const now = new Date().toISOString()
 
-  const event = await dbInsert<ChoirEvent>(db.events, {
+  const event = await insertEvent({
     date: body.date,
     choirType: session.choirType,
     eventType: body.eventType,

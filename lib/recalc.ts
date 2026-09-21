@@ -1,5 +1,6 @@
-import { db, dbFind, dbUpdate } from './db'
+import { db, dbFind } from './db'
 import { pricesToMap, applyHalf } from './types'
+import { findEvents, findMembers, updateEvent } from './secureStore'
 import type { Member, ChoirEvent, EventTypeDoc, MemberRole } from './types'
 
 /** Первое число месяца со сдвигом: 0 — текущий, -1 — прошлый */
@@ -26,9 +27,9 @@ interface RecalcOptions {
  */
 export async function recalcEvents({ choirType, memberId, from, until }: RecalcOptions): Promise<number> {
   const [events, types, members] = await Promise.all([
-    dbFind<ChoirEvent>(db.events, { choirType }),
+    findEvents({ choirType }),
     dbFind<EventTypeDoc>(db.eventTypes, { choirType }),
-    dbFind<Member>(db.members, { choirType }),
+    findMembers({ choirType }),
   ])
 
   const byId = new Map(members.map((m) => [m._id, m]))
@@ -75,7 +76,7 @@ export async function recalcEvents({ choirType, memberId, from, until }: RecalcO
     })
 
     if (!changed) continue
-    await dbUpdate(db.events, { _id: ev._id }, { attendances, updatedAt: new Date().toISOString() })
+    await updateEvent({ _id: ev._id }, { attendances, updatedAt: new Date().toISOString() })
     updated++
   }
 

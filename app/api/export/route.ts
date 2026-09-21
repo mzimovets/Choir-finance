@@ -1,11 +1,11 @@
 import { NextRequest } from 'next/server'
 import ExcelJS from 'exceljs'
 import { getSession } from '@/lib/auth'
-import { db, dbFind } from '@/lib/db'
 import { getSettings } from '@/lib/settings'
-import type { ChoirEvent, Member } from '@/lib/types'
 import { shortName } from '@/lib/nameFormat'
 import { attendancesOf, sumAttendances } from '@/lib/types'
+import type { Member } from '@/lib/types'
+import { findEvents, findMembers } from '@/lib/secureStore'
 
 const MONTHS_UPPER = [
   'ЯНВАРЬ', 'ФЕВРАЛЬ', 'МАРТ', 'АПРЕЛЬ', 'МАЙ', 'ИЮНЬ',
@@ -92,11 +92,11 @@ export async function GET(req: NextRequest) {
   const choirLabel = session.choirType === 'festive' ? 'праздничного' : 'буднего'
 
   const [events, members] = await Promise.all([
-    dbFind<ChoirEvent>(db.events, {
+    findEvents({
       choirType: session.choirType,
       date: { $regex: new RegExp(`^${month}`) },
     }),
-    dbFind<Member>(db.members, { choirType: session.choirType, isActive: true }),
+    findMembers({ choirType: session.choirType, isActive: true }),
   ])
 
   events.sort((a, b) => {

@@ -5,11 +5,11 @@ import {
   TableLayoutType,
 } from 'docx'
 import { getSession } from '@/lib/auth'
-import { db, dbFind } from '@/lib/db'
 import { getSettings } from '@/lib/settings'
 import { attendancesOf, sumAttendances } from '@/lib/types'
-import type { ChoirEvent, Member } from '@/lib/types'
+import type { Member } from '@/lib/types'
 import { shortName } from '@/lib/nameFormat'
+import { findEvents, findMembers } from '@/lib/secureStore'
 
 const MONTHS_LOWER = [
   'январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
@@ -84,11 +84,11 @@ export async function GET(req: NextRequest) {
   const choirLabel = session.choirType === 'festive' ? 'праздничного' : 'буднего'
 
   const [events, members] = await Promise.all([
-    dbFind<ChoirEvent>(db.events, {
+    findEvents({
       choirType: session.choirType,
       date: { $regex: new RegExp(`^${month}`) },
     }),
-    dbFind<Member>(db.members, { choirType: session.choirType, isActive: true }),
+    findMembers({ choirType: session.choirType, isActive: true }),
   ])
 
   members.sort((a, b) => a.name.localeCompare(b.name, 'ru'))

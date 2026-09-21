@@ -1,6 +1,5 @@
-import { db, dbFind, dbUpdate } from './db'
+import { findEvents, findMembers, updateEvent, updateMember } from './secureStore'
 import { mapToPrices, pricesToMap } from './types'
-import type { ChoirEvent, Member } from './types'
 
 export interface RenameResult {
   events: number
@@ -28,8 +27,8 @@ export async function renameEventType(
   if (!oldName || !newName || oldName === newName) return { events: 0, members: 0 }
 
   const [allEvents, members] = await Promise.all([
-    dbFind<ChoirEvent>(db.events, { choirType, eventType: oldName }),
-    dbFind<Member>(db.members, { choirType }),
+    findEvents({ choirType, eventType: oldName }),
+    findMembers({ choirType }),
   ])
 
   // Сданные месяцы обычно не трогают: там название должно остаться
@@ -38,7 +37,7 @@ export async function renameEventType(
     (!range?.from || ev.date >= range.from) && (!range?.until || ev.date < range.until))
 
   for (const ev of events) {
-    await dbUpdate(db.events, { _id: ev._id }, { eventType: newName, updatedAt: new Date().toISOString() })
+    await updateEvent({ _id: ev._id }, { eventType: newName, updatedAt: new Date().toISOString() })
   }
 
   let touchedMembers = 0
@@ -66,7 +65,7 @@ export async function renameEventType(
       update.halvedEventTypes = halved.map((t) => (t === oldName ? newName : t))
     }
 
-    await dbUpdate(db.members, { _id: m._id }, update)
+    await updateMember({ _id: m._id }, update)
     touchedMembers++
   }
 

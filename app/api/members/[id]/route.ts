@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { db, dbFind, dbFindOne, dbUpdate, dbRemove } from '@/lib/db'
-import { mapToPrices, pricesToMap, applyHalf } from '@/lib/types'
+import { db, dbRemove } from '@/lib/db'
+import { mapToPrices } from '@/lib/types'
 import { logAction } from '@/lib/audit'
-import type { Member, ChoirEvent, EventTypeDoc, MemberRole } from '@/lib/types'
+import { findOneMember, updateMember } from '@/lib/secureStore'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession()
@@ -38,7 +38,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     update.halvedEventTypes = Array.isArray(body.halvedEventTypes) ? body.halvedEventTypes : []
   }
 
-  await dbUpdate(db.members, { _id: id, choirType: session.choirType }, update)
+  await updateMember({ _id: id, choirType: session.choirType }, update)
 
   await logAction('update_member', `Изменён певчий «${body.name || id}»`)
   // Выходы пересчитываются отдельным запросом — только если пользователь
@@ -51,7 +51,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { id } = await params
-  const member = await dbFindOne<Member>(db.members, { _id: id, choirType: session.choirType })
+  const member = await findOneMember({ _id: id, choirType: session.choirType })
   await dbRemove(db.members, { _id: id, choirType: session.choirType })
   await logAction('delete_member', `Удалён певчий «${member?.name || id}»`)
   return Response.json({ ok: true })

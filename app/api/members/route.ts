@@ -1,17 +1,16 @@
 import { NextRequest } from 'next/server'
 import { getSession } from '@/lib/auth'
-import { db, dbFind, dbInsert } from '@/lib/db'
 import { mapToPrices } from '@/lib/types'
 import { logAction } from '@/lib/audit'
 import { ensureMigrations } from '@/lib/migrate'
-import type { Member } from '@/lib/types'
+import { findMembers, insertMember } from '@/lib/secureStore'
 
 export async function GET() {
   const session = await getSession()
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   await ensureMigrations()
-  const members = await dbFind<Member>(db.members, { choirType: session.choirType })
+  const members = await findMembers({ choirType: session.choirType })
   members.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
   return Response.json(members)
 }
@@ -38,7 +37,7 @@ export async function POST(req: NextRequest) {
     ...(Array.isArray(body.halvedEventTypes) ? { halvedEventTypes: body.halvedEventTypes } : {}),
   }
 
-  const member = await dbInsert<Member>(db.members, doc)
+  const member = await insertMember(doc)
   await logAction('create_member', `Добавлен певчий «${body.name}»`)
   return Response.json(member, { status: 201 })
 }

@@ -1,4 +1,5 @@
 import { db, dbFind, dbFindOne, dbInsert, dbUpdate } from './db'
+import { updateMember, updateEvent, memberNeedsEncryption, eventNeedsEncryption } from './secureStore'
 import type { Member } from './types'
 
 /**
@@ -24,6 +25,7 @@ async function mark(key: string) {
 
 async function run() {
   await clearWeekdayDefaultPrices()
+  await encryptExistingData()
 }
 
 /**
@@ -42,5 +44,35 @@ async function clearWeekdayDefaultPrices() {
       await dbUpdate(db.members, { _id: m._id }, { defaultPrices: [] })
     }
   }
+  await mark(KEY)
+}
+
+/**
+ * Шифрует ФИО и суммы в уже накопленных данных. Читает файлы напрямую
+ * (в обход расшифровки — иначе не отличить зашифрованное от ещё не
+ * тронутого) и переписывает через те же обёртки, что использует всё
+ * приложение, поэтому формат получается ровно такой же, как у новых
+ * записей. Идемпотентна и без метки: memberNeedsEncryption/eventNeedsEncryption
+ * пропускают уже зашифрованное, так что запуск дважды ничего не испортит.
+ */
+async function encryptExistingData() {
+  const KEY = 'encrypt-members-events-1'
+  if (await done(KEY)) return
+
+  const rawMembers = await dbFind<Record<string, unknown>>(db.members, {})
+  for (const m of rawMembers) {
+    if (!memberNeedsEncryption(m)) continue
+    await updateMember(
+      { _id: m._id },
+      { name: m.name, patronymic: m.patronymic, defaultPrices: m.defaultPrices },
+    )
+  }
+
+  const rawEvents = await dbFind<Record<string, unknown>>(db.events, {})
+  for (const ev of rawEvents) {
+    if (!eventNeedsEncryption(ev)) continue
+    await updateEvent({ _id: ev._id }, { attendances: ev.attendances })
+  }
+
   await mark(KEY)
 }
