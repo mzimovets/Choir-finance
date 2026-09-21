@@ -9,7 +9,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { InlineNumpad } from '@/components/InlineNumpad'
 import { DrawerHandle } from '@/components/DrawerHandle'
 import { DiscardConfirm } from '@/components/DiscardConfirm'
-import type { ChoirEvent, Member, EventTypeDoc } from '@/lib/types'
+import type { ChoirEvent, Member, EventTypeDoc, MemberRole } from '@/lib/types'
 import { pricesToMap, applyHalf } from '@/lib/types'
 import { plural, SINGER, PARTICIPANT } from '@/lib/plural'
 import { buildMemberName, shortName } from '@/lib/nameFormat'
@@ -207,18 +207,21 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   function pasteRoster() {
     if (!clipboard || clipboard.choirType !== choirType) return
-    // Пропускаем участников, недоступных в целевом типе выхода (роль отключена в
-    // этом типе или тип отключён у самого участника). Напр. чтец не вставится в
-    // молебен, где чтеца нет.
-    const byId = (id: string) => {
+    // Пропускаем участников, недоступных в целевом типе выхода (роль-слот
+    // отключена в этом типе или тип отключён у самого участника). Напр.
+    // чтец не вставится в молебен, где чтеца нет. Роль — та, в которой
+    // человек был скопирован (slotRole), а не его основная роль в
+    // картотеке: певчего, скопированного как чтеца, можно вставить туда,
+    // где отключён именно певчий.
+    const byId = (id: string, slotRole?: MemberRole) => {
       const m = members.find((mm) => mm._id === id)
-      return m && !isMemberDisabled(m, resolvedType) ? m : undefined
+      return m && !isMemberDisabled(m, resolvedType, slotRole) ? m : undefined
     }
 
     if (choirType === 'festive') {
       const reg = clipboard.items.find((i) => i.role === 'regent')
       if (reg) {
-        const m = byId(reg.memberId)
+        const m = byId(reg.memberId, 'regent')
         if (m) setFestiveRegent({
           memberId: m._id, memberName: buildMemberName(m.name, m.patronymic),
           basePrice: getPriceForMember(m, resolvedType), bonus: 0, fine: 0, search: '', results: [],
@@ -228,21 +231,21 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       const singerIds = new Set(clipboard.items.filter((i) => i.role === 'singer').map((i) => i.memberId))
       setFestiveRows((prev) => prev.map((r) => {
         if (!singerIds.has(r.memberId)) return r
-        const m = byId(r.memberId)
+        const m = byId(r.memberId, 'singer')
         if (!m) return r
         const p = getPriceForMember(m, resolvedType)
         return { ...r, checked: true, basePrice: p, fullPrice: p, share: 1 }
       }))
     } else {
       const reg = clipboard.items.find((i) => i.role === 'regent')
-      const regM = reg && byId(reg.memberId)
+      const regM = reg && byId(reg.memberId, 'regent')
       if (regM) setRegent({
         memberId: regM._id, memberName: buildMemberName(regM.name, regM.patronymic),
         basePrice: getPriceForMember(regM, resolvedType, 'regent'), bonus: 0, fine: 0, search: '', results: [],
         fullPrice: getPriceForMember(regM, resolvedType, 'regent'), share: 1,
       })
       const rdrRows: WeekdayRow[] = clipboard.items.filter((i) => i.role === 'reader').flatMap((i) => {
-        const m = byId(i.memberId)
+        const m = byId(i.memberId, 'reader')
         if (!m) return []
         const price = getPriceForMember(m, resolvedType, 'reader')
         return [{
@@ -256,7 +259,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         return [...prev.filter((r) => r.memberId), ...rdrRows.filter((r) => !existing.has(r.memberId))]
       })
       const rows: WeekdayRow[] = clipboard.items.filter((i) => i.role === 'singer').flatMap((i) => {
-        const m = byId(i.memberId)
+        const m = byId(i.memberId, 'singer')
         if (!m) return []
         return [{
           key: nextKey(), memberId: m._id, memberName: buildMemberName(m.name, m.patronymic),
@@ -323,11 +326,20 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     return `${lastName} ${firstWord[0]}.${pi}`
   }
 
-  /** Скрыт ли участник для данного типа выхода (отключён в профиле или роль отключена в типе) */
-  function isMemberDisabled(m: Member, type: string): boolean {
+  /**
+   * Скрыт ли участник для данного типа выхода и роли-слота (отключён в
+   * профиле самого участника, либо эта роль-слот отключена в типе выхода).
+   *
+   * slotRole — та роль, в которую человека сейчас пытаются поставить
+   * (регент/чтец/певчий), а не его основная роль в картотеке: певчего
+   * можно временно поставить чтецом там, где для типа выхода отключён
+   * именно певчий, но не чтец. По умолчанию считаем слотом основную
+   * роль — это подходит для мест, где переназначения роли не бывает.
+   */
+  function isMemberDisabled(m: Member, type: string, slotRole: MemberRole = m.role): boolean {
     if ((m.disabledEventTypes ?? []).includes(type)) return true
     const etDoc = eventTypeDocs.find((et) => et.name === type)
-    if ((etDoc?.disabledRoles ?? []).includes(m.role)) return true
+    if ((etDoc?.disabledRoles ?? []).includes(slotRole)) return true
     return false
   }
 
@@ -343,7 +355,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         if (!cur.memberId) return [cur]
         const readerMember = members.find((m) => m._id === cur.memberId)
         if (!readerMember) return [cur]
-        if (isMemberDisabled(readerMember, rt)) return []
+        if (isMemberDisabled(readerMember, rt, 'reader')) return []
         const full = getPriceForMember(readerMember, rt, 'reader')
         return [{ ...cur, fullPrice: full, basePrice: priceForShare(full, cur.share) }]
       }))
@@ -626,20 +638,25 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     setFestiveRows((prev) => prev.map((r) => (r.memberId === id ? { ...r, [field]: val } : r)))
   }
 
-  /* ── Поиск (общий) ── */
-  function searchMembers(q: string, excludeIds: string[], preferRole?: string): Member[] {
+  /**
+   * Поиск для конкретного слота (регент/чтец/певчий). slotRole решает,
+   * доступен ли человек для этого типа выхода в ЭТОЙ роли — а не в его
+   * основной роли из картотеки, — а также поднимает совпадающих по
+   * основной роли выше в списке подсказок.
+   */
+  function searchMembers(q: string, excludeIds: string[], slotRole?: MemberRole): Member[] {
     if (!q.trim()) return []
     const q2 = q.toLowerCase()
     return members
       .filter((m) =>
         m.name.toLowerCase().includes(q2) &&
         !excludeIds.includes(m._id) &&
-        !isMemberDisabled(m, resolvedType)
+        !isMemberDisabled(m, resolvedType, slotRole)
       )
       .sort((a, b) => {
-        if (preferRole) {
-          if (a.role === preferRole && b.role !== preferRole) return -1
-          if (b.role === preferRole && a.role !== preferRole) return 1
+        if (slotRole) {
+          if (a.role === slotRole && b.role !== slotRole) return -1
+          if (b.role === slotRole && a.role !== slotRole) return 1
         }
         return a.name.localeCompare(b.name, 'ru')
       })
@@ -741,7 +758,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       regent.memberId,
       ...weekdayRows.filter((r) => r.key !== key && r.memberId).map((r) => r.memberId),
     ].filter(Boolean)
-    const results = searchMembers(q, excludeIds)
+    const results = searchMembers(q, excludeIds, 'singer')
     // Экран намеренно не двигаем: список подсказок сам подстраивается под
     // свободное место (см. эффект ниже), поэтому прокрутка не нужна
     setWeekdayRows((prev) => prev.map((r) => r.key === key ? { ...r, search: q, results } : r))
