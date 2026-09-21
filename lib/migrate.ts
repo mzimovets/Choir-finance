@@ -10,7 +10,16 @@ import type { Member } from './types'
 
 let started: Promise<void> | null = null
 export function ensureMigrations(): Promise<void> {
-  if (!started) started = run().catch(() => {})
+  if (!started) {
+    started = run().catch((err) => {
+      // Ошибка (например, DATA_ENC_KEY не был выставлен в момент запуска)
+      // не должна портить обычные запросы — но и не должна навсегда
+      // застревать: сбрасываем started, чтобы следующий вызов попробовал
+      // снова, а не молча считал миграцию якобы завершённой.
+      console.error('[migrate] ошибка при выполнении миграций:', err)
+      started = null
+    })
+  }
   return started
 }
 
