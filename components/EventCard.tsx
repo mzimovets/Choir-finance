@@ -65,12 +65,16 @@ function IconGrip() {
   )
 }
 
-/** «½», «⅓», «60%» — доля выхода, если человек был не весь выход */
+/** «½», «⅓», «60%», «×2» — доля/множитель выхода, если ставка не обычная */
 function shareLabel(share: number): string {
-  if (Math.abs(share - 0.5) < 0.001) return '\u00bd'
-  if (Math.abs(share - 1 / 3) < 0.005) return '\u2153'
-  if (Math.abs(share - 0.25) < 0.001) return '\u00bc'
-  if (Math.abs(share - 0.75) < 0.001) return '\u00be'
+  if (share > 1) {
+    const rounded = Math.round(share * 100) / 100
+    return `×${rounded}`
+  }
+  if (Math.abs(share - 0.5) < 0.001) return '½'
+  if (Math.abs(share - 1 / 3) < 0.005) return '⅓'
+  if (Math.abs(share - 0.25) < 0.001) return '¼'
+  if (Math.abs(share - 0.75) < 0.001) return '¾'
   return `${Math.round(share * 100)}%`
 }
 

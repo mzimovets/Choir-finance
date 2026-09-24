@@ -68,19 +68,31 @@ function emptySlot(): SlotState {
   return { memberId: '', memberName: '', basePrice: 0, bonus: 0, fine: 0, search: '', results: [], fullPrice: 0, share: 1 }
 }
 
-/** Цена с учётом доли выхода */
+/** Цена с учётом доли/множителя выхода */
 function priceForShare(fullPrice: number, share: number): number {
   return Math.round(fullPrice * share)
 }
 
+/** Верхний предел ввода доли/множителя в процентах (1000% = ×10) */
+const MAX_SHARE_PERCENT = 1000
+
 /** «½», «⅓», «60%» — как показать долю на бейдже */
 function shareLabel(share: number): string {
   if (share === 1) return '1'
+  if (share > 1) {
+    const rounded = Math.round(share * 100) / 100
+    return `\u00d7${rounded}`
+  }
   if (Math.abs(share - 0.5) < 0.001) return '\u00bd'
   if (Math.abs(share - 1 / 3) < 0.005) return '\u2153'
   if (Math.abs(share - 0.25) < 0.001) return '\u00bc'
   if (Math.abs(share - 0.75) < 0.001) return '\u00be'
   return `${Math.round(share * 100)}%`
+}
+
+/** «3 июня 2026» — для текста, который копируется в буфер обмена */
+function formatDateForClipboard(d: string): string {
+  return new Date(d + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 const ROSTER_CLIPBOARD_KEY = 'cf_roster_clipboard'
@@ -188,19 +200,45 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   function copyRoster() {
     const items: { memberId: string; role: RosterRole }[] = []
+    let regentName = ''
+    const readerNames: string[] = []
+    const singerNames: string[] = []
     if (choirType === 'festive') {
-      if (festiveRegent.memberId) items.push({ memberId: festiveRegent.memberId, role: 'regent' })
+      if (festiveRegent.memberId) {
+        items.push({ memberId: festiveRegent.memberId, role: 'regent' })
+        regentName = festiveRegent.memberName
+      }
       festiveRows.filter((r) => r.checked && r.memberId !== festiveRegent.memberId)
-        .forEach((r) => items.push({ memberId: r.memberId, role: 'singer' }))
+        .forEach((r) => { items.push({ memberId: r.memberId, role: 'singer' }); singerNames.push(r.memberName) })
     } else {
-      if (regent.memberId) items.push({ memberId: regent.memberId, role: 'regent' })
-      readerRows.filter((r) => r.memberId).forEach((r) => items.push({ memberId: r.memberId, role: 'reader' }))
-      weekdayRows.filter((r) => r.memberId).forEach((r) => items.push({ memberId: r.memberId, role: 'singer' }))
+      if (regent.memberId) {
+        items.push({ memberId: regent.memberId, role: 'regent' })
+        regentName = regent.memberName
+      }
+      readerRows.filter((r) => r.memberId).forEach((r) => {
+        items.push({ memberId: r.memberId, role: 'reader' }); readerNames.push(r.memberName)
+      })
+      weekdayRows.filter((r) => r.memberId).forEach((r) => {
+        items.push({ memberId: r.memberId, role: 'singer' }); singerNames.push(r.memberName)
+      })
     }
     if (items.length === 0) return
     const data: RosterClip = { choirType, items }
     try { localStorage.setItem(ROSTER_CLIPBOARD_KEY, JSON.stringify(data)) } catch {}
     setClipboard(data)
+
+    // Тот же состав — ещё и текстом в системный буфер обмена, чтобы можно
+    // было вставить его в мессенджер (певчих в приложении вставляем отдельно).
+    const textLines = [
+      `${resolvedType || 'Выход'} · ${formatDateForClipboard(date)}`,
+      '',
+      `Регент: ${regentName}`,
+      ...(choirType === 'weekday' ? [`Чтец: ${readerNames.join(', ')}`] : []),
+      'Певчие:',
+      ...singerNames,
+    ]
+    try { navigator.clipboard?.writeText(textLines.join('\n')) } catch {}
+
     setCopyDone(true)
     setTimeout(() => setCopyDone(false), 3000)
   }
@@ -845,7 +883,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   const [shareDraft, setShareDraft] = useState(0)
   const [allPriceDraft, setAllPriceDraft] = useState(0)
 
-  const FIELD_LABELS: Record<PriceField, string> = { basePrice: 'цена', bonus: 'доплата', fine: 'штраф', share: 'доля, %' }
+  const FIELD_LABELS: Record<PriceField, string> = { basePrice: 'цена', bonus: 'доплата', fine: 'штраф', share: 'доля/множитель, %' }
 
   function numpadValue(): number {
     if (!activeNumpad) return 0
@@ -866,8 +904,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     row: T, field: PriceField, v: number,
   ): T {
     if (field === 'share') {
-      // Доля вводится в процентах; 0 или пусто — считаем целым выходом
-      const share = v > 0 ? Math.min(v, 100) / 100 : 1
+      // Доля/множитель вводится в процентах; 0 или пусто — считаем целым выходом.
+      // Больше 100% — множитель ставки (200% = ×2 и т.д.), ограничен MAX_SHARE_PERCENT.
+      const share = v > 0 ? Math.min(v, MAX_SHARE_PERCENT) / 100 : 1
       return { ...row, share, basePrice: priceForShare(row.fullPrice, share) }
     }
     if (field === 'basePrice') {
@@ -882,7 +921,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     const { id, field } = activeNumpad
     if (id === 'all') { setAllPriceDraft(v); applyPriceToAll(v); return }
     if (field === 'share') {
-      if (v > 100) return   // больше целого выхода не бывает
+      if (v > MAX_SHARE_PERCENT) return   // разумный предел множителя
       setShareDraft(v)
     }
     if (id === 'festiveRegent') setFestiveRegent((r) => applyField(r, field, v))

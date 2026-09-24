@@ -16,6 +16,7 @@ const SHARE_CHIPS: { label: string; value: number }[] = [
   { label: '\u00bd', value: 0.5 },
   { label: '\u2153', value: 1 / 3 },
   { label: '\u00bc', value: 0.25 },
+  { label: '\u00d72', value: 2 },
 ]
 
 function fmt(v: string) {
@@ -57,7 +58,7 @@ export function InlineNumpad({ role, value, onChange, onClose, unit = '₽', sha
       {share && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 14px 8px' }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: '#b8a08a', textTransform: 'uppercase', letterSpacing: '.06em', fontFamily: "'Roboto Slab', serif" }}>
-            доля
+            доля/×
           </span>
           {SHARE_CHIPS.map((c) => {
             const active = Math.abs(share.value - c.value) < 0.005
