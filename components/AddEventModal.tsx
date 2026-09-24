@@ -229,13 +229,15 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
     // Тот же состав — ещё и текстом в системный буфер обмена, чтобы можно
     // было вставить его в мессенджер (певчих в приложении вставляем отдельно).
+    // Имена — в коротком формате «Фамилия И.» / «Фамилия И.О.»; строку «Чтец:»
+    // показываем, только если чтец в выходе действительно есть.
     const textLines = [
       `${resolvedType || 'Выход'} · ${formatDateForClipboard(date)}`,
       '',
-      `Регент: ${regentName}`,
-      ...(choirType === 'weekday' ? [`Чтец: ${readerNames.join(', ')}`] : []),
+      `Регент: ${shortName(regentName)}`,
+      ...(readerNames.length ? [`Чтец: ${readerNames.map((n) => shortName(n)).join(', ')}`] : []),
       'Певчие:',
-      ...singerNames,
+      ...singerNames.map((n) => shortName(n)),
     ]
     try { navigator.clipboard?.writeText(textLines.join('\n')) } catch {}
 
