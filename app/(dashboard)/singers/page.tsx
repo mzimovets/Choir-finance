@@ -644,8 +644,10 @@ export default function SingersPage() {
         onOpenChange={(open) => { if (open) return; if (requestCloseDrawer()) return; setDrawerOpen(false) }}
         placement="bottom"
         scrollBehavior="inside"
-        /* Пока висит подтверждение сброса цен — клик вне Drawer его не закрывает */
-        isDismissable={!showResetConfirm && !discardOpen}
+        /* Пока висит любое из наших модальных подтверждений (они рендерятся вне
+           этого Drawer) — клик по ним react-aria иначе считает «кликом снаружи»
+           и закрывает Drawer раньше, чем сработает кнопка в модалке */
+        isDismissable={!showResetConfirm && !discardOpen && !singleArchiveConfirmOpen && !duplicateConfirm}
         classNames={{
           base: 'bg-white rounded-t-2xl max-h-[92dvh] flex flex-col overflow-hidden drawer-sheet',
           header: 'border-b border-warm-200 px-4 pt-2 pb-3 shrink-0',
@@ -1149,6 +1151,8 @@ export default function SingersPage() {
         onOpenChange={setArchiveViewOpen}
         placement="bottom"
         scrollBehavior="inside"
+        /* Пока висит подтверждение возврата (рендерится вне этого Drawer) — не закрывать */
+        isDismissable={!restoreTarget}
         classNames={{
           base: 'bg-white rounded-t-2xl max-h-[85dvh] flex flex-col overflow-hidden drawer-sheet',
           header: 'border-b border-warm-200 px-4 pt-2 pb-3 shrink-0',
