@@ -76,6 +76,17 @@ function IconInboxLine() {
   )
 }
 
+/** Пояснение в модалке подтверждения архивации */
+function IconInfo() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path fillRule="evenodd" clipRule="evenodd" d="M12 2.75C6.89137 2.75 2.75 6.89137 2.75 12C2.75 17.1086 6.89137 21.25 12 21.25C17.1086 21.25 21.25 17.1086 21.25 12C21.25 6.89137 17.1086 2.75 12 2.75ZM1.25 12C1.25 6.06294 6.06294 1.25 12 1.25C17.9371 1.25 22.75 6.06294 22.75 12C22.75 17.9371 17.9371 22.75 12 22.75C6.06294 22.75 1.25 17.9371 1.25 12Z" fill="currentColor"/>
+      <path d="M12 11C12.4142 11 12.75 11.3358 12.75 11.75V16.25C12.75 16.6642 12.4142 17 12 17C11.5858 17 11.25 16.6642 11.25 16.25V11.75C11.25 11.3358 11.5858 11 12 11Z" fill="currentColor"/>
+      <path d="M13 8.25C13 8.80228 12.5523 9.25 12 9.25C11.4477 9.25 11 8.80228 11 8.25C11 7.69772 11.4477 7.25 12 7.25C12.5523 7.25 13 7.69772 13 8.25Z" fill="currentColor"/>
+    </svg>
+  )
+}
+
 /** Возвращает цены по умолчанию из документов типов выходов (база данных) */
 function buildDefaultPrices(role: MemberRole, docs: EventTypeDoc[]): Record<string, number> {
   const out: Record<string, number> = {}
@@ -118,6 +129,7 @@ export default function SingersPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false)
   const [archivingBulk, setArchivingBulk] = useState(false)
+  const [archiveInfoOpen, setArchiveInfoOpen] = useState(false)
 
   // Снимок формы на момент открытия — для определения несохранённых изменений
   const formSnapshot = useRef('')
@@ -302,6 +314,13 @@ export default function SingersPage() {
     setSelectedIds(new Set())
   }
 
+  /** Кнопка «Добавить в архив» внутри дравера архива: закрывает дравер и включает выбор чекбоксами */
+  function startBulkArchive() {
+    setArchiveViewOpen(false)
+    setSelectMode(true)
+    setSelectedIds(new Set())
+  }
+
   function toggleSelected(id: string) {
     setSelectedIds((prev) => {
       const next = new Set(prev)
@@ -324,6 +343,19 @@ export default function SingersPage() {
     setArchiveConfirmOpen(false)
     setSelectMode(false)
     setSelectedIds(new Set())
+    load()
+    notifyDataChanged()
+  }
+
+  /** Кнопка архива в самой карточке редактирования — отправляет в архив только этого певчего */
+  async function archiveSingleFromEdit() {
+    if (!editing) return
+    await fetch(`/api/members/${editing._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive: false }),
+    })
+    setDrawerOpen(false)
     load()
     notifyDataChanged()
   }
@@ -395,13 +427,6 @@ export default function SingersPage() {
                 title="Архив"
               >
                 <IconInboxLine />
-              </button>
-              <button
-                onClick={toggleSelectMode}
-                className="w-10 h-10 rounded-xl border border-warm-200 bg-white text-warm-700 flex items-center justify-center active:bg-warm-50 transition-colors"
-                title="Отправить в архив"
-              >
-                <IconInboxIn />
               </button>
               <button
                 onClick={openNew}
@@ -734,6 +759,15 @@ export default function SingersPage() {
               </DrawerBody>
 
               <DrawerFooter style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
+                {editing && (
+                  <button
+                    onClick={archiveSingleFromEdit}
+                    className="w-11 py-3 rounded-xl border border-warm-200 bg-white text-warm-600 flex items-center justify-center active:bg-warm-50 transition-colors shrink-0"
+                    title="Отправить в архив"
+                  >
+                    <IconInboxIn />
+                  </button>
+                )}
                 <button
                   onClick={closeDrawer}
                   className="flex-1 py-3 rounded-xl border border-warm-200 text-warm-700 text-sm font-slab font-semibold active:bg-warm-50"
@@ -822,14 +856,27 @@ export default function SingersPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center px-5">
             <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl">
               <div className="px-5 pt-5 pb-4">
-                <h2 className="text-base font-slab font-bold text-warm-900 mb-2">
-                  Отправить в архив?
-                </h2>
-                <p className="text-sm text-warm-600 leading-relaxed">
-                  {selectedIds.size} {plural(selectedIds.size, PERSON)} перестанут предлагаться при
-                  добавлении новых выходов. Уже сохранённые табеля не изменятся, вернуть из архива
-                  можно в любой момент.
-                </p>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <h2 className="text-base font-slab font-bold text-warm-900">
+                    Отправить в архив?
+                  </h2>
+                  <button
+                    onClick={() => setArchiveInfoOpen(true)}
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-warm-400 active:text-warm-600 transition-colors shrink-0"
+                    title="Что это значит"
+                  >
+                    <IconInfo />
+                  </button>
+                </div>
+                <div className="max-h-40 overflow-y-auto">
+                  {members
+                    .filter((m) => selectedIds.has(m._id))
+                    .map((m) => (
+                      <p key={m._id} className="text-sm text-warm-800 font-slab leading-relaxed">
+                        {m.name}{m.patronymic ? ` ${m.patronymic}.` : ''}
+                      </p>
+                    ))}
+                </div>
               </div>
               <div className="flex gap-2 px-4 pb-4">
                 <button
@@ -847,6 +894,32 @@ export default function SingersPage() {
                 >
                   {archivingBulk && <LoadingSpinner size="sm" color="white" />}
                   В архив
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Пояснение, что значит архив — вынесено из основной модалки за иконку (i) */}
+      {archiveInfoOpen && (
+        <>
+          <div className="fixed inset-0 z-[60] bg-black/50" onClick={() => setArchiveInfoOpen(false)} />
+          <div className="fixed inset-0 z-[60] flex items-center justify-center px-5">
+            <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl">
+              <div className="px-5 pt-5 pb-4">
+                <h2 className="text-base font-slab font-bold text-warm-900 mb-2">Что это значит</h2>
+                <p className="text-sm text-warm-600 leading-relaxed">
+                  Певчие перестанут предлагаться при добавлении новых выходов. Уже сохранённые
+                  табеля не изменятся, вернуть из архива можно в любой момент.
+                </p>
+              </div>
+              <div className="px-4 pb-4">
+                <button
+                  onClick={() => setArchiveInfoOpen(false)}
+                  className="w-full py-2.5 rounded-xl border border-warm-200 text-warm-700 text-sm font-slab font-semibold active:bg-warm-50"
+                >
+                  Понятно
                 </button>
               </div>
             </div>
@@ -874,7 +947,16 @@ export default function SingersPage() {
               <>
                 <DrawerHeader className="flex-col gap-0">
                   <DrawerHandle onClose={closeArchive} />
-                  <span className="text-base font-slab font-bold text-warm-900">Архив</span>
+                  <div className="w-full flex items-center justify-between">
+                    <span className="text-base font-slab font-bold text-warm-900">Архив</span>
+                    <button
+                      onClick={startBulkArchive}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-warm-100 text-warm-700 text-xs font-slab font-semibold active:bg-warm-200 transition-colors"
+                    >
+                      <IconInboxIn />
+                      Добавить в архив
+                    </button>
+                  </div>
                 </DrawerHeader>
                 <DrawerBody>
                   {archivedMembers.length === 0 ? (
