@@ -108,6 +108,10 @@ export default function SingersPage() {
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  // Подтверждение возврата из архива
+  const [restoreTarget, setRestoreTarget] = useState<Member | null>(null)
+  const [restoring, setRestoring] = useState(false)
+
   // Form state
   const [name, setName] = useState('')
   const [patronymic, setPatronymic] = useState('')
@@ -417,12 +421,16 @@ export default function SingersPage() {
     }
   }
 
-  async function restoreMember(m: Member) {
-    await fetch(`/api/members/${m._id}`, {
+  async function confirmRestore() {
+    if (!restoreTarget) return
+    setRestoring(true)
+    await fetch(`/api/members/${restoreTarget._id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isActive: true }),
     })
+    setRestoring(false)
+    setRestoreTarget(null)
     load()
     notifyDataChanged()
   }
@@ -905,6 +913,47 @@ export default function SingersPage() {
         </>
       )}
 
+      {/* Подтверждение возврата из архива */}
+      {restoreTarget && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/50"
+            onClick={() => { if (!restoring) setRestoreTarget(null) }}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-5">
+            <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl">
+              <div className="px-5 pt-5 pb-4">
+                <h2 className="text-base font-slab font-bold text-warm-900 mb-2">
+                  Вернуть из архива?
+                </h2>
+                <p className="text-sm text-warm-600 leading-relaxed">
+                  <span className="font-semibold text-warm-900">{restoreTarget.name}</span>{' '}
+                  снова будет предлагаться при добавлении выходов.
+                </p>
+              </div>
+              <div className="flex gap-2 px-4 pb-4">
+                <button
+                  onClick={() => setRestoreTarget(null)}
+                  disabled={restoring}
+                  className="flex-1 py-2.5 rounded-xl border border-warm-200 text-warm-700 text-sm font-slab font-semibold active:bg-warm-50 disabled:opacity-40"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={confirmRestore}
+                  disabled={restoring}
+                  className="flex-1 py-2.5 rounded-xl text-white text-sm font-slab font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+                  style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}
+                >
+                  {restoring && <LoadingSpinner size="sm" color="white" />}
+                  Вернуть
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Совпадение по ФИО при добавлении нового певчего */}
       {duplicateConfirm && (
         <>
@@ -1101,10 +1150,10 @@ export default function SingersPage() {
                     <span className="text-base font-slab font-bold text-warm-900">Архив</span>
                     <button
                       onClick={startBulkArchive}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-warm-100 text-warm-700 text-xs font-slab font-semibold active:bg-warm-200 transition-colors"
+                      className="w-8 h-8 rounded-lg bg-warm-100 text-warm-700 flex items-center justify-center active:bg-warm-200 transition-colors shrink-0"
+                      title="Добавить в архив"
                     >
                       <IconInboxIn />
-                      Добавить в архив
                     </button>
                   </div>
                 </DrawerHeader>
@@ -1127,7 +1176,7 @@ export default function SingersPage() {
                                 </td>
                                 <td style={{ width: '40px' }}>
                                   <button
-                                    onClick={() => restoreMember(m)}
+                                    onClick={() => setRestoreTarget(m)}
                                     className="w-7 h-7 rounded-lg bg-green-50 text-green-600 flex items-center justify-center active:bg-green-100 transition-colors ml-auto"
                                     title="Вернуть из архива"
                                   >
