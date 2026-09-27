@@ -639,9 +639,20 @@ export default function SingersPage() {
             <>
               <DrawerHeader className="flex-col gap-0">
                 <DrawerHandle onClose={closeDrawer} interceptClose={requestCloseDrawer} />
-                <span className="text-base font-slab font-bold text-warm-900">
-                  {editing ? 'Редактировать певчего' : 'Добавить певчего'}
-                </span>
+                <div className="w-full flex items-center justify-between">
+                  <span className="text-base font-slab font-bold text-warm-900">
+                    {editing ? 'Редактировать певчего' : 'Добавить певчего'}
+                  </span>
+                  {editing && (
+                    <button
+                      onClick={handleArchiveClickFromEdit}
+                      className="w-8 h-8 rounded-lg bg-warm-100 text-warm-600 flex items-center justify-center active:bg-warm-200 transition-colors shrink-0"
+                      title="Отправить в архив"
+                    >
+                      <IconInboxIn />
+                    </button>
+                  )}
+                </div>
               </DrawerHeader>
 
               <DrawerBody>
@@ -816,15 +827,6 @@ export default function SingersPage() {
               </DrawerBody>
 
               <DrawerFooter style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}>
-                {editing && (
-                  <button
-                    onClick={handleArchiveClickFromEdit}
-                    className="w-11 py-3 rounded-xl border border-warm-200 bg-white text-warm-600 flex items-center justify-center active:bg-warm-50 transition-colors shrink-0"
-                    title="Отправить в архив"
-                  >
-                    <IconInboxIn />
-                  </button>
-                )}
                 <button
                   onClick={closeDrawer}
                   className="flex-1 py-3 rounded-xl border border-warm-200 text-warm-700 text-sm font-slab font-semibold active:bg-warm-50"
