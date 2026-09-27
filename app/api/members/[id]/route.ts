@@ -40,7 +40,19 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   await updateMember({ _id: id, choirType: session.choirType }, update)
 
-  await logAction('update_member', `Изменён певчий «${body.name || id}»`)
+  // Архивация/восстановление — отдельное, более понятное сообщение в журнале
+  const isArchiveToggle = body.isActive !== undefined && Object.keys(body).length === 1
+  if (isArchiveToggle) {
+    const member = await findOneMember({ _id: id, choirType: session.choirType })
+    await logAction(
+      body.isActive ? 'restore_member' : 'archive_member',
+      body.isActive
+        ? `Певчий «${member?.name || id}» возвращён из архива`
+        : `Певчий «${member?.name || id}» отправлен в архив`,
+    )
+  } else {
+    await logAction('update_member', `Изменён певчий «${body.name || id}»`)
+  }
   // Выходы пересчитываются отдельным запросом — только если пользователь
   // подтвердил это в приложении (см. /api/recalc)
   return Response.json({ ok: true })

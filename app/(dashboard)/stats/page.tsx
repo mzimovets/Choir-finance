@@ -112,7 +112,12 @@ export default function StatsPage() {
       });
     });
 
-    const sorted = [...map.values()].sort((a, b) => a.member.name.localeCompare(b.member.name, 'ru'));
+    // Архивных певчих без выходов в этом месяце не показываем — они не
+    // должны маячить в списке пустыми строками. Но если в архиве человек
+    // оказался уже после того, как спел в этом месяце, запись остаётся.
+    const sorted = [...map.values()]
+      .filter((s) => s.member.isActive !== false || s.events > 0)
+      .sort((a, b) => a.member.name.localeCompare(b.member.name, 'ru'));
     setStats(sorted);
     setLoading(false);
   }, [month]);

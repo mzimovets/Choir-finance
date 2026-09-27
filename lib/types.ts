@@ -86,6 +86,7 @@ export interface ChoirEvent {
 export type AuditAction =
   | 'create_event' | 'update_event' | 'delete_event' | 'delete_month'
   | 'create_member' | 'update_member' | 'delete_member'
+  | 'archive_member' | 'restore_member'
   | 'create_event_type' | 'update_event_type' | 'delete_event_type'
 
 export interface AuditEntry {

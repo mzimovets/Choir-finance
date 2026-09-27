@@ -255,7 +255,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     // где отключён именно певчий.
     const byId = (id: string, slotRole?: MemberRole) => {
       const m = members.find((mm) => mm._id === id)
-      return m && !isMemberDisabled(m, resolvedType, slotRole) ? m : undefined
+      return m && m.isActive !== false && !isMemberDisabled(m, resolvedType, slotRole) ? m : undefined
     }
 
     if (choirType === 'festive') {
@@ -594,7 +594,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
         // Предзаполнить регента для праздничного хора
         if (choirType === 'festive') {
-          const defaultRegent = (membersData as Member[]).find((m) => m.role === 'regent')
+          const defaultRegent = (membersData as Member[]).find((m) => m.role === 'regent' && m.isActive !== false)
           setFestiveRegent(defaultRegent
             ? { memberId: defaultRegent._id, memberName: buildMemberName(defaultRegent.name, defaultRegent.patronymic), basePrice: 0, bonus: 0, fine: 0, search: '', results: [], fullPrice: 0, share: 1 }
             : emptySlot()
@@ -607,7 +607,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         if (choirType === 'weekday') {
           // Подставляем только чтеца со звёздочкой. Нет звёздочки ни у кого —
           // список чтецов остаётся пустым, выбирают вручную
-          const defaultReader = (membersData as Member[]).find((m) => m.role === 'reader' && m.isPreferredReader)
+          const defaultReader = (membersData as Member[]).find((m) => m.role === 'reader' && m.isPreferredReader && m.isActive !== false)
           // basePrice выставим позже в goToMembers, когда тип будет известен
           setReaderRows(defaultReader
             ? [{ key: nextKey(), memberId: defaultReader._id, memberName: buildMemberName(defaultReader.name, defaultReader.patronymic), basePrice: 0, bonus: 0, fine: 0, search: '', results: [], fullPrice: 0, share: 1 }]
@@ -627,6 +627,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     const sorted = [...members].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
     const newRows: FestiveRow[] = sorted
       .filter((m) => !isMemberDisabled(m, resolvedType))  // исключить отключённых
+      // Архивных не показываем в чек-листе — если только человек уже не
+      // записан в этот выход (тогда его строка должна остаться видимой при
+      // редактировании, чтобы запись не потерялась при сохранении).
+      .filter((m) => m.isActive !== false || existingAtt.some((a) => a.memberId === m._id))
       .map((m) => {
         const mName = memberDisplayName(m.name, m.patronymic)
         // Регент в праздничном хоре берётся из отдельного слота, не из общего списка
@@ -689,6 +693,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     const q2 = q.toLowerCase()
     return members
       .filter((m) =>
+        m.isActive !== false &&
         m.name.toLowerCase().includes(q2) &&
         !excludeIds.includes(m._id) &&
         !isMemberDisabled(m, resolvedType, slotRole)

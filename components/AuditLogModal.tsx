@@ -16,6 +16,8 @@ const ACTION_LABELS: Record<string, { label: string; color: string; icon: string
   create_member:     { label: 'Добавлен певчий',   color: 'text-green-600',  icon: '＋' },
   update_member:     { label: 'Изменён певчий',    color: 'text-blue-500',   icon: '✎' },
   delete_member:     { label: 'Удалён певчий',     color: 'text-red-500',    icon: '✕' },
+  archive_member:    { label: 'В архив',            color: 'text-warm-500',  icon: '⇩' },
+  restore_member:    { label: 'Из архива',          color: 'text-green-600', icon: '⇧' },
   create_event_type: { label: 'Добавлен тип',      color: 'text-green-600',  icon: '＋' },
   update_event_type: { label: 'Изменён тип',       color: 'text-blue-500',   icon: '✎' },
   delete_event_type: { label: 'Удалён тип',        color: 'text-red-500',    icon: '✕' },
