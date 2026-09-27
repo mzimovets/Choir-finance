@@ -145,7 +145,7 @@ export default function SingersPage() {
   const [archiveInfoOpen, setArchiveInfoOpen] = useState(false)
   // Кто из выбранных уже отмечен в табеле текущего месяца — предупреждаем перед архивацией
   const [currentMonthMemberIds, setCurrentMonthMemberIds] = useState<Set<string>>(new Set())
-  const [singleArchiveWarning, setSingleArchiveWarning] = useState(false)
+  const [singleArchiveConfirmOpen, setSingleArchiveConfirmOpen] = useState(false)
 
   // Совпадение по ФИО с уже существующим певчим (активным или в архиве) при сохранении карточки
   const [duplicateConfirm, setDuplicateConfirm] = useState<Member[] | null>(null)
@@ -413,21 +413,17 @@ export default function SingersPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isActive: false }),
     })
-    setSingleArchiveWarning(false)
+    setSingleArchiveConfirmOpen(false)
     setDrawerOpen(false)
     load()
     notifyDataChanged()
   }
 
-  /** Клик по иконке архива в карточке — если есть выходы в этом месяце, сперва предупреждаем */
+  /** Клик по иконке архива в карточке — всегда спрашиваем подтверждение, а если есть выходы в этом месяце — предупреждаем прямо в нём */
   async function handleArchiveClickFromEdit() {
     if (!editing) return
-    const monthIds = await fetchCurrentMonthMemberIds()
-    if (monthIds.has(editing._id)) {
-      setSingleArchiveWarning(true)
-    } else {
-      await archiveSingleFromEdit()
-    }
+    setCurrentMonthMemberIds(await fetchCurrentMonthMemberIds())
+    setSingleArchiveConfirmOpen(true)
   }
 
   async function confirmRestore() {
@@ -507,7 +503,7 @@ export default function SingersPage() {
                 className="w-10 h-10 rounded-xl border border-warm-200 bg-white text-warm-700 flex items-center justify-center active:bg-warm-50 transition-colors"
                 title="Архив"
               >
-                <IconInboxLine size={24} />
+                <IconInboxLine size={22} />
               </button>
               <button
                 onClick={openNew}
@@ -1016,25 +1012,30 @@ export default function SingersPage() {
         </>
       )}
 
-      {/* Предупреждение при архивации одного певчего с выходами в этом месяце */}
-      {singleArchiveWarning && editing && (
+      {/* Подтверждение архивации одного певчего из карточки — поверх дравера редактирования (z-[70]) */}
+      {singleArchiveConfirmOpen && editing && (
         <>
-          <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setSingleArchiveWarning(false)} />
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-5">
+          <div className="fixed inset-0 z-[70] bg-black/50" onClick={() => setSingleArchiveConfirmOpen(false)} />
+          <div className="fixed inset-0 z-[70] flex items-center justify-center px-5">
             <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl">
               <div className="px-5 pt-5 pb-4">
                 <h2 className="text-base font-slab font-bold text-warm-900 mb-2">
                   Отправить в архив?
                 </h2>
                 <p className="text-sm text-warm-600 leading-relaxed">
-                  У <span className="font-semibold text-warm-900">{editing.name}</span> уже есть
-                  отметки в табеле текущего месяца. Сами выходы не изменятся, но проверьте, не рано
-                  ли отправлять в архив.
+                  <span className="font-semibold text-warm-900">{editing.name}</span> перестанет
+                  предлагаться при добавлении новых выходов.
                 </p>
+                {currentMonthMemberIds.has(editing._id) && (
+                  <div className="mt-3 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 font-slab leading-relaxed">
+                    У {editing.name} уже есть отметки в табеле текущего месяца. Сами выходы не
+                    изменятся, но проверьте, не рано ли отправлять в архив.
+                  </div>
+                )}
               </div>
               <div className="flex gap-2 px-4 pb-4">
                 <button
-                  onClick={() => setSingleArchiveWarning(false)}
+                  onClick={() => setSingleArchiveConfirmOpen(false)}
                   className="flex-1 py-2.5 rounded-xl border border-warm-200 text-warm-700 text-sm font-slab font-semibold active:bg-warm-50"
                 >
                   Отмена
@@ -1193,7 +1194,7 @@ export default function SingersPage() {
                                 <td style={{ width: '40px' }}>
                                   <button
                                     onClick={() => setRestoreTarget(m)}
-                                    className="w-7 h-7 rounded-lg bg-green-50 text-green-600 flex items-center justify-center active:bg-green-100 transition-colors ml-auto"
+                                    className="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center active:bg-green-100 transition-colors ml-auto"
                                     title="Вернуть из архива"
                                   >
                                     <IconInboxOut size={18} />
