@@ -477,11 +477,16 @@ export default function SingersPage() {
               <button
                 onClick={openBulkArchiveConfirm}
                 disabled={selectedIds.size === 0}
-                className="px-3 h-10 rounded-xl text-white text-sm font-slab font-semibold disabled:opacity-40 flex items-center gap-1.5"
+                className="relative w-10 h-10 rounded-xl text-white disabled:opacity-40 flex items-center justify-center"
                 style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}
+                title="ОК"
               >
                 <IconInboxIn />
-                ОК{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+                {selectedIds.size > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                    {selectedIds.size}
+                  </span>
+                )}
               </button>
             </div>
           ) : (
