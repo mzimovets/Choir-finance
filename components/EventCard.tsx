@@ -149,10 +149,13 @@ export function EventCard({ event, onEdit, onDelete, defaultExpanded = false, hi
     opacity: isDragging ? 0.6 : 1,
   }
 
-  const regent   = event.attendances.find(a => a.isRegent)
+  const isWeekday = event.choirType === 'weekday'
+  const regent   = isWeekday ? event.attendances.find(a => a.isRegent) : undefined
   // Чтецов может быть несколько — показываем всех, кого проставили
-  const readers  = event.attendances.filter(a => a.isReader)
-  const singers  = event.attendances.filter(a => !a.isRegent && !a.isReader)
+  const readers  = isWeekday ? event.attendances.filter(a => a.isReader) : []
+  const singers  = isWeekday
+    ? event.attendances.filter(a => !a.isRegent && !a.isReader)
+    : event.attendances
 
   const total = event.attendances.reduce((s, a) => s + (a.basePrice || 0) + (a.bonus || 0) - (a.fine || 0), 0)
 
@@ -165,7 +168,7 @@ export function EventCard({ event, onEdit, onDelete, defaultExpanded = false, hi
   // Цифра в значке — общее кол-во участников
   const badgeNum = event.attendances.length
 
-  const hasGroups = !!regent || readers.length > 0
+  const hasGroups = isWeekday && (regent || readers.length > 0)
 
   return (
     <div

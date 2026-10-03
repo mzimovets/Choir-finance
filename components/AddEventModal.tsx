@@ -203,9 +203,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     let regentName = ''
     const readerNames: string[] = []
     const singerNames: string[] = []
-    readerRows.filter((r) => r.memberId).forEach((r) => {
-      items.push({ memberId: r.memberId, role: 'reader' }); readerNames.push(r.memberName)
-    })
     if (choirType === 'festive') {
       if (festiveRegent.memberId) {
         items.push({ memberId: festiveRegent.memberId, role: 'regent' })
@@ -218,6 +215,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         items.push({ memberId: regent.memberId, role: 'regent' })
         regentName = regent.memberName
       }
+      readerRows.filter((r) => r.memberId).forEach((r) => {
+        items.push({ memberId: r.memberId, role: 'reader' }); readerNames.push(r.memberName)
+      })
       weekdayRows.filter((r) => r.memberId).forEach((r) => {
         items.push({ memberId: r.memberId, role: 'singer' }); singerNames.push(r.memberName)
       })
@@ -258,21 +258,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       return m && m.isActive !== false && !isMemberDisabled(m, resolvedType, slotRole) ? m : undefined
     }
 
-    const rdrRows: WeekdayRow[] = clipboard.items.filter((i) => i.role === 'reader').flatMap((i) => {
-      const m = byId(i.memberId, 'reader')
-      if (!m) return []
-      const price = getPriceForMember(m, resolvedType, 'reader')
-      return [{
-        key: nextKey(), memberId: m._id, memberName: buildMemberName(m.name, m.patronymic),
-        basePrice: price, bonus: 0, fine: 0, search: '', results: [],
-        fullPrice: price, share: 1,
-      }]
-    })
-    if (rdrRows.length) setReaderRows((prev) => {
-      const existing = new Set(prev.filter((r) => r.memberId).map((r) => r.memberId))
-      return [...prev.filter((r) => r.memberId), ...rdrRows.filter((r) => !existing.has(r.memberId))]
-    })
-
     if (choirType === 'festive') {
       const reg = clipboard.items.find((i) => i.role === 'regent')
       if (reg) {
@@ -298,6 +283,20 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         memberId: regM._id, memberName: buildMemberName(regM.name, regM.patronymic),
         basePrice: getPriceForMember(regM, resolvedType, 'regent'), bonus: 0, fine: 0, search: '', results: [],
         fullPrice: getPriceForMember(regM, resolvedType, 'regent'), share: 1,
+      })
+      const rdrRows: WeekdayRow[] = clipboard.items.filter((i) => i.role === 'reader').flatMap((i) => {
+        const m = byId(i.memberId, 'reader')
+        if (!m) return []
+        const price = getPriceForMember(m, resolvedType, 'reader')
+        return [{
+          key: nextKey(), memberId: m._id, memberName: buildMemberName(m.name, m.patronymic),
+          basePrice: price, bonus: 0, fine: 0, search: '', results: [],
+          fullPrice: price, share: 1,
+        }]
+      })
+      if (rdrRows.length) setReaderRows((prev) => {
+        const existing = new Set(prev.filter((r) => r.memberId).map((r) => r.memberId))
+        return [...prev.filter((r) => r.memberId), ...rdrRows.filter((r) => !existing.has(r.memberId))]
       })
       const rows: WeekdayRow[] = clipboard.items.filter((i) => i.role === 'singer').flatMap((i) => {
         const m = byId(i.memberId, 'singer')
@@ -390,7 +389,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     setStep('members')
 
     // Обновить цену чтеца под выбранный тип выхода (или сбросить, если отключён)
-    if (!editingEvent) {
+    if (choirType === 'weekday' && !editingEvent) {
       const rt = eventType === 'Другое' ? customType.trim() : eventType
       setReaderRows((prev) => prev.flatMap((cur) => {
         if (!cur.memberId) return [cur]
@@ -564,23 +563,23 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         }
         setStep('members')
 
-        // Только явно помеченный регент. Раньше при его отсутствии в слот
-        // подставлялся первый участник списка — и после сохранения человек
-        // без спроса становился регентом
-        const regentAtt = editingEvent.attendances.find((a) => a.isRegent)
-        // Чтецы — общий список для обоих хоров
-        const readerAtts = editingEvent.attendances.filter((a) => a.isReader)
-        setReaderRows(readerAtts.map((a) => ({ key: nextKey(), ...slotFromAtt(a) })))
-
         if (choirType === 'festive') {
+          const regentAtt = editingEvent.attendances.find((a) => a.isRegent)
           setFestiveRegent(regentAtt ? slotFromAtt(regentAtt) : emptySlot())
         }
 
         if (choirType === 'weekday') {
+          // Только явно помеченный регент. Раньше при его отсутствии в слот
+          // подставлялся первый участник списка — и после сохранения человек
+          // без спроса становился регентом
+          const regentAtt = editingEvent.attendances.find((a) => a.isRegent)
+          const readerAtts = editingEvent.attendances.filter((a) => a.isReader)
           const singerAtts = editingEvent.attendances.filter(
             (a) => a !== regentAtt && !readerAtts.includes(a)
           )
+
           setRegent(regentAtt ? slotFromAtt(regentAtt) : emptySlot())
+          setReaderRows(readerAtts.map((a) => ({ key: nextKey(), ...slotFromAtt(a) })))
           setWeekdayRows(singerAtts.map((a) => ({ key: nextKey(), ...slotFromAtt(a) })))
         }
       } else {
@@ -604,14 +603,18 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
           setFestiveRegent(emptySlot())
         }
 
-        // Автозаполнить чтеца (общее для обоих хоров), если он не отключён для нового типа.
-        // Подставляем только чтеца со звёздочкой. Нет звёздочки ни у кого —
-        // список чтецов остаётся пустым, выбирают вручную
-        const defaultReader = (membersData as Member[]).find((m) => m.role === 'reader' && m.isPreferredReader && m.isActive !== false)
-        // basePrice выставим позже в goToMembers, когда тип будет известен
-        setReaderRows(defaultReader
-          ? [{ key: nextKey(), memberId: defaultReader._id, memberName: buildMemberName(defaultReader.name, defaultReader.patronymic), basePrice: 0, bonus: 0, fine: 0, search: '', results: [], fullPrice: 0, share: 1 }]
-          : [])
+        // Автозаполнить чтеца для буднего хора (если он не отключён для нового типа)
+        if (choirType === 'weekday') {
+          // Подставляем только чтеца со звёздочкой. Нет звёздочки ни у кого —
+          // список чтецов остаётся пустым, выбирают вручную
+          const defaultReader = (membersData as Member[]).find((m) => m.role === 'reader' && m.isPreferredReader && m.isActive !== false)
+          // basePrice выставим позже в goToMembers, когда тип будет известен
+          setReaderRows(defaultReader
+            ? [{ key: nextKey(), memberId: defaultReader._id, memberName: buildMemberName(defaultReader.name, defaultReader.patronymic), basePrice: 0, bonus: 0, fine: 0, search: '', results: [], fullPrice: 0, share: 1 }]
+            : [])
+        } else {
+          setReaderRows([])
+        }
       }
     })
   }, [isOpen, editingEvent, choirType])
@@ -630,14 +633,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       .filter((m) => m.isActive !== false || existingAtt.some((a) => a.memberId === m._id))
       .map((m) => {
         const mName = memberDisplayName(m.name, m.patronymic)
-        // Регент и чтец в праздничном хоре берутся из отдельных слотов/списка,
-        // не из общего чек-листа. Регента в чек-листе вообще не показываем;
-        // запись чтеца при поиске «своей» строки пропускаем — иначе если тот
-        // же человек ещё и спел отдельной строкой, его цена/галочка здесь
-        // перепутались бы с чтецкой записью.
+        // Регент в праздничном хоре берётся из отдельного слота, не из общего списка
         const isRegentAtt = existingAtt.find((a) => a.memberId === m._id && a.isRegent)
         if (isRegentAtt) return null
-        const existing = existingAtt.find((a) => !a.isReader && (a.memberId === m._id || a.memberName === m.name || a.memberName === mName))
+        const existing = existingAtt.find((a) => a.memberId === m._id || a.memberName === m.name || a.memberName === mName)
         const basePrice = existing?.basePrice ?? getPriceForMember(m, resolvedType)
         const share = existing?.share ?? 1
         return {
@@ -725,8 +724,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   /* ── Регент праздничного хора ── */
   function handleFestiveRegentSearch(q: string) {
-    const excludeIds = readerRows.filter((r) => r.memberId).map((r) => r.memberId)
-    const results = searchMembers(q, excludeIds, 'regent')
+    const results = searchMembers(q, [], 'regent')
     setFestiveRegent((r) => ({ ...r, search: q, results }))
   }
 
@@ -756,9 +754,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }
 
   function updateReaderRowSearch(key: string, q: string) {
-    const currentRegentId = choirType === 'festive' ? festiveRegent.memberId : regent.memberId
     const excludeIds = [
-      currentRegentId,
+      regent.memberId,
       ...readerRows.filter((r) => r.key !== key && r.memberId).map((r) => r.memberId),
     ].filter(Boolean)
     const results = searchMembers(q, excludeIds, 'reader')
@@ -833,27 +830,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }
 
   /* ── Сохранение ── */
-  // Если в этом выходе ожидается чтец (роль не отключена у типа выхода), а его
-  // не указали — спрашиваем подтверждение, а не сохраняем сразу молча
-  const [noReaderConfirmOpen, setNoReaderConfirmOpen] = useState(false)
-
-  function readerExpectedButMissing(): boolean {
-    if (choirType !== 'festive') return false
-    const etDoc = eventTypeDocs.find((et) => et.name === resolvedType)
-    const readerDisabled = (etDoc?.disabledRoles ?? []).includes('reader')
-    if (readerDisabled) return false
-    return readerRows.filter((r) => r.memberId).length === 0
-  }
-
-  function handleSave() {
+  async function handleSave() {
     if (!resolvedType) return
-    if (readerExpectedButMissing()) { setNoReaderConfirmOpen(true); return }
-    doSave()
-  }
-
-  async function doSave() {
-    if (!resolvedType) return
-    setNoReaderConfirmOpen(false)
 
     let attendances
     if (choirType === 'festive') {
@@ -864,9 +842,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         ...(festiveRegent.memberId
           ? [{ memberId: festiveRegent.memberId, memberName: festiveRegent.memberName, basePrice: festiveRegent.basePrice, bonus: festiveRegent.bonus, ...(festiveRegent.fine ? { fine: festiveRegent.fine } : {}), ...(festiveRegent.share !== 1 ? { share: festiveRegent.share, fullPrice: festiveRegent.fullPrice } : {}), isRegent: true as const }]
           : []),
-        ...readerRows
-          .filter((r) => r.memberId)
-          .map((r) => ({ memberId: r.memberId, memberName: r.memberName, basePrice: r.basePrice, bonus: r.bonus, ...(r.fine ? { fine: r.fine } : {}), ...(r.share !== 1 ? { share: r.share, fullPrice: r.fullPrice } : {}), isReader: true as const })),
         ...singerAtts,
       ]
     } else {
@@ -907,7 +882,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }
 
   const checkedCount = choirType === 'festive'
-    ? (festiveRegent.memberId ? 1 : 0) + readerRows.filter((r) => r.memberId).length + festiveRows.filter((r) => r.checked).length
+    ? (festiveRegent.memberId ? 1 : 0) + festiveRows.filter((r) => r.checked).length
     : (regent.memberId ? 1 : 0) + readerRows.filter((r) => r.memberId).length + weekdayRows.filter((r) => r.memberId).length
 
   /* ─── Нампад: чтение и запись значения активного поля ─── */
@@ -1103,7 +1078,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       onOpenChange={(open) => { if (open) return; if (requestCloseDrawer()) return; onClose() }}
       placement="bottom"
       scrollBehavior="inside"
-      isDismissable={!discardOpen && !noReaderConfirmOpen}
+      isDismissable={!discardOpen}
       classNames={{
         // Подгонка под клавиатуру нужна только пока она открыта: иначе
         // застрявшая высота обёртки отрывает шторку от низа экрана
@@ -1266,83 +1241,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                 )}
                               </div>
                             )}
-                          </div>
-
-                          {/* ── Чтецы ── */}
-                          <div className="mb-2">
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide">Чтецы</p>
-                              <span className="text-xs text-warm-400">{readerRows.filter((r) => r.memberId).length} чел.</span>
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                              {readerRows.map((row) => (
-                                <div key={row.key}>
-                                  {row.memberId ? (
-                                    <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
-                                      <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(row.memberName)}</span>
-                                      <PriceInputs
-                                        id={`r:${row.key}`} name={shortName(row.memberName)}
-                                        basePrice={row.basePrice} bonus={row.bonus} fine={row.fine} share={row.share}
-                                      />
-                                      <button onClick={() => removeReaderRow(row.key)} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-center gap-2">
-                                      <div className="relative flex-1">
-                                        <input
-                                          ref={(el) => {
-                                            if (el) readerInputRefs.current.set(row.key, el)
-                                            else readerInputRefs.current.delete(row.key)
-                                          }}
-                                          className="warm-input"
-                                          placeholder="Поиск по фамилии..."
-                                          onFocus={() => setActiveNumpad(null)}
-                                          value={row.search}
-                                          onChange={(e) => updateReaderRowSearch(row.key, e.target.value)}
-                                          autoComplete="off"
-                                        />
-                                        {row.results.length > 0 && (
-                                          <div data-suggest="1" className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56">
-                                            {row.results.map((m) => (
-                                              <button
-                                                key={m._id}
-                                                className="w-full text-left px-4 py-3 text-sm border-b border-warm-100 last:border-b-0 active:bg-warm-50 flex items-center gap-2"
-                                                onClick={() => selectReaderMember(row.key, m)}
-                                              >
-                                                <span className="font-semibold text-warm-900 flex-1">{memberDisplayName(m.name, m.patronymic)}</span>
-                                                {m.role === 'reader' && <span className="text-xs text-warm-400 shrink-0">Чтец</span>}
-                                                <span className="text-xs text-warm-400 shrink-0">{getPriceForMember(m, resolvedType, 'reader')} ₽</span>
-                                              </button>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                      <button
-                                        onClick={() => removeReaderRow(row.key)}
-                                        className="w-9 h-9 rounded-xl bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100"
-                                      >
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                                          <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                                        </svg>
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-
-                              <button
-                                onClick={addReaderRow}
-                                className="w-full py-2.5 rounded-xl border border-dashed border-warm-300 text-warm-500 text-sm font-medium flex items-center justify-center gap-2 active:bg-warm-50 transition-colors"
-                              >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                  <path fillRule="evenodd" clipRule="evenodd" d="M12 3.25C12.4142 3.25 12.75 3.58579 12.75 4V11.25H20C20.4142 11.25 20.75 11.5858 20.75 12C20.75 12.4142 20.4142 12.75 20 12.75H12.75V20C12.75 20.4142 12.4142 20.75 12 20.75C11.5858 20.75 11.25 20.4142 11.25 20V12.75H4C3.58579 12.75 3.25 12.4142 3.25 12C3.25 11.5858 3.58579 11.25 4 11.25H11.25V4C11.25 3.58579 11.5858 3.25 12 3.25Z" fill="currentColor"/>
-                                </svg>
-                                Добавить чтеца
-                              </button>
-                            </div>
                           </div>
 
                           <div className="flex items-center justify-between mb-1">
@@ -1691,38 +1589,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       onStay={() => setDiscardOpen(false)}
       onDiscard={() => { setDiscardOpen(false); onClose() }}
     />
-
-    {/* Для этого типа выхода обычно нужен чтец, а его не поставили — уточняем перед сохранением */}
-    {noReaderConfirmOpen && (
-      <>
-        <div className="fixed inset-0 z-[70] bg-black/50" onClick={() => setNoReaderConfirmOpen(false)} />
-        <div className="fixed inset-0 z-[70] flex items-center justify-center px-5">
-          <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl">
-            <div className="px-5 pt-5 pb-4">
-              <h2 className="text-base font-slab font-bold text-warm-900 mb-2">Сохранить без чтеца?</h2>
-              <p className="text-sm text-warm-600 leading-relaxed">
-                Для «{resolvedType}» обычно должен быть чтец, но в этом выходе он не указан.
-              </p>
-            </div>
-            <div className="flex gap-2 px-4 pb-4">
-              <button
-                onClick={() => setNoReaderConfirmOpen(false)}
-                className="flex-1 py-2.5 rounded-xl border border-warm-200 text-warm-700 text-sm font-slab font-semibold active:bg-warm-50"
-              >
-                Отмена
-              </button>
-              <button
-                onClick={doSave}
-                className="flex-1 py-2.5 rounded-xl text-white text-sm font-slab font-semibold flex items-center justify-center gap-2"
-                style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}
-              >
-                Сохранить
-              </button>
-            </div>
-          </div>
-        </div>
-      </>
-    )}
     </>
   )
 }

@@ -45,15 +45,11 @@ export async function recalcEvents({ choirType, memberId, from, until }: RecalcO
       const member = byId.get(att.memberId)
       if (!member) return att
 
-      // Роль слота — как при создании выхода. Чтец всегда считается по
-      // слоту (и в будних, и в праздничных выходах можно поставить чтецом
-      // того, чья основная роль — певчий). Регент в праздничном хоре
-      // по-прежнему считается по роли участника — так же, как при выборе.
-      const role: MemberRole = att.isReader
-        ? 'reader'
-        : choirType === 'weekday'
-          ? (att.isRegent ? 'regent' : 'singer')
-          : member.role
+      // Роль слота — как при создании выхода: будний хор считает по слоту,
+      // праздничный — по роли участника
+      const role: MemberRole = choirType === 'weekday'
+        ? (att.isRegent ? 'regent' : att.isReader ? 'reader' : 'singer')
+        : member.role
 
       const etDoc = types.find((t) => t.name === ev.eventType)
       const tariff = (etDoc?.prices as Record<string, number> | undefined)?.[role] ?? 0
