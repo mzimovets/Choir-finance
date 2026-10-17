@@ -1050,10 +1050,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
             e.stopPropagation()
             setActiveNumpad(isActive ? null : { id, field, label: `${name} · ${FIELD_LABELS[field]}` })
           }}
-          className={`price-value text-right rounded-lg px-2 py-1 text-sm font-medium border transition-all ${toneClass} ${isActive ? 'ring-2 ring-[#bd9673] border-[#bd9673]' : ''}`}
+          className={`text-right rounded-lg px-2 py-1 text-sm font-medium border transition-all ${toneClass} ${isActive ? 'ring-2 ring-[#bd9673] border-[#bd9673]' : ''}`}
           style={{ minWidth: tone === 'base' ? 72 : 56 }}
         >
-          {value.toLocaleString('ru-RU')}
+          <span className="price-value">{value.toLocaleString('ru-RU')}</span>
         </button>
       </div>
     )

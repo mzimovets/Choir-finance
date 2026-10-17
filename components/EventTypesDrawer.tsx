@@ -312,9 +312,9 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
                                 type="button"
                                 disabled={disabled}
                                 onClick={() => !disabled && setActiveNumpad(isActive ? null : r.key as typeof activeNumpad)}
-                                className={`price-value text-sm font-semibold font-slab px-3 py-1 rounded-lg border transition-colors ${isActive ? 'border-[#bd9673] bg-white text-warm-900' : 'border-warm-200 bg-warm-50 text-warm-900'} disabled:cursor-not-allowed`}
+                                className={`text-sm font-semibold font-slab px-3 py-1 rounded-lg border transition-colors ${isActive ? 'border-[#bd9673] bg-white text-warm-900' : 'border-warm-200 bg-warm-50 text-warm-900'} disabled:cursor-not-allowed`}
                               >
-                                {val.toLocaleString('ru-RU')} ₽
+                                <span className="price-value">{val.toLocaleString('ru-RU')} ₽</span>
                               </button>
                             </div>
                           )

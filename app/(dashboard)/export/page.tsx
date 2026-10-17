@@ -1009,7 +1009,7 @@ export default function ExportPage() {
                       <tr>
                         <td colSpan={2} style={{ ...tdBase, position: "sticky", left: 0, zIndex: 2, minWidth: COL_NUM + COL_NAME, background: "#c9a87c", borderTop: `2px solid #b8945e`, borderBottom: "none", borderRight: "none", textAlign: "left", paddingLeft: 8, fontWeight: 700, fontSize: 13, color: "#fff8f0" }}>{label}</td>
                         {Array.from({ length: numEvCols }).map((_, i) => <td key={i} style={{ ...tdBase, background: "#c9a87c", borderTop: `2px solid #b8945e`, borderBottom: "none", borderRight: "none", borderLeft: "none" }} />)}
-                        <td className="price-value" style={{ ...tdBase, background: "#c9a87c", borderTop: `2px solid #b8945e`, borderBottom: "none", fontWeight: 700, fontSize: 13, color: "#fff8f0", textAlign: "right", paddingRight: 8 }}>{amount.toLocaleString("ru-RU")}</td>
+                        <td style={{ ...tdBase, background: "#c9a87c", borderTop: `2px solid #b8945e`, borderBottom: "none", fontWeight: 700, fontSize: 13, color: "#fff8f0", textAlign: "right", paddingRight: 8 }}><span className="price-value">{amount.toLocaleString("ru-RU")}</span></td>
                       </tr>
                     );
 
@@ -1034,7 +1034,7 @@ export default function ExportPage() {
                               {hasReaders ? "Всего" : "Итого"}
                             </td>
                             {sortedEvents.map((ev) => <td key={ev._id} style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", borderRight: "none", borderLeft: "none" }} />)}
-                            <td className="price-value" style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", fontWeight: 800, fontSize: 15, color: "#ffffff", textAlign: "right", paddingRight: 8 }}>{totalAmount.toLocaleString("ru-RU")}</td>
+                            <td style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", fontWeight: 800, fontSize: 15, color: "#ffffff", textAlign: "right", paddingRight: 8 }}><span className="price-value">{totalAmount.toLocaleString("ru-RU")}</span></td>
                           </tr>
                         </tfoot>
                       </>
@@ -1237,7 +1237,7 @@ export default function ExportPage() {
                       <tr>
                         <td colSpan={2} style={{ ...tdBase, position: "sticky", left: 0, zIndex: 2, minWidth: COL_NUM + COL_NAME, background: "#a07850", borderTop: `2px solid #7d5e42`, borderRight: "none", borderBottom: "none", textAlign: "left", paddingLeft: 8, fontWeight: 700, fontSize: 15, color: "#ffffff" }}>Итого</td>
                         {mbEvents.map(ev => <td key={ev._id} style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", borderRight: "none", borderLeft: "none" }} />)}
-                        <td className="price-value" style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", fontWeight: 800, fontSize: 15, color: "#ffffff", textAlign: "right", paddingRight: 8 }}>{mbTotal.toLocaleString("ru-RU")}</td>
+                        <td style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", fontWeight: 800, fontSize: 15, color: "#ffffff", textAlign: "right", paddingRight: 8 }}><span className="price-value">{mbTotal.toLocaleString("ru-RU")}</span></td>
                       </tr>
                     </tfoot>
                   </table>
@@ -1260,7 +1260,7 @@ export default function ExportPage() {
                     <tfoot>
                       <tr>
                         <td colSpan={2} style={{ ...tdBase, position: "sticky", left: 0, zIndex: 2, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", textAlign: "left", paddingLeft: 8, fontWeight: 700, fontSize: 15, color: "#ffffff" }}>Итого</td>
-                        <td className="price-value" style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", fontWeight: 800, fontSize: 15, color: "#ffffff", textAlign: "right", paddingRight: 8 }}>{mbTotal.toLocaleString("ru-RU")}</td>
+                        <td style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", fontWeight: 800, fontSize: 15, color: "#ffffff", textAlign: "right", paddingRight: 8 }}><span className="price-value">{mbTotal.toLocaleString("ru-RU")}</span></td>
                       </tr>
                     </tfoot>
                   </table>

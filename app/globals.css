@@ -285,12 +285,16 @@ input[type="number"] {
 
 /* Скрытие сумм (переворотом телефона или кнопкой-«глазом»). Блюр и обратно —
    с анимацией; select: none, чтобы скрытую сумму нельзя было выделить и
-   скопировать мимо блюра. */
+   скопировать мимо блюра. Класс вешаем на сам текст суммы, а не на кнопку/
+   ячейку вокруг — иначе размывается ещё и рамка/фон, и выглядит грязно. */
 .price-value {
+  display: inline-block;
   filter: blur(0px);
-  transition: filter 0.35s ease;
+  transition: filter 0.3s ease, opacity 0.3s ease;
+  opacity: 1;
 }
 .prices-hidden .price-value {
-  filter: blur(6px);
+  filter: blur(9px);
+  opacity: 0.92;
   user-select: none;
 }
