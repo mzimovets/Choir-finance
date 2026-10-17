@@ -6,6 +6,12 @@ import { useEffect, useRef, useState } from 'react'
 import PinLock from '@/components/PinLock'
 import PinSetup from '@/components/PinSetup'
 import { hasPin, isPinVerified, markPinVerified, clearPinVerified, clearPin } from '@/lib/pin'
+import {
+  startFlipListener, needsMotionPermission, requestMotionPermission,
+  wasMotionPermissionAsked, markMotionPermissionAsked,
+} from '@/lib/deviceFlip'
+import { togglePricesHidden } from '@/lib/priceVisibility'
+import { usePricesHidden } from '@/hooks/usePricesHidden'
 
 const NAV = [
   {
@@ -118,6 +124,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const [pinState, setPinState] = useState<PinState>('loading')
   const [usernameInitials, setUsernameInitials] = useState('')
+
+  // Переворот телефона (экраном вниз и обратно вверх) переключает скрытие сумм
+  const pricesHidden = usePricesHidden()
+  useEffect(() => startFlipListener(() => togglePricesHidden()), [])
+  useEffect(() => {
+    document.documentElement.classList.toggle('prices-hidden', pricesHidden)
+    return () => document.documentElement.classList.remove('prices-hidden')
+  }, [pricesHidden])
+
+  // На iOS разрешение на датчик движения нужно запросить тапом — показываем
+  // баннер один раз при первом открытии, дальше не спрашиваем
+  const [showMotionBanner, setShowMotionBanner] = useState(false)
+  useEffect(() => {
+    if (needsMotionPermission() && !wasMotionPermissionAsked()) setShowMotionBanner(true)
+  }, [])
+  function handleMotionBannerAllow() {
+    markMotionPermissionAsked()
+    requestMotionPermission()
+    setShowMotionBanner(false)
+  }
+  function handleMotionBannerDismiss() {
+    markMotionPermissionAsked()
+    setShowMotionBanner(false)
+  }
 
   // На планшете (и крупнее) нижнее меню крупнее — иначе кнопки мелковаты
   const [isTablet, setIsTablet] = useState(false)
@@ -256,6 +286,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-page flex flex-col">
       {pinOverlay}
+
+      {showMotionBanner && (
+        <div
+          className="fixed left-3 right-3 z-[90] rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 92px)', background: '#2c1a0e' }}
+        >
+          <p className="flex-1 text-xs text-white leading-snug">
+            Разрешить датчик движения, чтобы скрывать суммы переворотом телефона?
+          </p>
+          <button
+            onClick={handleMotionBannerDismiss}
+            className="shrink-0 text-xs font-slab font-semibold text-white/60 px-2 py-1.5"
+          >
+            Не сейчас
+          </button>
+          <button
+            onClick={handleMotionBannerAllow}
+            className="shrink-0 text-xs font-slab font-semibold text-white px-3 py-1.5 rounded-xl"
+            style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}
+          >
+            Разрешить
+          </button>
+        </div>
+      )}
+
       {/* Без overflow-auto: у <main> нет ограничения высоты (родитель — min-h-screen,
           не height), поэтому сам <main> никогда не скроллится — реально скроллит body.
           Но overflow != visible всё равно делает элемент точкой привязки для

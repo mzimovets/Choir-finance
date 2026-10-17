@@ -6,6 +6,9 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import PinLock from '@/components/PinLock'
 import PinSetup from '@/components/PinSetup'
 import { hasPin, markPinVerified, clearPin } from '@/lib/pin'
+import { usePricesHidden } from '@/hooks/usePricesHidden'
+import { togglePricesHidden } from '@/lib/priceVisibility'
+import { requestMotionPermission, needsMotionPermission, markMotionPermissionAsked } from '@/lib/deviceFlip'
 
 function IconEye() {
   return (
@@ -40,6 +43,17 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [selectingChoir, setSelectingChoir] = useState<'festive' | 'weekday' | null>(null)
+
+  // Скрытие сумм в приложении — можно переключить уже здесь, на странице входа.
+  // Тот же тап, если нужно, попутно запрашивает разрешение на датчик движения.
+  const pricesHidden = usePricesHidden()
+  function handleTogglePricesHidden() {
+    togglePricesHidden()
+    if (needsMotionPermission()) {
+      markMotionPermissionAsked()
+      requestMotionPermission()
+    }
+  }
 
   // Автовосстановление сессии из localStorage (для PWA где cookie очищается при закрытии)
   useEffect(() => {
@@ -150,6 +164,15 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-page">
+      <button
+        type="button"
+        onClick={handleTogglePricesHidden}
+        title={pricesHidden ? 'Показать суммы в приложении' : 'Скрыть суммы в приложении'}
+        className="fixed flex items-center justify-center w-11 h-11 rounded-full bg-white border border-warm-200 text-warm-500 shadow-sm active:bg-warm-50 transition-colors"
+        style={{ right: 'calc(env(safe-area-inset-right, 0px) + 16px)', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+      >
+        {pricesHidden ? <IconEyeClosed /> : <IconEye />}
+      </button>
       <div className="w-full max-w-lg">
         <div className="warm-card p-6">
           {step === 'credentials' ? (

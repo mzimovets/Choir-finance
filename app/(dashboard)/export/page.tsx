@@ -722,7 +722,7 @@ export default function ExportPage() {
                 className="flex-1 flex flex-col justify-center items-end rounded-xl px-5 py-3"
                 style={{ background: "linear-gradient(135deg, #c4a07a 0%, #8f6540 100%)", border: "1px solid #b08a5e" }}
               >
-                <span className="font-slab font-bold tabular-nums leading-none text-white"
+                <span className="price-value font-slab font-bold tabular-nums leading-none text-white"
                   style={{ fontSize: totalAmount >= 100000 ? 22 : 26 }}>
                   {totalAmount.toLocaleString("ru-RU")} ₽
                 </span>
@@ -1009,7 +1009,7 @@ export default function ExportPage() {
                       <tr>
                         <td colSpan={2} style={{ ...tdBase, position: "sticky", left: 0, zIndex: 2, minWidth: COL_NUM + COL_NAME, background: "#c9a87c", borderTop: `2px solid #b8945e`, borderBottom: "none", borderRight: "none", textAlign: "left", paddingLeft: 8, fontWeight: 700, fontSize: 13, color: "#fff8f0" }}>{label}</td>
                         {Array.from({ length: numEvCols }).map((_, i) => <td key={i} style={{ ...tdBase, background: "#c9a87c", borderTop: `2px solid #b8945e`, borderBottom: "none", borderRight: "none", borderLeft: "none" }} />)}
-                        <td style={{ ...tdBase, background: "#c9a87c", borderTop: `2px solid #b8945e`, borderBottom: "none", fontWeight: 700, fontSize: 13, color: "#fff8f0", textAlign: "right", paddingRight: 8 }}>{amount.toLocaleString("ru-RU")}</td>
+                        <td className="price-value" style={{ ...tdBase, background: "#c9a87c", borderTop: `2px solid #b8945e`, borderBottom: "none", fontWeight: 700, fontSize: 13, color: "#fff8f0", textAlign: "right", paddingRight: 8 }}>{amount.toLocaleString("ru-RU")}</td>
                       </tr>
                     );
 
@@ -1034,7 +1034,7 @@ export default function ExportPage() {
                               {hasReaders ? "Всего" : "Итого"}
                             </td>
                             {sortedEvents.map((ev) => <td key={ev._id} style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", borderRight: "none", borderLeft: "none" }} />)}
-                            <td style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", fontWeight: 800, fontSize: 15, color: "#ffffff", textAlign: "right", paddingRight: 8 }}>{totalAmount.toLocaleString("ru-RU")}</td>
+                            <td className="price-value" style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", fontWeight: 800, fontSize: 15, color: "#ffffff", textAlign: "right", paddingRight: 8 }}>{totalAmount.toLocaleString("ru-RU")}</td>
                           </tr>
                         </tfoot>
                       </>
@@ -1237,7 +1237,7 @@ export default function ExportPage() {
                       <tr>
                         <td colSpan={2} style={{ ...tdBase, position: "sticky", left: 0, zIndex: 2, minWidth: COL_NUM + COL_NAME, background: "#a07850", borderTop: `2px solid #7d5e42`, borderRight: "none", borderBottom: "none", textAlign: "left", paddingLeft: 8, fontWeight: 700, fontSize: 15, color: "#ffffff" }}>Итого</td>
                         {mbEvents.map(ev => <td key={ev._id} style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", borderRight: "none", borderLeft: "none" }} />)}
-                        <td style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", fontWeight: 800, fontSize: 15, color: "#ffffff", textAlign: "right", paddingRight: 8 }}>{mbTotal.toLocaleString("ru-RU")}</td>
+                        <td className="price-value" style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", fontWeight: 800, fontSize: 15, color: "#ffffff", textAlign: "right", paddingRight: 8 }}>{mbTotal.toLocaleString("ru-RU")}</td>
                       </tr>
                     </tfoot>
                   </table>
@@ -1260,7 +1260,7 @@ export default function ExportPage() {
                     <tfoot>
                       <tr>
                         <td colSpan={2} style={{ ...tdBase, position: "sticky", left: 0, zIndex: 2, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", textAlign: "left", paddingLeft: 8, fontWeight: 700, fontSize: 15, color: "#ffffff" }}>Итого</td>
-                        <td style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", fontWeight: 800, fontSize: 15, color: "#ffffff", textAlign: "right", paddingRight: 8 }}>{mbTotal.toLocaleString("ru-RU")}</td>
+                        <td className="price-value" style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", fontWeight: 800, fontSize: 15, color: "#ffffff", textAlign: "right", paddingRight: 8 }}>{mbTotal.toLocaleString("ru-RU")}</td>
                       </tr>
                     </tfoot>
                   </table>

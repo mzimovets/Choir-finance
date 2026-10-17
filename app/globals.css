@@ -282,3 +282,15 @@ input[type="number"] {
   box-shadow: 0 -10px 34px rgba(44, 26, 14, 0.18);
   border-top: 1px solid rgba(44, 26, 14, 0.08);
 }
+
+/* Скрытие сумм (переворотом телефона или кнопкой-«глазом»). Блюр и обратно —
+   с анимацией; select: none, чтобы скрытую сумму нельзя было выделить и
+   скопировать мимо блюра. */
+.price-value {
+  filter: blur(0px);
+  transition: filter 0.35s ease;
+}
+.prices-hidden .price-value {
+  filter: blur(6px);
+  user-select: none;
+}

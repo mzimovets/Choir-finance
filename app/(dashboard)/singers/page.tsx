@@ -835,7 +835,7 @@ export default function SingersPage() {
                                 type="button"
                                 disabled={isDisabled}
                                 onClick={() => !isDisabled && setActiveNumpad(activeNumpad === t ? null : t)}
-                                className={`text-sm font-semibold font-slab px-3 py-1 rounded-lg border transition-colors ${activeNumpad === t ? 'border-[#bd9673] bg-white text-warm-900' : 'border-warm-200 bg-warm-50 text-warm-900'} ${isOverride ? 'border-b-orange-400' : ''} disabled:cursor-not-allowed`}
+                                className={`price-value text-sm font-semibold font-slab px-3 py-1 rounded-lg border transition-colors ${activeNumpad === t ? 'border-[#bd9673] bg-white text-warm-900' : 'border-warm-200 bg-warm-50 text-warm-900'} ${isOverride ? 'border-b-orange-400' : ''} disabled:cursor-not-allowed`}
                               >
                                 {applyHalf(prices[t] ?? 0, isHalved).toLocaleString('ru-RU')} ₽
                               </button>

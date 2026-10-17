@@ -254,7 +254,7 @@ export default function StatsPage() {
                     <td className="text-center tabular-nums text-warm-500 text-sm">
                       {s.events > 0 ? s.events : "—"}
                     </td>
-                    <td className="text-center tabular-nums font-semibold text-warm-800">
+                    <td className="price-value text-center tabular-nums font-semibold text-warm-800">
                       {s.total > 0
                         ? `${s.total.toLocaleString("ru-RU")} ₽`
                         : "—"}
@@ -296,7 +296,7 @@ export default function StatsPage() {
                         <td className="text-center tabular-nums text-warm-500 text-sm">
                           {s.events > 0 ? s.events : "—"}
                         </td>
-                        <td className="text-center tabular-nums font-semibold text-warm-800">
+                        <td className="price-value text-center tabular-nums font-semibold text-warm-800">
                           {s.total > 0
                             ? `${s.total.toLocaleString("ru-RU")} ₽`
                             : "—"}
@@ -312,7 +312,7 @@ export default function StatsPage() {
                     Итого
                   </td>
                   <td />
-                  <td className="text-center font-bold tabular-nums text-base py-3" style={{ color: "#ffffff" }}>
+                  <td className="price-value text-center font-bold tabular-nums text-base py-3" style={{ color: "#ffffff" }}>
                     {grandTotal.toLocaleString("ru-RU")} ₽
                   </td>
                 </tr>
@@ -397,7 +397,7 @@ export default function StatsPage() {
                       </>
                     )}
                     <div className="text-right">
-                      <p className="text-lg font-bold text-warm-800 tabular-nums">
+                      <p className="price-value text-lg font-bold text-warm-800 tabular-nums">
                         {selected?.total.toLocaleString("ru-RU")} ₽
                       </p>
                       <p className="text-xs text-warm-400">
@@ -449,7 +449,7 @@ export default function StatsPage() {
                                 )}
                               </td>
                               <td
-                                className={`text-right tabular-nums font-medium ${
+                                className={`price-value text-right tabular-nums font-medium ${
                                   r.bonus - r.fine > 0
                                     ? "text-green-600"
                                     : r.bonus - r.fine < 0
@@ -476,7 +476,7 @@ export default function StatsPage() {
                         >
                           Итого
                         </td>
-                        <td className="text-right font-bold text-warm-900 tabular-nums">
+                        <td className="price-value text-right font-bold text-warm-900 tabular-nums">
                           {selected.total.toLocaleString("ru-RU")} ₽
                         </td>
                       </tr>
