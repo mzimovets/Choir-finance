@@ -264,8 +264,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         const m = byId(reg.memberId, 'regent')
         if (m) setFestiveRegent({
           memberId: m._id, memberName: buildMemberName(m.name, m.patronymic),
-          basePrice: getPriceForMember(m, resolvedType), bonus: 0, fine: 0, search: '', results: [],
-          fullPrice: getPriceForMember(m, resolvedType), share: 1,
+          basePrice: getPriceForMember(m, resolvedType, 'regent'), bonus: 0, fine: 0, search: '', results: [],
+          fullPrice: getPriceForMember(m, resolvedType, 'regent'), share: 1,
         })
       }
       const singerIds = new Set(clipboard.items.filter((i) => i.role === 'singer').map((i) => i.memberId))
@@ -659,7 +659,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         if (!cur.memberId) return cur
         const regentMember = members.find((m) => m._id === cur.memberId)
         if (!regentMember) return cur
-        const full = getPriceForMember(regentMember, resolvedType)
+        const full = getPriceForMember(regentMember, resolvedType, 'regent')
         return { ...cur, fullPrice: full, basePrice: priceForShare(full, cur.share) }
       })
     }
@@ -729,7 +729,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }
 
   function selectFestiveRegent(m: Member) {
-    const price = getPriceForMember(m, resolvedType)
+    const price = getPriceForMember(m, resolvedType, 'regent')
     setFestiveRegent({ memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [], fullPrice: price, share: 1 })
   }
 
