@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from 'react'
 import PinLock from '@/components/PinLock'
 import PinSetup from '@/components/PinSetup'
 import { hasPin, isPinVerified, markPinVerified, clearPinVerified, clearPin } from '@/lib/pin'
-import { startFlipListener } from '@/lib/deviceFlip'
 import { togglePricesHidden } from '@/lib/priceVisibility'
 import { usePricesHidden, usePriceBlurFeatureEnabled } from '@/hooks/usePricesHidden'
 
@@ -122,20 +121,77 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [pinState, setPinState] = useState<PinState>('loading')
   const [usernameInitials, setUsernameInitials] = useState('')
 
-  // Переворот телефона (экраном вниз и обратно вверх) переключает скрытие сумм.
-  // Всю фичу целиком можно выключить в «Профиле» — тогда не слушаем датчик.
-  // Разрешение на датчик (iOS) запрашивается тапом по кнопке-глазу на экране
-  // PIN-кода и в «Профиле» — без отдельного автовсплывающего баннера.
+  // Скрытие сумм — кнопкой-глазом (PIN-экран, профиль, страница входа) или
+  // длинным свайпом сверху вниз от самого верха экрана (см. ниже). Всю
+  // фичу целиком можно выключить в «Профиле».
   const priceBlurFeatureEnabled = usePriceBlurFeatureEnabled()
   const pricesHidden = usePricesHidden()
-  useEffect(() => {
-    if (!priceBlurFeatureEnabled) return
-    return startFlipListener(() => togglePricesHidden())
-  }, [priceBlurFeatureEnabled])
   useEffect(() => {
     document.documentElement.classList.toggle('prices-hidden', pricesHidden)
     return () => document.documentElement.classList.remove('prices-hidden')
   }, [pricesHidden])
+
+  /*
+    Свайпы по содержимому страницы:
+    — горизонтальный — переключает разделы (как нижнее меню);
+    — длинный вертикальный вниз, начатый у самого верха экрана при
+      прокрутке в ноль — переключает скрытие сумм. Обычная прокрутка списка
+      вниз не стартует у самого верха вьюпорта, поэтому не путается с этим
+      жестом; требуем ещё и заметную протяжку, чтобы не сработать от касания.
+  */
+  const touchStart = useRef<{ x: number; y: number; t: number; atTop: boolean; inHScroll: boolean } | null>(null)
+  const TOP_ZONE = 60
+  const SWIPE_H_THRESHOLD = 70
+  const SWIPE_V_THRESHOLD = 130
+
+  // Есть ли у цели касания предок со своей горизонтальной прокруткой (например,
+  // широкая таблица в «Экспорте») — тогда это не наш жест, а их собственный скролл
+  function isInsideHorizontalScroller(target: EventTarget | null): boolean {
+    let node = target instanceof Element ? target : null
+    while (node && node !== document.body) {
+      if (node.scrollWidth > node.clientWidth + 1) {
+        const overflowX = getComputedStyle(node).overflowX
+        if (overflowX === 'auto' || overflowX === 'scroll') return true
+      }
+      node = node.parentElement
+    }
+    return false
+  }
+
+  function handleMainTouchStart(e: React.TouchEvent) {
+    const touch = e.touches[0]
+    touchStart.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      t: Date.now(),
+      atTop: touch.clientY < TOP_ZONE && window.scrollY <= 0,
+      inHScroll: isInsideHorizontalScroller(e.target),
+    }
+  }
+
+  function handleMainTouchEnd(e: React.TouchEvent) {
+    const start = touchStart.current
+    touchStart.current = null
+    if (!start) return
+    const touch = e.changedTouches[0]
+    const dx = touch.clientX - start.x
+    const dy = touch.clientY - start.y
+    const adx = Math.abs(dx)
+    const ady = Math.abs(dy)
+
+    // Длинный свайп вниз от самого верха — переключить скрытие сумм
+    if (priceBlurFeatureEnabled && start.atTop && dy > SWIPE_V_THRESHOLD && ady > adx * 1.5) {
+      togglePricesHidden()
+      return
+    }
+
+    // Горизонтальный свайп — переключить раздел (кроме случаев, когда свайп
+    // шёл по собственной горизонтальной прокрутке, например, таблице)
+    if (!start.inHScroll && adx > SWIPE_H_THRESHOLD && adx > ady * 1.5 && activeIndex >= 0) {
+      const nextIndex = dx < 0 ? activeIndex + 1 : activeIndex - 1
+      if (nextIndex >= 0 && nextIndex < NAV.length) router.push(NAV[nextIndex].href)
+    }
+  }
 
   // На планшете (и крупнее) нижнее меню крупнее — иначе кнопки мелковаты
   const [isTablet, setIsTablet] = useState(false)
@@ -279,7 +335,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           не height), поэтому сам <main> никогда не скроллится — реально скроллит body.
           Но overflow != visible всё равно делает элемент точкой привязки для
           потомков с position: sticky, из-за чего они не работали нигде на странице. */}
-      <main className="flex-1 pb-nav">{children}</main>
+      <main
+        className="flex-1 pb-nav"
+        onTouchStart={handleMainTouchStart}
+        onTouchEnd={handleMainTouchEnd}
+      >
+        {children}
+      </main>
 
       <nav
         className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none"

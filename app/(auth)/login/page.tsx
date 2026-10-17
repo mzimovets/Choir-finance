@@ -8,7 +8,6 @@ import PinSetup from '@/components/PinSetup'
 import { hasPin, markPinVerified, clearPin } from '@/lib/pin'
 import { usePricesHidden, usePriceBlurFeatureEnabled } from '@/hooks/usePricesHidden'
 import { togglePricesHidden } from '@/lib/priceVisibility'
-import { requestMotionPermission, needsMotionPermission, markMotionPermissionAsked } from '@/lib/deviceFlip'
 
 function IconEye() {
   return (
@@ -44,17 +43,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [selectingChoir, setSelectingChoir] = useState<'festive' | 'weekday' | null>(null)
 
-  // Скрытие сумм в приложении — можно переключить уже здесь, на странице входа.
-  // Тот же тап, если нужно, попутно запрашивает разрешение на датчик движения.
+  // Скрытие сумм в приложении — можно переключить уже здесь, на странице входа
   const pricesHidden = usePricesHidden()
   const priceBlurFeatureEnabled = usePriceBlurFeatureEnabled()
-  function handleTogglePricesHidden() {
-    togglePricesHidden()
-    if (needsMotionPermission()) {
-      markMotionPermissionAsked()
-      requestMotionPermission()
-    }
-  }
 
   // Автовосстановление сессии из localStorage (для PWA где cookie очищается при закрытии)
   useEffect(() => {
@@ -168,12 +159,14 @@ export default function LoginPage() {
       {priceBlurFeatureEnabled && (
         <button
           type="button"
-          onClick={handleTogglePricesHidden}
+          onClick={() => togglePricesHidden()}
           title={pricesHidden ? 'Показать суммы в приложении' : 'Скрыть суммы в приложении'}
           className="fixed flex items-center justify-center w-11 h-11 rounded-full bg-white border border-warm-200 text-warm-500 shadow-sm active:bg-warm-50 transition-colors"
           style={{ right: 'calc(env(safe-area-inset-right, 0px) + 16px)', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
         >
-          {pricesHidden ? <IconEyeClosed /> : <IconEye />}
+          <span style={pricesHidden ? { transform: 'translateY(2px)' } : undefined}>
+            {pricesHidden ? <IconEyeClosed /> : <IconEye />}
+          </span>
         </button>
       )}
       <div className="w-full max-w-lg">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { usePricesHidden } from '@/hooks/usePricesHidden'
 
 interface Particle {
@@ -13,10 +13,8 @@ interface Particle {
  * Сумма, скрытая «пылью», как спойлер в Телеграме — вместо CSS-блюра
  * рисуем частицы по форме текста на canvas и слегка анимируем их, пока
  * сумма скрыта. При показе/скрытии текст и частицы плавно крестфейдятся.
- *
- * Демо-компонент для одного места (общая сумма в «Экспорте») — если
- * понравится, можно будет распространить на остальные суммы, учитывая,
- * что на каждый экземпляр заводится свой canvas + requestAnimationFrame.
+ * Анимация идёт только пока суммы реально скрыты — иначе на экранах с
+ * десятками сумм было бы столько же холостых requestAnimationFrame.
  */
 export function SpoilerAmount({
   text, className, style,
@@ -31,8 +29,11 @@ export function SpoilerAmount({
   const particlesRef = useRef<Particle[]>([])
   const colorRef = useRef('#ffffff')
 
-  // Строим маску частиц по реальным пикселям отрисованного текста
-  useEffect(() => {
+  // Строим маску частиц по реальным пикселям отрисованного текста.
+  // useLayoutEffect — чтобы маска была готова до первой отрисовки на экране,
+  // иначе при маунте (переключение между разделами) на миг мелькала бы
+  // настоящая сумма, пока частицы ещё не посчитаны.
+  useLayoutEffect(() => {
     const span = textRef.current
     const canvas = canvasRef.current
     if (!span || !canvas) return
@@ -80,8 +81,10 @@ export function SpoilerAmount({
     return () => ro.disconnect()
   }, [text])
 
-  // Анимация пыли — постоянно работает, видимость переключается прозрачностью
+  // Анимация пыли — работает, только пока суммы реально скрыты (при показанных
+  // суммах canvas всё равно прозрачный — незачем грузить CPU на сотнях сумм)
   useEffect(() => {
+    if (!hidden) return
     const canvas = canvasRef.current
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx) return
@@ -106,7 +109,7 @@ export function SpoilerAmount({
     }
     raf = requestAnimationFrame(frame)
     return () => cancelAnimationFrame(raf)
-  }, [])
+  }, [hidden])
 
   return (
     <span className={`relative inline-block ${className ?? ''}`} style={style}>

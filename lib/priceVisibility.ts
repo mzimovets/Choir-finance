@@ -2,7 +2,7 @@ const KEY = 'cf_prices_hidden'
 const FEATURE_KEY = 'cf_price_blur_feature_enabled'
 const EVENT = 'chorus:prices-visibility-changed'
 
-/** Включена ли вся фича целиком (блюр + переворот). Выключатель — в «Профиле». */
+/** Включена ли вся фича скрытия сумм целиком. Выключатель — в «Профиле». */
 export function isPriceBlurFeatureEnabled(): boolean {
   if (typeof window === 'undefined') return true
   return localStorage.getItem(FEATURE_KEY) !== '0'

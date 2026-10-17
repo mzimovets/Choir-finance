@@ -13,6 +13,7 @@ import type { ChoirEvent, Member, EventTypeDoc, MemberRole } from '@/lib/types'
 import { pricesToMap, applyHalf } from '@/lib/types'
 import { plural, SINGER, PARTICIPANT } from '@/lib/plural'
 import { buildMemberName, shortName } from '@/lib/nameFormat'
+import { SpoilerAmount } from '@/components/SpoilerAmount'
 
 interface Props {
   isOpen: boolean
@@ -1053,7 +1054,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
           className={`text-right rounded-lg px-2 py-1 text-sm font-medium border transition-all ${toneClass} ${isActive ? 'ring-2 ring-[#bd9673] border-[#bd9673]' : ''}`}
           style={{ minWidth: tone === 'base' ? 72 : 56 }}
         >
-          <span className="price-value">{value.toLocaleString('ru-RU')}</span>
+          <SpoilerAmount text={value.toLocaleString('ru-RU')} />
         </button>
       </div>
     )

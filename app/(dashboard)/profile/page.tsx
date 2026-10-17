@@ -6,7 +6,6 @@ import PinLock from '@/components/PinLock'
 import PinSetup from '@/components/PinSetup'
 import { usePriceBlurFeatureEnabled, usePricesHidden } from '@/hooks/usePricesHidden'
 import { setPriceBlurFeatureEnabled, togglePricesHidden } from '@/lib/priceVisibility'
-import { requestMotionPermission, needsMotionPermission, markMotionPermissionAsked } from '@/lib/deviceFlip'
 
 type PinMode = null | 'verify' | 'new-pin'
 
@@ -91,13 +90,6 @@ export default function ProfilePage() {
   const [isMobile, setIsMobile] = useState(false)
   const priceBlurFeatureEnabled = usePriceBlurFeatureEnabled()
   const pricesHidden = usePricesHidden()
-  function handleTogglePricesHidden() {
-    togglePricesHidden()
-    if (needsMotionPermission()) {
-      markMotionPermissionAsked()
-      requestMotionPermission()
-    }
-  }
 
   useEffect(() => {
     setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0)
@@ -175,11 +167,13 @@ export default function ProfilePage() {
         {priceBlurFeatureEnabled && (
           <button
             type="button"
-            onClick={handleTogglePricesHidden}
+            onClick={() => togglePricesHidden()}
             title={pricesHidden ? 'Показать суммы в приложении' : 'Скрыть суммы в приложении'}
             className="flex items-center justify-center w-10 h-10 rounded-full bg-white border border-[#e5d9cc] text-[#9b7653] shadow-sm active:bg-[#f7f4f1] transition-colors"
           >
-            {pricesHidden ? <IconEyeBigClosed /> : <IconEyeBig />}
+            <span style={pricesHidden ? { transform: 'translateY(2px)' } : undefined}>
+              {pricesHidden ? <IconEyeBigClosed /> : <IconEyeBig />}
+            </span>
           </button>
         )}
       </div>
@@ -199,16 +193,16 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Скрытие сумм: блюр + переворот телефона — можно выключить совсем */}
+      {/* Скрытие сумм: блюр — можно выключить совсем */}
       <div className="warm-card p-4 mb-4">
         <p className="text-[13px] font-semibold text-[#7d5e42] uppercase tracking-wide font-slab mb-3">
           Скрытие сумм
         </p>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[14px] font-slab text-[#2c1a0e]">Блюр и переворот телефона</p>
+            <p className="text-[14px] font-slab text-[#2c1a0e]">Блюр сумм</p>
             <p className="text-[12px] text-[#9b7653] mt-0.5">
-              Кнопка-глаз и переворот экраном вниз скрывают суммы
+              Кнопка-глаз или длинный свайп сверху вниз скрывают суммы
             </p>
           </div>
           <button

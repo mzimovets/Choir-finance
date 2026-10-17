@@ -8,6 +8,7 @@ import { InlineNumpad } from '@/components/InlineNumpad'
 import { DrawerHandle } from '@/components/DrawerHandle'
 import { DiscardConfirm } from '@/components/DiscardConfirm'
 import { RecalcConfirm } from '@/components/RecalcConfirm'
+import { SpoilerAmount } from '@/components/SpoilerAmount'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -131,7 +132,7 @@ function SortableRow({
         <IconGrip />
       </button>
       <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{t.name}</span>
-      <span className="price-value text-xs text-warm-400 tabular-nums mr-1">{t.prices.singer.toLocaleString('ru-RU')} ₽</span>
+      <SpoilerAmount text={`${t.prices.singer.toLocaleString('ru-RU')} ₽`} className="text-xs text-warm-400 tabular-nums mr-1" />
       <button onClick={onEdit} className="w-7 h-7 rounded-lg bg-warm-100 text-warm-600 flex items-center justify-center active:bg-warm-200 shrink-0"><IconPen /></button>
       <button onClick={onDelete} className="w-7 h-7 rounded-lg bg-red-50 text-red-500 flex items-center justify-center active:bg-red-100 shrink-0"><IconTrash /></button>
     </div>
@@ -314,7 +315,7 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
                                 onClick={() => !disabled && setActiveNumpad(isActive ? null : r.key as typeof activeNumpad)}
                                 className={`text-sm font-semibold font-slab px-3 py-1 rounded-lg border transition-colors ${isActive ? 'border-[#bd9673] bg-white text-warm-900' : 'border-warm-200 bg-warm-50 text-warm-900'} disabled:cursor-not-allowed`}
                               >
-                                <span className="price-value">{val.toLocaleString('ru-RU')} ₽</span>
+                                <SpoilerAmount text={`${val.toLocaleString('ru-RU')} ₽`} />
                               </button>
                             </div>
                           )

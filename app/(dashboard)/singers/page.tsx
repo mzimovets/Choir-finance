@@ -16,6 +16,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { useSession } from '@/hooks/useSession'
 import { notifyDataChanged, onDataChanged } from '@/lib/dataSignal'
 import { RecalcConfirm } from '@/components/RecalcConfirm'
+import { SpoilerAmount } from '@/components/SpoilerAmount'
 
 const ROLES: { value: MemberRole; label: string }[] = [
   { value: 'singer',  label: 'Певчий'  },
@@ -837,7 +838,7 @@ export default function SingersPage() {
                                 onClick={() => !isDisabled && setActiveNumpad(activeNumpad === t ? null : t)}
                                 className={`text-sm font-semibold font-slab px-3 py-1 rounded-lg border transition-colors ${activeNumpad === t ? 'border-[#bd9673] bg-white text-warm-900' : 'border-warm-200 bg-warm-50 text-warm-900'} ${isOverride ? 'border-b-orange-400' : ''} disabled:cursor-not-allowed`}
                               >
-                                <span className="price-value">{applyHalf(prices[t] ?? 0, isHalved).toLocaleString('ru-RU')} ₽</span>
+                                <SpoilerAmount text={`${applyHalf(prices[t] ?? 0, isHalved).toLocaleString('ru-RU')} ₽`} />
                               </button>
                             </div>
                           )

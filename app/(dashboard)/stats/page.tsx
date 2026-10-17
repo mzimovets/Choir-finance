@@ -18,6 +18,7 @@ import { shortName } from "@/lib/nameFormat";
 import { IconEmpty } from "@/components/IconEmpty";
 import { MonthPicker, IconCalendar } from "@/components/MonthPicker";
 import { onDataChanged } from "@/lib/dataSignal";
+import { SpoilerAmount } from "@/components/SpoilerAmount";
 
 const MONTHS_RU = [
   "Январь",
@@ -255,11 +256,9 @@ export default function StatsPage() {
                       {s.events > 0 ? s.events : "—"}
                     </td>
                     <td className="text-center tabular-nums font-semibold text-warm-800">
-                      <span className="price-value">
-                        {s.total > 0
-                          ? `${s.total.toLocaleString("ru-RU")} ₽`
-                          : "—"}
-                      </span>
+                      {s.total > 0
+                        ? <SpoilerAmount text={`${s.total.toLocaleString("ru-RU")} ₽`} />
+                        : "—"}
                     </td>
                   </tr>
                 ))}
@@ -299,11 +298,9 @@ export default function StatsPage() {
                           {s.events > 0 ? s.events : "—"}
                         </td>
                         <td className="text-center tabular-nums font-semibold text-warm-800">
-                          <span className="price-value">
-                            {s.total > 0
-                              ? `${s.total.toLocaleString("ru-RU")} ₽`
-                              : "—"}
-                          </span>
+                          {s.total > 0
+                            ? <SpoilerAmount text={`${s.total.toLocaleString("ru-RU")} ₽`} />
+                            : "—"}
                         </td>
                       </tr>
                     ))}
@@ -317,7 +314,7 @@ export default function StatsPage() {
                   </td>
                   <td />
                   <td className="text-center font-bold tabular-nums text-base py-3" style={{ color: "#ffffff" }}>
-                    <span className="price-value">{grandTotal.toLocaleString("ru-RU")} ₽</span>
+                    <SpoilerAmount text={`${grandTotal.toLocaleString("ru-RU")} ₽`} />
                   </td>
                 </tr>
               </tfoot>
@@ -401,9 +398,10 @@ export default function StatsPage() {
                       </>
                     )}
                     <div className="text-right">
-                      <p className="price-value text-lg font-bold text-warm-800 tabular-nums">
-                        {selected?.total.toLocaleString("ru-RU")} ₽
-                      </p>
+                      <SpoilerAmount
+                        text={`${selected?.total.toLocaleString("ru-RU") ?? 0} ₽`}
+                        className="text-lg font-bold text-warm-800 tabular-nums"
+                      />
                       <p className="text-xs text-warm-400">
                         {selected?.events ?? 0}{" "}
                         {plural(selected?.events ?? 0, [
@@ -466,7 +464,7 @@ export default function StatsPage() {
                                     : undefined
                                 }
                               >
-                                <span className="price-value">{(r.basePrice + r.bonus - r.fine).toLocaleString("ru-RU")} ₽</span>
+                                <SpoilerAmount text={`${(r.basePrice + r.bonus - r.fine).toLocaleString("ru-RU")} ₽`} />
                               </td>
                             </tr>
                           );
@@ -481,7 +479,7 @@ export default function StatsPage() {
                           Итого
                         </td>
                         <td className="text-right font-bold text-warm-900 tabular-nums">
-                          <span className="price-value">{selected.total.toLocaleString("ru-RU")} ₽</span>
+                          <SpoilerAmount text={`${selected.total.toLocaleString("ru-RU")} ₽`} />
                         </td>
                       </tr>
                     </tfoot>

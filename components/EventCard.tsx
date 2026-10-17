@@ -6,6 +6,7 @@ import { CSS } from '@dnd-kit/utilities'
 import type { ChoirEvent } from '@/lib/types'
 import { plural, SINGER } from '@/lib/plural'
 import { shortName } from '@/lib/nameFormat'
+import { SpoilerAmount } from '@/components/SpoilerAmount'
 
 interface Props {
   event: ChoirEvent
@@ -107,8 +108,8 @@ function AttRow({ name, price, bonus, fine, badge, highlight, share }: {
           </span>
         )}
       </div>
-      <span className={`price-value text-sm font-medium tabular-nums ${tone}`} title={hint}>
-        {total.toLocaleString('ru-RU')} ₽
+      <span title={hint}>
+        <SpoilerAmount text={`${total.toLocaleString('ru-RU')} ₽`} className={`text-sm font-medium tabular-nums ${tone}`} />
       </span>
     </div>
   )
@@ -201,9 +202,7 @@ export function EventCard({ event, onEdit, onDelete, defaultExpanded = false, hi
             <p className="font-slab font-semibold text-warm-900 text-sm">{event.eventType}</p>
             <p className="text-xs text-warm-400 mt-0.5">{subtitle}</p>
           </div>
-          <p className="price-value text-base font-slab font-bold text-warm-800 shrink-0">
-            {total.toLocaleString('ru-RU')} ₽
-          </p>
+          <SpoilerAmount text={`${total.toLocaleString('ru-RU')} ₽`} className="text-base font-slab font-bold text-warm-800 shrink-0" />
           <span className="text-warm-400 shrink-0 ml-1">
             <IconArrow expanded={expanded} />
           </span>
