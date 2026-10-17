@@ -474,7 +474,7 @@ export default function SingersPage() {
         subtitle={loading ? '' : `${members.filter(m => m.isActive !== false).length} ${plural(members.filter(m => m.isActive !== false).length, PERSON)}`}
         right={
           selectMode ? (
-            <div className="flex items-center gap-2 -mt-2">
+            <div className="flex items-center gap-2">
               <button
                 onClick={toggleSelectMode}
                 className="w-10 h-10 rounded-xl border border-warm-200 bg-white text-warm-700 flex items-center justify-center active:bg-warm-50 transition-colors"
@@ -498,7 +498,7 @@ export default function SingersPage() {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2 -mt-2">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setArchiveViewOpen(true)}
                 className="w-10 h-10 rounded-xl border border-warm-200 bg-white text-warm-700 flex items-center justify-center active:bg-warm-50 transition-colors"

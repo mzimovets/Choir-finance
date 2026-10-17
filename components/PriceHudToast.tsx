@@ -78,8 +78,9 @@ export function PriceHudToast({ trigger, hidden }: { trigger: number; hidden: bo
           <span
             style={{
               position: 'absolute', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               opacity: showClosedIcon ? 0 : 1,
-              transform: showClosedIcon ? 'scale(0.55) rotate(-8deg)' : 'scale(1) rotate(0deg)',
+              transform: showClosedIcon ? 'scale(0.55)' : 'scale(1)',
               transition: 'opacity 220ms ease, transform 220ms ease',
             }}
           >
@@ -88,8 +89,9 @@ export function PriceHudToast({ trigger, hidden }: { trigger: number; hidden: bo
           <span
             style={{
               position: 'absolute', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               opacity: showClosedIcon ? 1 : 0,
-              transform: showClosedIcon ? 'scale(1) rotate(0deg)' : 'scale(0.55) rotate(8deg)',
+              transform: showClosedIcon ? 'scale(1) translateY(2px)' : 'scale(0.55) translateY(2px)',
               transition: 'opacity 220ms ease, transform 220ms ease',
             }}
           >

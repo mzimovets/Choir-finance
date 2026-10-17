@@ -1065,9 +1065,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }) {
     return (
       <div className="flex items-center gap-1.5">
-        <PriceButton id={id} field="basePrice" name={name} value={basePrice} tone="base" share={share} />
-        <PriceButton id={id} field="bonus" name={name} value={bonus} tone="bonus" />
-        <PriceButton id={id} field="fine" name={name} value={fine} tone="fine" />
+        {PriceButton({ id, field: 'basePrice', name, value: basePrice, tone: 'base', share })}
+        {PriceButton({ id, field: 'bonus', name, value: bonus, tone: 'bonus' })}
+        {PriceButton({ id, field: 'fine', name, value: fine, tone: 'fine' })}
       </div>
     )
   }
@@ -1208,10 +1208,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                             {festiveRegent.memberId ? (
                               <div className="flex items-center gap-2 bg-warm-50 border border-warm-200 rounded-xl px-3 py-2.5">
                                 <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(festiveRegent.memberName)}</span>
-                                <PriceInputs
-                                  id="festiveRegent" name={shortName(festiveRegent.memberName)}
-                                  basePrice={festiveRegent.basePrice} bonus={festiveRegent.bonus} fine={festiveRegent.fine} share={festiveRegent.share}
-                                />
+                                {PriceInputs({
+                                  id: 'festiveRegent', name: shortName(festiveRegent.memberName),
+                                  basePrice: festiveRegent.basePrice, bonus: festiveRegent.bonus, fine: festiveRegent.fine, share: festiveRegent.share,
+                                })}
                                 <button onClick={() => setFestiveRegent(emptySlot())} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                                 </button>
@@ -1246,7 +1246,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
                           <div className="flex items-center justify-between mb-1">
                             <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide">Певчие</p>
-                            <AllPriceButton />
+                            {AllPriceButton()}
                           </div>
 
                           {festiveRows.map((row) => {
@@ -1290,10 +1290,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                 </span>
                                 {row.checked && (
                                   <div onClick={(e) => e.stopPropagation()}>
-                                    <PriceInputs
-                                      id={`f:${row.memberId}`} name={shortName(row.memberName)}
-                                      basePrice={row.basePrice} bonus={row.bonus} fine={row.fine} share={row.share}
-                                    />
+                                    {PriceInputs({
+                                      id: `f:${row.memberId}`, name: shortName(row.memberName),
+                                      basePrice: row.basePrice, bonus: row.bonus, fine: row.fine, share: row.share,
+                                    })}
                                   </div>
                                 )}
                               </div>
@@ -1312,10 +1312,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                             {regent.memberId ? (
                               <div className="flex items-center gap-2 bg-warm-50 border border-warm-200 rounded-xl px-3 py-2.5">
                                 <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(regent.memberName)}</span>
-                                <PriceInputs
-                                  id="regent" name={shortName(regent.memberName)}
-                                  basePrice={regent.basePrice} bonus={regent.bonus} fine={regent.fine} share={regent.share}
-                                />
+                                {PriceInputs({
+                                  id: 'regent', name: shortName(regent.memberName),
+                                  basePrice: regent.basePrice, bonus: regent.bonus, fine: regent.fine, share: regent.share,
+                                })}
                                 <button onClick={clearRegent} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                                 </button>
@@ -1363,10 +1363,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   {row.memberId ? (
                                     <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
                                       <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(row.memberName)}</span>
-                                      <PriceInputs
-                                        id={`r:${row.key}`} name={shortName(row.memberName)}
-                                        basePrice={row.basePrice} bonus={row.bonus} fine={row.fine} share={row.share}
-                                      />
+                                      {PriceInputs({
+                                        id: `r:${row.key}`, name: shortName(row.memberName),
+                                        basePrice: row.basePrice, bonus: row.bonus, fine: row.fine, share: row.share,
+                                      })}
                                       <button onClick={() => removeReaderRow(row.key)} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                                       </button>
@@ -1432,7 +1432,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                             <div className="flex items-center justify-between mb-2">
                               <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide">Певчие</p>
                               <div className="flex items-center gap-2">
-                                <AllPriceButton />
+                                {AllPriceButton()}
                                 <span className="text-xs text-warm-400">{weekdayRows.filter((r) => r.memberId).length} чел.</span>
                               </div>
                             </div>
@@ -1443,10 +1443,10 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                   {row.memberId ? (
                                     <div className="flex items-center gap-2 bg-white border border-warm-200 rounded-xl px-3 py-2.5">
                                       <span className="flex-1 text-sm text-warm-900 font-medium">{shortName(row.memberName)}</span>
-                                      <PriceInputs
-                                        id={`w:${row.key}`} name={shortName(row.memberName)}
-                                        basePrice={row.basePrice} bonus={row.bonus} fine={row.fine} share={row.share}
-                                      />
+                                      {PriceInputs({
+                                        id: `w:${row.key}`, name: shortName(row.memberName),
+                                        basePrice: row.basePrice, bonus: row.bonus, fine: row.fine, share: row.share,
+                                      })}
                                       <button
                                         onClick={() => removeSingerRow(row.key)}
                                         className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100"
