@@ -34,15 +34,21 @@ export async function requestMotionPermission(): Promise<boolean> {
 
 const ASKED_KEY = 'cf_motion_permission_asked'
 
-/** Спрашивали ли уже один раз (баннер при первом открытии показываем только пока не спросили) */
+/**
+ * Спрашивали ли уже в ЭТОМ открытии приложения. Нарочно sessionStorage, а не
+ * localStorage: на iOS разрешение на датчик движения не переживает полный
+ * перезапуск PWA (само ограничение iOS), поэтому баннер «Разрешить» должен
+ * появляться заново при каждом новом открытии, а не один раз навсегда —
+ * иначе после первого же перезапуска переворот молча переставал работать.
+ */
 export function wasMotionPermissionAsked(): boolean {
   if (typeof window === 'undefined') return true
-  return localStorage.getItem(ASKED_KEY) === '1'
+  return sessionStorage.getItem(ASKED_KEY) === '1'
 }
 
 export function markMotionPermissionAsked() {
   if (typeof window === 'undefined') return
-  localStorage.setItem(ASKED_KEY, '1')
+  sessionStorage.setItem(ASKED_KEY, '1')
 }
 
 /**

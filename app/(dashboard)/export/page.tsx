@@ -994,12 +994,12 @@ export default function ExportPage() {
                             return (
                               <td key={ev._id} {...cellTapProps(ev, mb._id, val !== null)} style={{ ...tdBase, position: "relative", overflow: "hidden", background: evenRow ? "#fdf8f4" : C_BG, fontWeight: val ? 600 : 400, color: val ? C_TEXT : "#d4c0ac", fontSize: 12, cursor: val !== null && !selectionMode ? "pointer" : undefined, borderRight: isGroupEnd && idx < sortedEvents.length - 1 ? `1px solid ${C_SEP}` : undefined }}>
                                 {fine > 0 && (<span style={{ position: "absolute", top: 10, right: -4, width: "400%", height: 6, background: "#ef4444", transformOrigin: "top right", transform: "rotate(45deg)", zIndex: 1 }}><span style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.25)", filter: "blur(3px)", transform: "rotate(12deg)" }} /></span>)}
-                                {val !== null ? val.toLocaleString("ru-RU") : "—"}
+                                <span className="price-value">{val !== null ? val.toLocaleString("ru-RU") : "—"}</span>
                               </td>
                             );
                           })}
                           <td style={{ ...tdBase, background: evenRow ? "#f0e4d5" : "#f5ece3", fontWeight: 700, fontSize: 12, color: rowTotal > 0 ? C_TEXT : C_MUTED, borderLeft: `1px solid ${C_SEP}`, textAlign: "right", paddingRight: 8 }}>
-                            {rowTotal > 0 ? rowTotal.toLocaleString("ru-RU") : "—"}
+                            <span className="price-value">{rowTotal > 0 ? rowTotal.toLocaleString("ru-RU") : "—"}</span>
                           </td>
                         </tr>
                       );
@@ -1085,7 +1085,7 @@ export default function ExportPage() {
                             {shortName(mb.name, mb.patronymic)}
                           </td>
                           <td style={{ ...tdBase, background: evenRow ? "#f0e4d5" : "#f5ece3", fontWeight: 700, fontSize: 12, color: rowTotal > 0 ? C_TEXT : C_MUTED, borderLeft: `1px solid ${C_SEP}`, textAlign: "right", paddingRight: 8 }}>
-                            {rowTotal > 0 ? rowTotal.toLocaleString("ru-RU") : "—"}
+                            <span className="price-value">{rowTotal > 0 ? rowTotal.toLocaleString("ru-RU") : "—"}</span>
                           </td>
                         </tr>
                       );
@@ -1104,7 +1104,7 @@ export default function ExportPage() {
                                   Итого
                                 </td>
                                 <td style={{ ...tdBase, background: "#c9a87c", borderTop: `2px solid #b8945e`, borderBottom: "none", fontWeight: 700, fontSize: 13, color: "#fff8f0", textAlign: "right", paddingRight: 8 }}>
-                                  {singerTotal.toLocaleString("ru-RU")}
+                                  <span className="price-value">{singerTotal.toLocaleString("ru-RU")}</span>
                                 </td>
                               </tr>
                             </tbody>
@@ -1125,7 +1125,7 @@ export default function ExportPage() {
                                 Итого
                               </td>
                               <td style={{ ...tdBase, background: "#c9a87c", borderTop: `1px solid #b8945e`, borderBottom: "none", fontWeight: 700, fontSize: 13, color: "#fff8f0", textAlign: "right", paddingRight: 8 }}>
-                                {readerTotal.toLocaleString("ru-RU")}
+                                <span className="price-value">{readerTotal.toLocaleString("ru-RU")}</span>
                               </td>
                             </tr>
                           )}
@@ -1134,7 +1134,7 @@ export default function ExportPage() {
                               {hasReaders ? "Всего" : "Итого"}
                             </td>
                             <td style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", fontWeight: 800, fontSize: 15, color: "#ffffff", textAlign: "right", paddingRight: 8 }}>
-                              {totalAmount.toLocaleString("ru-RU")}
+                              <span className="price-value">{totalAmount.toLocaleString("ru-RU")}</span>
                             </td>
                           </tr>
                         </tfoot>
@@ -1228,9 +1228,9 @@ export default function ExportPage() {
                           const val = atts.length ? sumAttendances(atts) : null;
                           let cumIdx = 0, isGroupEnd = false;
                           for (const g of dateGroups) { cumIdx += g.count; if (idx === cumIdx - 1) { isGroupEnd = true; break; } if (idx < cumIdx) break; }
-                          return <td key={ev._id} {...cellTapProps(ev, memberModal._id, val !== null)} style={{ ...tdBase, position: "relative", overflow: "hidden", fontWeight: val ? 600 : 400, color: val ? C_TEXT : "#d4c0ac", fontSize: 12, cursor: val !== null ? "pointer" : undefined, borderRight: isGroupEnd && idx < mbEvents.length - 1 ? `1px solid ${C_SEP}` : undefined }}>{mbFine > 0 &&<span style={{ position: "absolute", top: 10, right: -4, width: "400%", height: 6, background: "#ef4444", transformOrigin: "top right", transform: "rotate(45deg)", zIndex: 1 }}><span style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.25)", filter: "blur(3px)", transform: "rotate(12deg)" }} /></span>}{val !== null ? val.toLocaleString("ru-RU") : "—"}</td>;
+                          return <td key={ev._id} {...cellTapProps(ev, memberModal._id, val !== null)} style={{ ...tdBase, position: "relative", overflow: "hidden", fontWeight: val ? 600 : 400, color: val ? C_TEXT : "#d4c0ac", fontSize: 12, cursor: val !== null ? "pointer" : undefined, borderRight: isGroupEnd && idx < mbEvents.length - 1 ? `1px solid ${C_SEP}` : undefined }}>{mbFine > 0 &&<span style={{ position: "absolute", top: 10, right: -4, width: "400%", height: 6, background: "#ef4444", transformOrigin: "top right", transform: "rotate(45deg)", zIndex: 1 }}><span style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.25)", filter: "blur(3px)", transform: "rotate(12deg)" }} /></span>}<span className="price-value">{val !== null ? val.toLocaleString("ru-RU") : "—"}</span></td>;
                         })}
-                        <td style={{ ...tdBase, background: "#f5ece3", fontWeight: 700, fontSize: 12, color: mbTotal > 0 ? C_TEXT : C_MUTED, borderLeft: `1px solid ${C_SEP}`, textAlign: "right", paddingRight: 8 }}>{mbTotal > 0 ? mbTotal.toLocaleString("ru-RU") : "—"}</td>
+                        <td style={{ ...tdBase, background: "#f5ece3", fontWeight: 700, fontSize: 12, color: mbTotal > 0 ? C_TEXT : C_MUTED, borderLeft: `1px solid ${C_SEP}`, textAlign: "right", paddingRight: 8 }}><span className="price-value">{mbTotal > 0 ? mbTotal.toLocaleString("ru-RU") : "—"}</span></td>
                       </tr>
                     </tbody>
                     <tfoot>
@@ -1254,7 +1254,7 @@ export default function ExportPage() {
                       <tr>
                         <td style={{ ...tdBase, ...stickyNum, color: C_MUTED, fontSize: 11 }}>1</td>
                         <td style={{ ...tdBase, ...stickyName, textAlign: "left", paddingLeft: 8, fontWeight: 600, fontSize: 12 }}>{shortName(memberModal.name, memberModal.patronymic)}</td>
-                        <td style={{ ...tdBase, textAlign: "right", paddingRight: 8, fontWeight: mbTotal > 0 ? 600 : 400, color: mbTotal > 0 ? C_TEXT : "#d4c0ac", borderLeft: `1px solid ${C_SEP}` }}>{mbTotal > 0 ? mbTotal.toLocaleString("ru-RU") : "—"}</td>
+                        <td style={{ ...tdBase, textAlign: "right", paddingRight: 8, fontWeight: mbTotal > 0 ? 600 : 400, color: mbTotal > 0 ? C_TEXT : "#d4c0ac", borderLeft: `1px solid ${C_SEP}` }}><span className="price-value">{mbTotal > 0 ? mbTotal.toLocaleString("ru-RU") : "—"}</span></td>
                       </tr>
                     </tbody>
                     <tfoot>
@@ -1490,12 +1490,12 @@ export default function ExportPage() {
                               for (const g of dateGroups) { cumIdx += g.count; if (idx === cumIdx - 1) { isGroupEnd = true; break; } if (idx < cumIdx) break; }
                               return (
                                 <td key={ev._id} {...cellTapProps(ev, mb._id, val !== null)} style={{ ...tdBase, background: evenRow ? "#fdf8f4" : C_BG, fontWeight: val ? 600 : 400, color: val ? C_TEXT : "#d4c0ac", fontSize: 12, cursor: val !== null ? "pointer" : undefined, borderRight: isGroupEnd && idx < sortedEvents.length - 1 ? `1px solid ${C_SEP}` : undefined }}>
-                                  {val !== null ? val.toLocaleString("ru-RU") : "—"}
+                                  <span className="price-value">{val !== null ? val.toLocaleString("ru-RU") : "—"}</span>
                                 </td>
                               );
                             })}
                             <td style={{ ...tdBase, background: evenRow ? "#f0e4d5" : "#f5ece3", fontWeight: 700, fontSize: 12, color: rowTotal > 0 ? C_TEXT : C_MUTED, borderLeft: `1px solid ${C_SEP}`, textAlign: "right", paddingRight: 8 }}>
-                              {rowTotal > 0 ? rowTotal.toLocaleString("ru-RU") : "—"}
+                              <span className="price-value">{rowTotal > 0 ? rowTotal.toLocaleString("ru-RU") : "—"}</span>
                             </td>
                           </tr>
                         );
@@ -1506,7 +1506,7 @@ export default function ExportPage() {
                         <td colSpan={2} style={{ ...tdBase, position: "sticky", left: 0, zIndex: 2, minWidth: COL_NUM + COL_NAME, background: "#a07850", borderTop: `2px solid #7d5e42`, borderRight: "none", borderBottom: "none", textAlign: "left", paddingLeft: 8, fontWeight: 700, fontSize: 15, color: "#ffffff" }}>Итого</td>
                         {sortedEvents.map(ev => <td key={ev._id} style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", borderRight: "none", borderLeft: "none" }} />)}
                         <td style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", fontWeight: 800, fontSize: 15, color: "#ffffff", textAlign: "right", paddingRight: 8 }}>
-                          {groupTotal.toLocaleString("ru-RU")}
+                          <span className="price-value">{groupTotal.toLocaleString("ru-RU")}</span>
                         </td>
                       </tr>
                     </tfoot>
@@ -1531,7 +1531,7 @@ export default function ExportPage() {
                               {shortName(mb.name, mb.patronymic)}
                             </td>
                             <td style={{ ...tdBase, background: evenRow ? "#fdf8f4" : C_BG, textAlign: "right", paddingRight: 8, fontWeight: rowTotal > 0 ? 600 : 400, color: rowTotal > 0 ? C_TEXT : "#d4c0ac", borderLeft: `1px solid ${C_SEP}` }}>
-                              {rowTotal > 0 ? rowTotal.toLocaleString("ru-RU") : "—"}
+                              <span className="price-value">{rowTotal > 0 ? rowTotal.toLocaleString("ru-RU") : "—"}</span>
                             </td>
                           </tr>
                         );
@@ -1541,7 +1541,7 @@ export default function ExportPage() {
                       <tr>
                         <td colSpan={2} style={{ ...tdBase, position: "sticky", left: 0, zIndex: 2, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", textAlign: "left", paddingLeft: 8, fontWeight: 700, fontSize: 15, color: "#ffffff" }}>Итого</td>
                         <td style={{ ...tdBase, background: "#a07850", borderTop: `2px solid #7d5e42`, borderBottom: "none", fontWeight: 800, fontSize: 15, color: "#ffffff", textAlign: "right", paddingRight: 8 }}>
-                          {groupTotal.toLocaleString("ru-RU")}
+                          <span className="price-value">{groupTotal.toLocaleString("ru-RU")}</span>
                         </td>
                       </tr>
                     </tfoot>

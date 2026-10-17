@@ -11,7 +11,7 @@ import {
   wasMotionPermissionAsked, markMotionPermissionAsked,
 } from '@/lib/deviceFlip'
 import { togglePricesHidden } from '@/lib/priceVisibility'
-import { usePricesHidden } from '@/hooks/usePricesHidden'
+import { usePricesHidden, usePriceBlurFeatureEnabled } from '@/hooks/usePricesHidden'
 
 const NAV = [
   {
@@ -125,9 +125,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [pinState, setPinState] = useState<PinState>('loading')
   const [usernameInitials, setUsernameInitials] = useState('')
 
-  // Переворот телефона (экраном вниз и обратно вверх) переключает скрытие сумм
+  // Переворот телефона (экраном вниз и обратно вверх) переключает скрытие сумм.
+  // Всю фичу целиком можно выключить в «Профиле» — тогда не слушаем датчик и
+  // не показываем баннер разрешения.
+  const priceBlurFeatureEnabled = usePriceBlurFeatureEnabled()
   const pricesHidden = usePricesHidden()
-  useEffect(() => startFlipListener(() => togglePricesHidden()), [])
+  useEffect(() => {
+    if (!priceBlurFeatureEnabled) return
+    return startFlipListener(() => togglePricesHidden())
+  }, [priceBlurFeatureEnabled])
   useEffect(() => {
     document.documentElement.classList.toggle('prices-hidden', pricesHidden)
     return () => document.documentElement.classList.remove('prices-hidden')
@@ -137,8 +143,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // баннер один раз при первом открытии, дальше не спрашиваем
   const [showMotionBanner, setShowMotionBanner] = useState(false)
   useEffect(() => {
-    if (needsMotionPermission() && !wasMotionPermissionAsked()) setShowMotionBanner(true)
-  }, [])
+    if (priceBlurFeatureEnabled && needsMotionPermission() && !wasMotionPermissionAsked()) setShowMotionBanner(true)
+  }, [priceBlurFeatureEnabled])
   function handleMotionBannerAllow() {
     markMotionPermissionAsked()
     requestMotionPermission()

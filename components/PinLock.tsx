@@ -2,8 +2,9 @@
 
 import { useState, useCallback } from 'react'
 import { verifyPin } from '@/lib/pin'
-import { usePricesHidden } from '@/hooks/usePricesHidden'
+import { usePricesHidden, usePriceBlurFeatureEnabled } from '@/hooks/usePricesHidden'
 import { togglePricesHidden } from '@/lib/priceVisibility'
+import { requestMotionPermission, needsMotionPermission, markMotionPermissionAsked } from '@/lib/deviceFlip'
 
 const ROWS = [
   ['1', '2', '3'],
@@ -49,6 +50,7 @@ export default function PinLock({ onUnlock, onCancel, onForgotPin }: Props) {
   const [shaking, setShaking] = useState(false)
   const [showError, setShowError] = useState(false)
   const pricesHidden = usePricesHidden()
+  const priceBlurFeatureEnabled = usePriceBlurFeatureEnabled()
 
   const handleKey = useCallback(
     (key: string) => {
@@ -149,15 +151,23 @@ export default function PinLock({ onUnlock, onCancel, onForgotPin }: Props) {
         </button>
       )}
 
-      <button
-        type="button"
-        onClick={() => togglePricesHidden()}
-        title={pricesHidden ? 'Показать суммы в приложении' : 'Скрыть суммы в приложении'}
-        className="fixed flex items-center justify-center w-11 h-11 rounded-full bg-white border border-[#e5d9cc] text-[#9b7653] shadow-sm active:bg-[#f7f4f1] transition-colors"
-        style={{ right: 'calc(env(safe-area-inset-right, 0px) + 16px)', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
-      >
-        {pricesHidden ? <IconEyeClosed /> : <IconEye />}
-      </button>
+      {priceBlurFeatureEnabled && (
+        <button
+          type="button"
+          onClick={() => {
+            togglePricesHidden()
+            if (needsMotionPermission()) {
+              markMotionPermissionAsked()
+              requestMotionPermission()
+            }
+          }}
+          title={pricesHidden ? 'Показать суммы в приложении' : 'Скрыть суммы в приложении'}
+          className="fixed flex items-center justify-center w-11 h-11 rounded-full bg-white border border-[#e5d9cc] text-[#9b7653] shadow-sm active:bg-[#f7f4f1] transition-colors"
+          style={{ right: 'calc(env(safe-area-inset-right, 0px) + 16px)', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
+        >
+          {pricesHidden ? <IconEyeClosed /> : <IconEye />}
+        </button>
+      )}
     </div>
   )
 }

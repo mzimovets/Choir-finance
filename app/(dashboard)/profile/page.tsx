@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { hasPin } from '@/lib/pin'
 import PinLock from '@/components/PinLock'
 import PinSetup from '@/components/PinSetup'
+import { usePriceBlurFeatureEnabled } from '@/hooks/usePricesHidden'
+import { setPriceBlurFeatureEnabled } from '@/lib/priceVisibility'
 
 type PinMode = null | 'verify' | 'new-pin'
 
@@ -69,6 +71,7 @@ export default function ProfilePage() {
   const [pinMode, setPinMode] = useState<PinMode>(null)
   const [pinExists, setPinExists] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const priceBlurFeatureEnabled = usePriceBlurFeatureEnabled()
 
   useEffect(() => {
     setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0)
@@ -157,6 +160,34 @@ export default function ProfilePage() {
           </button>
         </div>
       )}
+
+      {/* Скрытие сумм: блюр + переворот телефона — можно выключить совсем */}
+      <div className="warm-card p-4 mb-4">
+        <p className="text-[13px] font-semibold text-[#7d5e42] uppercase tracking-wide font-slab mb-3">
+          Скрытие сумм
+        </p>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[14px] font-slab text-[#2c1a0e]">Блюр и переворот телефона</p>
+            <p className="text-[12px] text-[#9b7653] mt-0.5">
+              Кнопка-глаз и переворот экраном вниз скрывают суммы
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={priceBlurFeatureEnabled}
+            onClick={() => setPriceBlurFeatureEnabled(!priceBlurFeatureEnabled)}
+            className="shrink-0 w-12 h-7 rounded-full p-1 transition-colors"
+            style={{ background: priceBlurFeatureEnabled ? '#7d5e42' : '#e5d9cc' }}
+          >
+            <span
+              className="block w-5 h-5 rounded-full bg-white shadow-sm transition-transform"
+              style={{ transform: priceBlurFeatureEnabled ? 'translateX(20px)' : 'translateX(0)' }}
+            />
+          </button>
+        </div>
+      </div>
 
       {/* Account section */}
       <div className="warm-card p-4">
