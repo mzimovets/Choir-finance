@@ -8,6 +8,7 @@ import PinSetup from '@/components/PinSetup'
 import { hasPin, isPinVerified, markPinVerified, clearPinVerified, clearPin } from '@/lib/pin'
 import { togglePricesHidden } from '@/lib/priceVisibility'
 import { usePricesHidden, usePriceBlurFeatureEnabled } from '@/hooks/usePricesHidden'
+import { PriceHudToast } from '@/components/PriceHudToast'
 
 const NAV = [
   {
@@ -131,6 +132,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => document.documentElement.classList.remove('prices-hidden')
   }, [pricesHidden])
 
+  // HUD-подсказка (значок глаза по центру экрана) на срабатывание жеста
+  const [hudTrigger, setHudTrigger] = useState(0)
+  const [hudHidden, setHudHidden] = useState(false)
+
   /*
     Свайпы по содержимому страницы:
     — горизонтальный — переключает разделы (как нижнее меню);
@@ -198,7 +203,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     // Длинный свайп вниз от самого верха — переключить скрытие сумм
     if (priceBlurFeatureEnabled && start.atTop && dy > SWIPE_V_THRESHOLD && ady > adx * 1.5) {
+      const next = !pricesHidden
       togglePricesHidden()
+      setHudHidden(next)
+      setHudTrigger((t) => t + 1)
       return
     }
 
@@ -347,6 +355,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-page flex flex-col">
       {pinOverlay}
+      <PriceHudToast trigger={hudTrigger} hidden={hudHidden} />
 
       {/* Без overflow-auto: у <main> нет ограничения высоты (родитель — min-h-screen,
           не height), поэтому сам <main> никогда не скроллится — реально скроллит body.
