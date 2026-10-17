@@ -158,7 +158,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return false
   }
 
+  // Открыт дравер или модалка (и драверы HeroUI, и свои — подтверждения,
+  // PIN-экран) — все они держатся на position: fixed. Внутри них свайпы
+  // по странице (переключение раздела, скрытие сумм) не должны работать —
+  // мешают собственной прокрутке/жестам дравера (например, закрытию свайпом).
+  function isInsideOverlay(target: EventTarget | null): boolean {
+    let node = target instanceof Element ? target : null
+    while (node && node !== document.body) {
+      if (node.tagName !== 'NAV' && getComputedStyle(node).position === 'fixed') return true
+      node = node.parentElement
+    }
+    return false
+  }
+
   function handleMainTouchStart(e: React.TouchEvent) {
+    if (isInsideOverlay(e.target)) {
+      touchStart.current = null
+      return
+    }
     const touch = e.touches[0]
     touchStart.current = {
       x: touch.clientX,

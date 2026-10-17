@@ -226,9 +226,9 @@ export function PageHeader({ title, subtitle, username, choirType, right, left, 
           )}
           <div className="text-center">
             <h1 className="text-2xl font-slab font-bold leading-tight gradient-text">{title}</h1>
-            {subtitle && (
-              <p className="text-sm font-slab font-semibold text-warm-900 mt-0.5">{subtitle}</p>
-            )}
+            {/* Строка зарезервирована всегда (даже пустая) — иначе пока subtitle
+                грузится, шапка ниже и кнопки сверху заметно подскакивают */}
+            <p className="text-sm font-slab font-semibold text-warm-900 mt-0.5">{subtitle || ' '}</p>
           </div>
           <div className="absolute right-4 flex items-center gap-2">
             {avatarBlock}
@@ -248,7 +248,9 @@ export function PageHeader({ title, subtitle, username, choirType, right, left, 
       <div className="flex items-center justify-between px-4 pt-5 pb-3">
         <div>
           <h1 className="text-xl font-slab font-bold text-warm-900">{title}</h1>
-          {subtitle && <p className="text-xs text-warm-500 mt-0.5">{subtitle}</p>}
+          {/* Строка зарезервирована всегда (даже пустая) — иначе пока subtitle
+              грузится, шапка ниже и кнопки сверху заметно подскакивают */}
+          <p className="text-xs text-warm-500 mt-0.5">{subtitle || ' '}</p>
         </div>
         <div className="flex items-center gap-2">
           {avatarBlock}
