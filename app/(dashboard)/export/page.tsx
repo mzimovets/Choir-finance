@@ -13,6 +13,7 @@ import { IconEmpty } from "@/components/IconEmpty";
 import { MonthPicker, IconCalendar } from "@/components/MonthPicker";
 import { onDataChanged } from "@/lib/dataSignal";
 import { RecalcConfirm } from "@/components/RecalcConfirm";
+import { SpoilerAmount } from "@/components/SpoilerAmount";
 
 function monthStr() {
   const d = new Date();
@@ -722,10 +723,11 @@ export default function ExportPage() {
                 className="flex-1 flex flex-col justify-center items-end rounded-xl px-5 py-3"
                 style={{ background: "linear-gradient(135deg, #c4a07a 0%, #8f6540 100%)", border: "1px solid #b08a5e" }}
               >
-                <span className="price-value font-slab font-bold tabular-nums leading-none text-white"
-                  style={{ fontSize: totalAmount >= 100000 ? 22 : 26 }}>
-                  {totalAmount.toLocaleString("ru-RU")} ₽
-                </span>
+                <SpoilerAmount
+                  text={`${totalAmount.toLocaleString("ru-RU")} ₽`}
+                  className="font-slab font-bold tabular-nums leading-none text-white"
+                  style={{ fontSize: totalAmount >= 100000 ? 22 : 26 }}
+                />
                 <span className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.7)", fontFamily: "'Roboto Slab', serif" }}>
                   общая сумма
                 </span>

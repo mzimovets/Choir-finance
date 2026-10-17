@@ -6,10 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import PinLock from '@/components/PinLock'
 import PinSetup from '@/components/PinSetup'
 import { hasPin, isPinVerified, markPinVerified, clearPinVerified, clearPin } from '@/lib/pin'
-import {
-  startFlipListener, needsMotionPermission, requestMotionPermission,
-  wasMotionPermissionAsked, markMotionPermissionAsked,
-} from '@/lib/deviceFlip'
+import { startFlipListener } from '@/lib/deviceFlip'
 import { togglePricesHidden } from '@/lib/priceVisibility'
 import { usePricesHidden, usePriceBlurFeatureEnabled } from '@/hooks/usePricesHidden'
 
@@ -126,8 +123,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [usernameInitials, setUsernameInitials] = useState('')
 
   // Переворот телефона (экраном вниз и обратно вверх) переключает скрытие сумм.
-  // Всю фичу целиком можно выключить в «Профиле» — тогда не слушаем датчик и
-  // не показываем баннер разрешения.
+  // Всю фичу целиком можно выключить в «Профиле» — тогда не слушаем датчик.
+  // Разрешение на датчик (iOS) запрашивается тапом по кнопке-глазу на экране
+  // PIN-кода и в «Профиле» — без отдельного автовсплывающего баннера.
   const priceBlurFeatureEnabled = usePriceBlurFeatureEnabled()
   const pricesHidden = usePricesHidden()
   useEffect(() => {
@@ -138,22 +136,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     document.documentElement.classList.toggle('prices-hidden', pricesHidden)
     return () => document.documentElement.classList.remove('prices-hidden')
   }, [pricesHidden])
-
-  // На iOS разрешение на датчик движения нужно запросить тапом — показываем
-  // баннер один раз при первом открытии, дальше не спрашиваем
-  const [showMotionBanner, setShowMotionBanner] = useState(false)
-  useEffect(() => {
-    if (priceBlurFeatureEnabled && needsMotionPermission() && !wasMotionPermissionAsked()) setShowMotionBanner(true)
-  }, [priceBlurFeatureEnabled])
-  function handleMotionBannerAllow() {
-    markMotionPermissionAsked()
-    requestMotionPermission()
-    setShowMotionBanner(false)
-  }
-  function handleMotionBannerDismiss() {
-    markMotionPermissionAsked()
-    setShowMotionBanner(false)
-  }
 
   // На планшете (и крупнее) нижнее меню крупнее — иначе кнопки мелковаты
   const [isTablet, setIsTablet] = useState(false)
@@ -292,30 +274,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-page flex flex-col">
       {pinOverlay}
-
-      {showMotionBanner && (
-        <div
-          className="fixed left-3 right-3 z-[90] rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 92px)', background: '#2c1a0e' }}
-        >
-          <p className="flex-1 text-xs text-white leading-snug">
-            Разрешить датчик движения, чтобы скрывать суммы переворотом телефона?
-          </p>
-          <button
-            onClick={handleMotionBannerDismiss}
-            className="shrink-0 text-xs font-slab font-semibold text-white/60 px-2 py-1.5"
-          >
-            Не сейчас
-          </button>
-          <button
-            onClick={handleMotionBannerAllow}
-            className="shrink-0 text-xs font-slab font-semibold text-white px-3 py-1.5 rounded-xl"
-            style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}
-          >
-            Разрешить
-          </button>
-        </div>
-      )}
 
       {/* Без overflow-auto: у <main> нет ограничения высоты (родитель — min-h-screen,
           не height), поэтому сам <main> никогда не скроллится — реально скроллит body.
