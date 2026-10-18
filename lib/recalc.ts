@@ -1,5 +1,5 @@
 import { db, dbFind } from './db'
-import { pricesToMap, applyHalf } from './types'
+import { pricesToMap, applyHalf, FESTIVE_READER_PRICES } from './types'
 import { findEvents, findMembers, updateEvent } from './secureStore'
 import type { Member, ChoirEvent, EventTypeDoc, MemberRole } from './types'
 
@@ -55,10 +55,17 @@ export async function recalcEvents({ choirType, memberId, from, until }: RecalcO
           ? (att.isReader ? 'reader' : 'singer')
           : member.role
 
-      const etDoc = types.find((t) => t.name === ev.eventType)
-      const tariff = (etDoc?.prices as Record<string, number> | undefined)?.[role] ?? 0
-      const own = pricesToMap(member.defaultPrices)[ev.eventType]
-      const base = own !== undefined && own > 0 ? own : tariff
+      // Чтец праздничного хора — цена фиксированная по выбранному им
+      // обычному/праздничному выходу, не по тарифу типа выхода
+      let base: number
+      if (choirType === 'festive' && att.isReader) {
+        base = FESTIVE_READER_PRICES[att.readerPriceKind ?? 'normal']
+      } else {
+        const etDoc = types.find((t) => t.name === ev.eventType)
+        const tariff = (etDoc?.prices as Record<string, number> | undefined)?.[role] ?? 0
+        const own = pricesToMap(member.defaultPrices)[ev.eventType]
+        base = own !== undefined && own > 0 ? own : tariff
+      }
 
       // Тариф не нашёлся: тип выхода переименовали или удалили из справочника,
       // либо у роли (чтец, солист) для него не задана цена. Это не повод

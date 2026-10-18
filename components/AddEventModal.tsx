@@ -10,7 +10,7 @@ import { InlineNumpad } from '@/components/InlineNumpad'
 import { DrawerHandle } from '@/components/DrawerHandle'
 import { DiscardConfirm } from '@/components/DiscardConfirm'
 import type { ChoirEvent, Member, EventTypeDoc, MemberRole } from '@/lib/types'
-import { pricesToMap, applyHalf } from '@/lib/types'
+import { pricesToMap, applyHalf, FESTIVE_READER_TYPES, FESTIVE_READER_PRICES } from '@/lib/types'
 import { plural, SINGER, PARTICIPANT } from '@/lib/plural'
 import { buildMemberName, shortName } from '@/lib/nameFormat'
 import { SpoilerAmount } from '@/components/SpoilerAmount'
@@ -50,6 +50,8 @@ interface WeekdayRow {
   results: Member[]
   fullPrice: number
   share: number
+  /** Только для чтеца праздничного хора — какой выход выбран в списке */
+  readerPriceKind?: 'normal' | 'festive'
 }
 
 /* ─── Состояние регента / чтеца ─── */
@@ -204,6 +206,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     let regentName = ''
     const readerNames: string[] = []
     const singerNames: string[] = []
+    readerRows.filter((r) => r.memberId).forEach((r) => {
+      items.push({ memberId: r.memberId, role: 'reader' }); readerNames.push(r.memberName)
+    })
     if (choirType === 'festive') {
       if (festiveRegent.memberId) {
         items.push({ memberId: festiveRegent.memberId, role: 'regent' })
@@ -216,9 +221,6 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         items.push({ memberId: regent.memberId, role: 'regent' })
         regentName = regent.memberName
       }
-      readerRows.filter((r) => r.memberId).forEach((r) => {
-        items.push({ memberId: r.memberId, role: 'reader' }); readerNames.push(r.memberName)
-      })
       weekdayRows.filter((r) => r.memberId).forEach((r) => {
         items.push({ memberId: r.memberId, role: 'singer' }); singerNames.push(r.memberName)
       })
@@ -277,6 +279,23 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         const p = getPriceForMember(m, resolvedType)
         return { ...r, checked: true, basePrice: p, fullPrice: p, share: 1 }
       }))
+      if (festiveReaderAllowed) {
+        const rdrRows: WeekdayRow[] = clipboard.items.filter((i) => i.role === 'reader').flatMap((i) => {
+          const m = byId(i.memberId, 'reader')
+          if (!m) return []
+          const kind: 'normal' | 'festive' = 'normal'
+          const price = FESTIVE_READER_PRICES[kind]
+          return [{
+            key: nextKey(), memberId: m._id, memberName: buildMemberName(m.name, m.patronymic),
+            basePrice: price, bonus: 0, fine: 0, search: '', results: [],
+            fullPrice: price, share: 1, readerPriceKind: kind,
+          }]
+        })
+        if (rdrRows.length) setReaderRows((prev) => {
+          const existing = new Set(prev.filter((r) => r.memberId).map((r) => r.memberId))
+          return [...prev.filter((r) => r.memberId), ...rdrRows.filter((r) => !existing.has(r.memberId))]
+        })
+      }
     } else {
       const reg = clipboard.items.find((i) => i.role === 'regent')
       const regM = reg && byId(reg.memberId, 'regent')
@@ -339,6 +358,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   const resolvedType = eventType === 'Другое' ? customType.trim() : eventType
 
+  // В праздничном хоре чтец бывает только в части типов выходов
+  const festiveReaderAllowed = choirType === 'festive' && FESTIVE_READER_TYPES.includes(resolvedType)
+
   /* ── Утилиты ── */
   /**
    * Возвращает цену участника для данного типа выхода.
@@ -400,6 +422,13 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         const full = getPriceForMember(readerMember, rt, 'reader')
         return [{ ...cur, fullPrice: full, basePrice: priceForShare(full, cur.share) }]
       }))
+    }
+
+    // Праздничный хор: чтец бывает не в каждом типе выхода — если выбрали тип,
+    // где его не бывает, не оставляем в выходе забытых чтецов из предыдущего выбора
+    if (choirType === 'festive' && !editingEvent) {
+      const rt = eventType === 'Другое' ? customType.trim() : eventType
+      if (!FESTIVE_READER_TYPES.includes(rt)) setReaderRows([])
     }
   }
 
@@ -564,23 +593,24 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         }
         setStep('members')
 
+        // Только явно помеченный регент. Раньше при его отсутствии в слот
+        // подставлялся первый участник списка — и после сохранения человек
+        // без спроса становился регентом
+        const regentAtt = editingEvent.attendances.find((a) => a.isRegent)
+        // Чтецы — общий список для обоих хоров
+        const readerAtts = editingEvent.attendances.filter((a) => a.isReader)
+        setReaderRows(readerAtts.map((a) => ({ key: nextKey(), ...slotFromAtt(a), readerPriceKind: a.readerPriceKind })))
+
         if (choirType === 'festive') {
-          const regentAtt = editingEvent.attendances.find((a) => a.isRegent)
           setFestiveRegent(regentAtt ? slotFromAtt(regentAtt) : emptySlot())
         }
 
         if (choirType === 'weekday') {
-          // Только явно помеченный регент. Раньше при его отсутствии в слот
-          // подставлялся первый участник списка — и после сохранения человек
-          // без спроса становился регентом
-          const regentAtt = editingEvent.attendances.find((a) => a.isRegent)
-          const readerAtts = editingEvent.attendances.filter((a) => a.isReader)
           const singerAtts = editingEvent.attendances.filter(
             (a) => a !== regentAtt && !readerAtts.includes(a)
           )
 
           setRegent(regentAtt ? slotFromAtt(regentAtt) : emptySlot())
-          setReaderRows(readerAtts.map((a) => ({ key: nextKey(), ...slotFromAtt(a) })))
           setWeekdayRows(singerAtts.map((a) => ({ key: nextKey(), ...slotFromAtt(a) })))
         }
       } else {
@@ -637,7 +667,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
         // Регент в праздничном хоре берётся из отдельного слота, не из общего списка
         const isRegentAtt = existingAtt.find((a) => a.memberId === m._id && a.isRegent)
         if (isRegentAtt) return null
-        const existing = existingAtt.find((a) => a.memberId === m._id || a.memberName === m.name || a.memberName === mName)
+        const existing = existingAtt.find((a) => !a.isReader && (a.memberId === m._id || a.memberName === m.name || a.memberName === mName))
         const basePrice = existing?.basePrice ?? getPriceForMember(m, resolvedType)
         const share = existing?.share ?? 1
         return {
@@ -725,7 +755,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   /* ── Регент праздничного хора ── */
   function handleFestiveRegentSearch(q: string) {
-    const results = searchMembers(q, [], 'regent')
+    const excludeIds = readerRows.filter((r) => r.memberId).map((r) => r.memberId)
+    const results = searchMembers(q, excludeIds, 'regent')
     setFestiveRegent((r) => ({ ...r, search: q, results }))
   }
 
@@ -755,8 +786,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }
 
   function updateReaderRowSearch(key: string, q: string) {
+    const currentRegentId = choirType === 'festive' ? festiveRegent.memberId : regent.memberId
     const excludeIds = [
-      regent.memberId,
+      currentRegentId,
       ...readerRows.filter((r) => r.key !== key && r.memberId).map((r) => r.memberId),
     ].filter(Boolean)
     const results = searchMembers(q, excludeIds, 'reader')
@@ -764,8 +796,21 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }
 
   function selectReaderMember(key: string, m: Member) {
-    const price = getPriceForMember(m, resolvedType, 'reader')   // слот = чтец
     setEmptyError(false)
+    if (choirType === 'festive') {
+      // Цена чтеца праздничного хора не зависит от тарифа типа выхода —
+      // по умолчанию «обычный», меняется вручную списком или цифрой
+      const kind: 'normal' | 'festive' = 'normal'
+      const price = FESTIVE_READER_PRICES[kind]
+      setReaderRows((prev) =>
+        prev.map((r) => r.key === key
+          ? { ...r, memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [], fullPrice: price, share: 1, readerPriceKind: kind }
+          : r
+        )
+      )
+      return
+    }
+    const price = getPriceForMember(m, resolvedType, 'reader')   // слот = чтец
     setReaderRows((prev) =>
       prev.map((r) => r.key === key
         ? { ...r, memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [], fullPrice: price, share: 1 }
@@ -776,6 +821,15 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   function removeReaderRow(key: string) {
     setReaderRows((prev) => prev.filter((r) => r.key !== key))
+  }
+
+  /** Смена «обычный/праздничный» у чтеца праздничного хора из выпадающего списка */
+  function setFestiveReaderKind(key: string, kind: 'normal' | 'festive') {
+    const price = FESTIVE_READER_PRICES[kind]
+    setReaderRows((prev) => prev.map((r) => r.key === key
+      ? { ...r, readerPriceKind: kind, fullPrice: price, basePrice: priceForShare(price, r.share) }
+      : r
+    ))
   }
 
   /* ── Будние певчие ── */
@@ -831,8 +885,24 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }
 
   /* ── Сохранение ── */
-  async function handleSave() {
+  // Для типов выходов праздничного хора, где обычно бывает чтец, а его не
+  // указали — спрашиваем подтверждение, а не сохраняем сразу молча
+  const [noReaderConfirmOpen, setNoReaderConfirmOpen] = useState(false)
+
+  function readerExpectedButMissing(): boolean {
+    if (!festiveReaderAllowed) return false
+    return readerRows.filter((r) => r.memberId).length === 0
+  }
+
+  function handleSave() {
     if (!resolvedType) return
+    if (readerExpectedButMissing()) { setNoReaderConfirmOpen(true); return }
+    doSave()
+  }
+
+  async function doSave() {
+    if (!resolvedType) return
+    setNoReaderConfirmOpen(false)
 
     let attendances
     if (choirType === 'festive') {
@@ -842,6 +912,11 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       attendances = [
         ...(festiveRegent.memberId
           ? [{ memberId: festiveRegent.memberId, memberName: festiveRegent.memberName, basePrice: festiveRegent.basePrice, bonus: festiveRegent.bonus, ...(festiveRegent.fine ? { fine: festiveRegent.fine } : {}), ...(festiveRegent.share !== 1 ? { share: festiveRegent.share, fullPrice: festiveRegent.fullPrice } : {}), isRegent: true as const }]
+          : []),
+        ...(festiveReaderAllowed
+          ? readerRows
+              .filter((r) => r.memberId)
+              .map((r) => ({ memberId: r.memberId, memberName: r.memberName, basePrice: r.basePrice, bonus: r.bonus, ...(r.fine ? { fine: r.fine } : {}), ...(r.share !== 1 ? { share: r.share, fullPrice: r.fullPrice } : {}), isReader: true as const, readerPriceKind: r.readerPriceKind ?? 'normal' }))
           : []),
         ...singerAtts,
       ]
@@ -883,7 +958,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }
 
   const checkedCount = choirType === 'festive'
-    ? (festiveRegent.memberId ? 1 : 0) + festiveRows.filter((r) => r.checked).length
+    ? (festiveRegent.memberId ? 1 : 0) + (festiveReaderAllowed ? readerRows.filter((r) => r.memberId).length : 0) + festiveRows.filter((r) => r.checked).length
     : (regent.memberId ? 1 : 0) + readerRows.filter((r) => r.memberId).length + weekdayRows.filter((r) => r.memberId).length
 
   /* ─── Нампад: чтение и запись значения активного поля ─── */
@@ -1079,7 +1154,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       onOpenChange={(open) => { if (open) return; if (requestCloseDrawer()) return; onClose() }}
       placement="bottom"
       scrollBehavior="inside"
-      isDismissable={!discardOpen}
+      isDismissable={!discardOpen && !noReaderConfirmOpen}
       classNames={{
         // Подгонка под клавиатуру нужна только пока она открыта: иначе
         // застрявшая высота обёртки отрывает шторку от низа экрана
@@ -1243,6 +1318,97 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                               </div>
                             )}
                           </div>
+
+                          {/* ── Чтецы (только для тех типов выходов, где они бывают) ── */}
+                          {festiveReaderAllowed && (
+                            <div className="mb-2">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide">Чтецы</p>
+                                <span className="text-xs text-warm-400">{readerRows.filter((r) => r.memberId).length} чел.</span>
+                              </div>
+
+                              <div className="flex flex-col gap-2">
+                                {readerRows.map((row) => (
+                                  <div key={row.key}>
+                                    {row.memberId ? (
+                                      <div className="flex flex-col gap-1.5 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
+                                        <div className="flex items-center gap-2">
+                                          <span className="flex-1 text-sm font-slab font-semibold text-warm-900">{shortName(row.memberName)}</span>
+                                          <button onClick={() => removeReaderRow(row.key)} className="w-7 h-7 rounded-full bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                                          </button>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-2">
+                                          <select
+                                            value={row.readerPriceKind ?? 'normal'}
+                                            onChange={(e) => setFestiveReaderKind(row.key, e.target.value as 'normal' | 'festive')}
+                                            className="text-xs font-slab font-semibold rounded-lg px-2 py-1.5 border border-warm-200 bg-white text-warm-700 shrink-0"
+                                          >
+                                            <option value="normal">Обычный · {FESTIVE_READER_PRICES.normal}₽</option>
+                                            <option value="festive">Праздничный · {FESTIVE_READER_PRICES.festive}₽</option>
+                                          </select>
+                                          {PriceInputs({
+                                            id: `r:${row.key}`, name: shortName(row.memberName),
+                                            basePrice: row.basePrice, bonus: row.bonus, fine: row.fine, share: row.share,
+                                          })}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-2">
+                                        <div className="relative flex-1">
+                                          <input
+                                            ref={(el) => {
+                                              if (el) readerInputRefs.current.set(row.key, el)
+                                              else readerInputRefs.current.delete(row.key)
+                                            }}
+                                            className="warm-input"
+                                            placeholder="Поиск по фамилии..."
+                                            onFocus={() => setActiveNumpad(null)}
+                                            value={row.search}
+                                            onChange={(e) => updateReaderRowSearch(row.key, e.target.value)}
+                                            autoComplete="off"
+                                          />
+                                          {row.results.length > 0 && (
+                                            <div data-suggest="1" className="absolute z-10 top-full left-0 right-0 bg-white border border-warm-200 rounded-xl shadow-lg mt-1 overflow-y-auto max-h-56">
+                                              {row.results.map((m) => (
+                                                <button
+                                                  key={m._id}
+                                                  className="w-full text-left px-4 py-3 text-sm border-b border-warm-100 last:border-b-0 active:bg-warm-50 flex items-center gap-2"
+                                                  onClick={() => selectReaderMember(row.key, m)}
+                                                >
+                                                  <span className="font-semibold text-warm-900 flex-1">{memberDisplayName(m.name, m.patronymic)}</span>
+                                                  {m.role === 'reader' && <span className="text-xs text-warm-400 shrink-0">Чтец</span>}
+                                                  <span className="text-xs text-warm-400 shrink-0">{FESTIVE_READER_PRICES.normal} ₽</span>
+                                                </button>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                        <button
+                                          onClick={() => removeReaderRow(row.key)}
+                                          className="w-9 h-9 rounded-xl bg-red-50 text-red-400 flex items-center justify-center shrink-0 active:bg-red-100"
+                                        >
+                                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                          </svg>
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+
+                                <button
+                                  onClick={addReaderRow}
+                                  className="w-full py-2.5 rounded-xl border border-dashed border-warm-300 text-warm-500 text-sm font-medium flex items-center justify-center gap-2 active:bg-warm-50 transition-colors"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                    <path fillRule="evenodd" clipRule="evenodd" d="M12 3.25C12.4142 3.25 12.75 3.58579 12.75 4V11.25H20C20.4142 11.25 20.75 11.5858 20.75 12C20.75 12.4142 20.4142 12.75 20 12.75H12.75V20C12.75 20.4142 12.4142 20.75 12 20.75C11.5858 20.75 11.25 20.4142 11.25 20V12.75H4C3.58579 12.75 3.25 12.4142 3.25 12C3.25 11.5858 3.58579 11.25 4 11.25H11.25V4C11.25 3.58579 11.5858 3.25 12 3.25Z" fill="currentColor"/>
+                                  </svg>
+                                  Добавить чтеца
+                                </button>
+                              </div>
+                            </div>
+                          )}
 
                           <div className="flex items-center justify-between mb-1">
                             <p className="text-xs font-slab font-semibold text-warm-600 uppercase tracking-wide">Певчие</p>
@@ -1590,6 +1756,38 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       onStay={() => setDiscardOpen(false)}
       onDiscard={() => { setDiscardOpen(false); onClose() }}
     />
+
+    {/* Для этого типа выхода обычно нужен чтец, а его не поставили — уточняем перед сохранением */}
+    {noReaderConfirmOpen && (
+      <>
+        <div className="fixed inset-0 z-[70] bg-black/50" onClick={() => setNoReaderConfirmOpen(false)} />
+        <div className="fixed inset-0 z-[70] flex items-center justify-center px-5">
+          <div className="bg-white rounded-2xl w-full max-w-xs shadow-2xl">
+            <div className="px-5 pt-5 pb-4">
+              <h2 className="text-base font-slab font-bold text-warm-900 mb-2">Сохранить без чтеца?</h2>
+              <p className="text-sm text-warm-600 leading-relaxed">
+                Для «{resolvedType}» обычно должен быть чтец, но в этом выходе он не указан.
+              </p>
+            </div>
+            <div className="flex gap-2 px-4 pb-4">
+              <button
+                onClick={() => setNoReaderConfirmOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border border-warm-200 text-warm-700 text-sm font-slab font-semibold active:bg-warm-50"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={doSave}
+                className="flex-1 py-2.5 rounded-xl text-white text-sm font-slab font-semibold flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(to right, #bd9673, #7d5e42)' }}
+              >
+                Сохранить
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    )}
     </>
   )
 }
