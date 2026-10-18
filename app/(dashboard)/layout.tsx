@@ -249,6 +249,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }
 
+  /*
+    Свайп двумя пальцами по тачпаду (MacBook и т.п.) — это не onMouseDown/Up
+    (кнопка не нажимается), а серия wheel-событий с deltaX. Копим deltaX,
+    пока жест не затихнет (сбрасываем счётчик по таймеру), и переключаем
+    раздел при превышении порога — с паузой после срабатывания, чтобы один
+    длинный жест не пролистал сразу несколько разделов.
+  */
+  const wheelAccum = useRef(0)
+  const wheelCooldown = useRef(false)
+  const wheelResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const WHEEL_THRESHOLD = 60
+
+  function handleMainWheel(e: React.WheelEvent) {
+    if (wheelCooldown.current) return
+    if (e.ctrlKey) return // пинч-зум тачпадом — не наш жест
+    if (isInsideOverlay(e.target)) return
+    if (isInsideHorizontalScroller(e.target)) return
+    // Вертикальная прокрутка (обычное колесо мыши или вертикальный свайп) —
+    // не копим, чтобы не мешать обычному скроллу страницы
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
+
+    wheelAccum.current += e.deltaX
+    if (wheelResetTimer.current) clearTimeout(wheelResetTimer.current)
+    wheelResetTimer.current = setTimeout(() => { wheelAccum.current = 0 }, 200)
+
+    if (Math.abs(wheelAccum.current) > WHEEL_THRESHOLD && activeIndex >= 0) {
+      const nextIndex = wheelAccum.current > 0 ? activeIndex + 1 : activeIndex - 1
+      wheelAccum.current = 0
+      if (nextIndex >= 0 && nextIndex < NAV.length) {
+        router.push(NAV[nextIndex].href)
+        wheelCooldown.current = true
+        setTimeout(() => { wheelCooldown.current = false }, 600)
+      }
+    }
+  }
+
   // На планшете (и крупнее) нижнее меню крупнее — иначе кнопки мелковаты
   const [isTablet, setIsTablet] = useState(false)
   useEffect(() => {
@@ -398,6 +434,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onTouchEnd={handleMainTouchEnd}
         onMouseDown={handleMainMouseDown}
         onMouseUp={handleMainMouseUp}
+        onWheel={handleMainWheel}
       >
         {children}
       </main>

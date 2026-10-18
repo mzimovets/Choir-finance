@@ -114,7 +114,7 @@ export function PageHeader({ title, subtitle, username, choirType, right, left, 
   )
 
   const eventTypesDrawer = (
-    <EventTypesDrawer isOpen={showEventTypes} onClose={() => setShowEventTypes(false)} />
+    <EventTypesDrawer isOpen={showEventTypes} onClose={() => setShowEventTypes(false)} choirType={choirType} />
   )
   const auditLogModal = (
     <AuditLogModal isOpen={showAuditLog} onClose={() => setShowAuditLog(false)} />

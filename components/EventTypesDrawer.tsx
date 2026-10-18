@@ -21,10 +21,12 @@ import { CSS } from '@dnd-kit/utilities'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { notifyDataChanged } from '@/lib/dataSignal'
 import type { EventTypeDoc, MemberRole } from '@/lib/types'
+import { FESTIVE_READER_PRICES } from '@/lib/types'
 
 interface Props {
   isOpen: boolean
   onClose: () => void
+  choirType?: string
 }
 
 const ROLES: { key: 'singer' | 'soloist' | 'regent' | 'reader'; label: string }[] = [
@@ -139,7 +141,7 @@ function SortableRow({
   )
 }
 
-export function EventTypesDrawer({ isOpen, onClose }: Props) {
+export function EventTypesDrawer({ isOpen, onClose, choirType }: Props) {
   const [types, setTypes] = useState<EventTypeDoc[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -349,6 +351,31 @@ export function EventTypesDrawer({ isOpen, onClose }: Props) {
                       </DndContext>
                       {types.length === 0 && <p className="text-center text-warm-400 py-8 text-sm">Нет типов — добавьте первый</p>}
                     </div>
+
+                    {/*
+                      Чтец праздничного хора оплачивается не по тарифу типа выхода,
+                      а по фиксированной ставке — «обычная» или «праздничная» служба
+                      (см. FESTIVE_READER_PRICES в lib/types.ts). Эти два пункта не
+                      редактируются как обычные типы — просто показываем, какие цены
+                      действуют, чтобы они были видны в одном списке с остальными.
+                    */}
+                    {choirType === 'festive' && (
+                      <>
+                        <p className="px-1 pt-4 pb-2 text-[10px] font-slab font-bold text-warm-400 uppercase tracking-widest">
+                          Типы выходов чтеца
+                        </p>
+                        <div className="warm-card overflow-hidden">
+                          <div className="flex items-center gap-2 px-3 py-3 bg-white border-b border-warm-100">
+                            <span className="flex-1 text-sm font-slab font-semibold text-warm-900">Обычная служба</span>
+                            <span className="text-xs text-warm-400 tabular-nums">{FESTIVE_READER_PRICES.normal} ₽</span>
+                          </div>
+                          <div className="flex items-center gap-2 px-3 py-3 bg-white">
+                            <span className="flex-1 text-sm font-slab font-semibold text-warm-900">Праздничная служба</span>
+                            <span className="text-xs text-warm-400 tabular-nums">{FESTIVE_READER_PRICES.festive} ₽</span>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </DrawerBody>
