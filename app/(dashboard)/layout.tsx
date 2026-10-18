@@ -218,6 +218,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }
 
+  /*
+    То же переключение разделов — мышью на десктопе (зажать и потянуть
+    влево/вправо). Порог движения (SWIPE_H_THRESHOLD) защищает от срабатывания
+    на обычный клик: эмулированные мышиные события от тапа на тачскрине тоже
+    идут без заметного сдвига координат, поэтому отдельная защита не нужна.
+  */
+  const mouseStart = useRef<{ x: number; y: number; inHScroll: boolean } | null>(null)
+
+  function handleMainMouseDown(e: React.MouseEvent) {
+    if (isInsideOverlay(e.target)) { mouseStart.current = null; return }
+    mouseStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      inHScroll: isInsideHorizontalScroller(e.target),
+    }
+  }
+
+  function handleMainMouseUp(e: React.MouseEvent) {
+    const start = mouseStart.current
+    mouseStart.current = null
+    if (!start) return
+    const dx = e.clientX - start.x
+    const dy = e.clientY - start.y
+    const adx = Math.abs(dx)
+    const ady = Math.abs(dy)
+    if (!start.inHScroll && adx > SWIPE_H_THRESHOLD && adx > ady * 1.5 && activeIndex >= 0) {
+      const nextIndex = dx < 0 ? activeIndex + 1 : activeIndex - 1
+      if (nextIndex >= 0 && nextIndex < NAV.length) router.push(NAV[nextIndex].href)
+    }
+  }
+
   // На планшете (и крупнее) нижнее меню крупнее — иначе кнопки мелковаты
   const [isTablet, setIsTablet] = useState(false)
   useEffect(() => {
@@ -365,6 +396,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         className="flex-1 pb-nav"
         onTouchStart={handleMainTouchStart}
         onTouchEnd={handleMainTouchEnd}
+        onMouseDown={handleMainMouseDown}
+        onMouseUp={handleMainMouseUp}
       >
         {children}
       </main>

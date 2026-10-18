@@ -634,14 +634,22 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
           setFestiveRegent(emptySlot())
         }
 
-        // Автозаполнить чтеца для буднего хора (если он не отключён для нового типа)
+        // Автозаполнить чтеца со звёздочкой (общее для обоих хоров). Нет
+        // звёздочки ни у кого — список чтецов остаётся пустым, выбирают вручную
+        const defaultReader = (membersData as Member[]).find((m) => m.role === 'reader' && m.isPreferredReader && m.isActive !== false)
         if (choirType === 'weekday') {
-          // Подставляем только чтеца со звёздочкой. Нет звёздочки ни у кого —
-          // список чтецов остаётся пустым, выбирают вручную
-          const defaultReader = (membersData as Member[]).find((m) => m.role === 'reader' && m.isPreferredReader && m.isActive !== false)
           // basePrice выставим позже в goToMembers, когда тип будет известен
           setReaderRows(defaultReader
             ? [{ key: nextKey(), memberId: defaultReader._id, memberName: buildMemberName(defaultReader.name, defaultReader.patronymic), basePrice: 0, bonus: 0, fine: 0, search: '', results: [], fullPrice: 0, share: 1 }]
+            : [])
+        } else if (choirType === 'festive') {
+          // Цена чтеца праздничного хора не зависит от типа выхода — можно
+          // подставить сразу; если выбранный позже тип читеца не предполагает,
+          // goToMembers сам очистит список
+          const kind: 'normal' | 'festive' = 'normal'
+          const price = FESTIVE_READER_PRICES[kind]
+          setReaderRows(defaultReader
+            ? [{ key: nextKey(), memberId: defaultReader._id, memberName: buildMemberName(defaultReader.name, defaultReader.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [], fullPrice: price, share: 1, readerPriceKind: kind }]
             : [])
         } else {
           setReaderRows([])
