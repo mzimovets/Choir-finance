@@ -251,12 +251,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   /*
     Свайп двумя пальцами по тачпаду (MacBook и т.п.) — это не onMouseDown/Up
-    (кнопка не нажимается), а серия wheel-событий с deltaX. Копим deltaX,
-    пока жест не затихнет (сбрасываем счётчик по таймеру), и переключаем
-    раздел при превышении порога — с паузой после срабатывания, чтобы один
-    длинный жест не пролистал сразу несколько разделов.
+    (кнопка не нажимается), а серия wheel-событий с deltaX. Копим deltaX И
+    deltaY за весь жест (а не отбрасываем событие, если в НЁМ ОДНОМ deltaY
+    оказался больше deltaX — у реального жеста пальцы редко идут идеально
+    горизонтально, в отдельных сэмплах шум по Y бывает больше, чем X; оценивать
+    направление нужно по накопленной сумме жеста целиком, как и с тач-свайпом).
   */
-  const wheelAccum = useRef(0)
+  const wheelAccumX = useRef(0)
+  const wheelAccumY = useRef(0)
   const wheelCooldown = useRef(false)
   const wheelResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const WHEEL_THRESHOLD = 60
@@ -266,17 +268,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (e.ctrlKey) return // пинч-зум тачпадом — не наш жест
     if (isInsideOverlay(e.target)) return
     if (isInsideHorizontalScroller(e.target)) return
-    // Вертикальная прокрутка (обычное колесо мыши или вертикальный свайп) —
-    // не копим, чтобы не мешать обычному скроллу страницы
-    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
 
-    wheelAccum.current += e.deltaX
+    wheelAccumX.current += e.deltaX
+    wheelAccumY.current += e.deltaY
     if (wheelResetTimer.current) clearTimeout(wheelResetTimer.current)
-    wheelResetTimer.current = setTimeout(() => { wheelAccum.current = 0 }, 200)
+    wheelResetTimer.current = setTimeout(() => { wheelAccumX.current = 0; wheelAccumY.current = 0 }, 300)
 
-    if (Math.abs(wheelAccum.current) > WHEEL_THRESHOLD && activeIndex >= 0) {
-      const nextIndex = wheelAccum.current > 0 ? activeIndex + 1 : activeIndex - 1
-      wheelAccum.current = 0
+    const adx = Math.abs(wheelAccumX.current)
+    const ady = Math.abs(wheelAccumY.current)
+    if (adx > WHEEL_THRESHOLD && adx > ady * 1.2 && activeIndex >= 0) {
+      const nextIndex = wheelAccumX.current > 0 ? activeIndex + 1 : activeIndex - 1
+      wheelAccumX.current = 0
+      wheelAccumY.current = 0
       if (nextIndex >= 0 && nextIndex < NAV.length) {
         router.push(NAV[nextIndex].href)
         wheelCooldown.current = true

@@ -731,18 +731,27 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     if (!q.trim()) return []
     const q2 = q.toLowerCase()
     return members
-      .filter((m) =>
-        m.isActive !== false &&
-        m.name.toLowerCase().includes(q2) &&
-        !excludeIds.includes(m._id) &&
-        !isMemberDisabled(m, resolvedType, slotRole)
-      )
+      .filter((m) => {
+        try {
+          return (
+            m.isActive !== false &&
+            (m.name ?? '').toLowerCase().includes(q2) &&
+            !excludeIds.includes(m._id) &&
+            !isMemberDisabled(m, resolvedType, slotRole)
+          )
+        } catch (err) {
+          // Повреждённая запись участника не должна ломать поиск для всех
+          // остальных — пропускаем именно её, а не весь список
+          console.error('searchMembers: skipped broken member record', m._id, err)
+          return false
+        }
+      })
       .sort((a, b) => {
         if (slotRole) {
           if (a.role === slotRole && b.role !== slotRole) return -1
           if (b.role === slotRole && a.role !== slotRole) return 1
         }
-        return a.name.localeCompare(b.name, 'ru')
+        return (a.name ?? '').localeCompare(b.name ?? '', 'ru')
       })
       .slice(0, 8)
   }
