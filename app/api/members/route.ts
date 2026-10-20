@@ -11,7 +11,9 @@ export async function GET() {
 
   await ensureMigrations()
   const members = await findMembers({ choirType: session.choirType })
-  members.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+  // (a.name ?? '') — повреждённая запись без имени не должна ронять .sort()
+  // и утаскивать за собой весь ответ (и, значит, все подсказки по участникам)
+  members.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'ru'))
   return Response.json(members)
 }
 

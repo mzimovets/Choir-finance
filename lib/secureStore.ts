@@ -28,13 +28,24 @@ function encryptMemberDoc(doc: Record<string, any>): Record<string, any> {
   return out
 }
 
+/**
+ * Расшифровка одного поля, которая не роняет всю запись, если именно это
+ * поле не расшифровалось (например, ключ шифрования сменился, или данные
+ * повреждены) — отдаём шифротекст как есть, лучше кривое значение, чем
+ * запись исчезает из выдачи целиком.
+ */
+function safeDecrypt(value: string): string {
+  try { return decryptText(value) }
+  catch { return value }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function decryptMemberDoc(doc: Record<string, any>): Member {
   const out = { ...doc }
-  if (typeof out.name === 'string') out.name = decryptText(out.name)
-  if (typeof out.patronymic === 'string') out.patronymic = decryptText(out.patronymic)
+  if (typeof out.name === 'string') out.name = safeDecrypt(out.name)
+  if (typeof out.patronymic === 'string') out.patronymic = safeDecrypt(out.patronymic)
   if (typeof out.defaultPrices === 'string') {
-    try { out.defaultPrices = JSON.parse(decryptText(out.defaultPrices)) }
+    try { out.defaultPrices = JSON.parse(safeDecrypt(out.defaultPrices)) }
     catch { out.defaultPrices = [] }
   }
   return out as Member
@@ -42,7 +53,19 @@ function decryptMemberDoc(doc: Record<string, any>): Member {
 
 export async function findMembers(query: Record<string, unknown>): Promise<Member[]> {
   const docs = await dbFind<Record<string, unknown>>(db.members, query)
-  return docs.map(decryptMemberDoc)
+  // Одна повреждённая запись (например, не расшифровывается) не должна
+  // ронять весь список — без этого /api/members отвечал бы 500 и ВСЕ
+  // подсказки по участникам (включая поиск чтеца) переставали бы работать
+  // из-за единственной плохой записи в картотеке
+  const out: Member[] = []
+  for (const doc of docs) {
+    try {
+      out.push(decryptMemberDoc(doc))
+    } catch (err) {
+      console.error('findMembers: skipped broken record', doc._id, err)
+    }
+  }
+  return out
 }
 
 export async function findOneMember(query: Record<string, unknown>): Promise<Member | null> {

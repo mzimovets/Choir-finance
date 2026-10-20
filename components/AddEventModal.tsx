@@ -140,6 +140,9 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   const [eventType, setEventType] = useState('')
   const [customType, setCustomType] = useState('')
   const [eventTypeDocs, setEventTypeDocs] = useState<EventTypeDoc[]>([])
+  // Цены чтеца праздничного хора — настраиваются в «Типы выходов», по
+  // умолчанию берутся из FESTIVE_READER_PRICES, пока не загрузятся свои
+  const [readerPrices, setReaderPrices] = useState<{ normal: number; festive: number }>(FESTIVE_READER_PRICES)
   const [members, setMembers] = useState<Member[]>([])
   const [membersLoading, setMembersLoading] = useState(false)
   const [typesLoading, setTypesLoading] = useState(false)
@@ -284,7 +287,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
           const m = byId(i.memberId, 'reader')
           if (!m) return []
           const kind: 'normal' | 'festive' = 'normal'
-          const price = FESTIVE_READER_PRICES[kind]
+          const price = readerPrices[kind]
           return [{
             key: nextKey(), memberId: m._id, memberName: buildMemberName(m.name, m.patronymic),
             basePrice: price, bonus: 0, fine: 0, search: '', results: [],
@@ -572,6 +575,12 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     const typesPromise = fetch('/api/event-types').then((r) => (r.ok ? r.json() : []))
     const membersPromise = fetch('/api/members').then((r) => (r.ok ? r.json() : []))
 
+    if (choirType === 'festive') {
+      fetch('/api/settings').then((r) => (r.ok ? r.json() : null)).then((s) => {
+        if (s?.festiveReaderPrices) setReaderPrices(s.festiveReaderPrices)
+      }).catch(() => {})
+    }
+
     typesPromise.then((typesData: EventTypeDoc[]) => {
       setEventTypeDocs(typesData)
       setTypesLoading(false)
@@ -647,7 +656,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
           // подставить сразу; если выбранный позже тип читеца не предполагает,
           // goToMembers сам очистит список
           const kind: 'normal' | 'festive' = 'normal'
-          const price = FESTIVE_READER_PRICES[kind]
+          const price = readerPrices[kind]
           setReaderRows(defaultReader
             ? [{ key: nextKey(), memberId: defaultReader._id, memberName: buildMemberName(defaultReader.name, defaultReader.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [], fullPrice: price, share: 1, readerPriceKind: kind }]
             : [])
@@ -663,7 +672,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
     if (choirType !== 'festive' || !resolvedType || members.length === 0) return
     const existingAtt = editingEvent?.attendances || []
     // Отсортировать участников по алфавиту
-    const sorted = [...members].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+    const sorted = [...members].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'ru'))
     const newRows: FestiveRow[] = sorted
       .filter((m) => !isMemberDisabled(m, resolvedType))  // исключить отключённых
       // Архивных не показываем в чек-листе — если только человек уже не
@@ -818,7 +827,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
       // Цена чтеца праздничного хора не зависит от тарифа типа выхода —
       // по умолчанию «обычный», меняется вручную списком или цифрой
       const kind: 'normal' | 'festive' = 'normal'
-      const price = FESTIVE_READER_PRICES[kind]
+      const price = readerPrices[kind]
       setReaderRows((prev) =>
         prev.map((r) => r.key === key
           ? { ...r, memberId: m._id, memberName: memberDisplayName(m.name, m.patronymic), basePrice: price, bonus: 0, fine: 0, search: '', results: [], fullPrice: price, share: 1, readerPriceKind: kind }
@@ -842,7 +851,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
 
   /** Смена «обычный/праздничный» у чтеца праздничного хора из выпадающего списка */
   function setFestiveReaderKind(key: string, kind: 'normal' | 'festive') {
-    const price = FESTIVE_READER_PRICES[kind]
+    const price = readerPrices[kind]
     setReaderRows((prev) => prev.map((r) => r.key === key
       ? { ...r, readerPriceKind: kind, fullPrice: price, basePrice: priceForShare(price, r.share) }
       : r
@@ -1361,8 +1370,8 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                             onChange={(e) => setFestiveReaderKind(row.key, e.target.value as 'normal' | 'festive')}
                                             className="text-xs font-slab font-semibold rounded-lg px-2 py-1.5 border border-warm-200 bg-white text-warm-700 shrink-0"
                                           >
-                                            <option value="normal">Обычный · {FESTIVE_READER_PRICES.normal}₽</option>
-                                            <option value="festive">Праздничный · {FESTIVE_READER_PRICES.festive}₽</option>
+                                            <option value="normal">Обычный · {readerPrices.normal}₽</option>
+                                            <option value="festive">Праздничный · {readerPrices.festive}₽</option>
                                           </select>
                                           {PriceInputs({
                                             id: `r:${row.key}`, name: shortName(row.memberName),
@@ -1395,7 +1404,7 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                                 >
                                                   <span className="font-semibold text-warm-900 flex-1">{memberDisplayName(m.name, m.patronymic)}</span>
                                                   {m.role === 'reader' && <span className="text-xs text-warm-400 shrink-0">Чтец</span>}
-                                                  <span className="text-xs text-warm-400 shrink-0">{FESTIVE_READER_PRICES.normal} ₽</span>
+                                                  <span className="text-xs text-warm-400 shrink-0">{readerPrices.normal} ₽</span>
                                                 </button>
                                               ))}
                                             </div>

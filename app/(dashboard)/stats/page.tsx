@@ -118,7 +118,7 @@ export default function StatsPage() {
     // оказался уже после того, как спел в этом месяце, запись остаётся.
     const sorted = [...map.values()]
       .filter((s) => s.member.isActive !== false || s.events > 0)
-      .sort((a, b) => a.member.name.localeCompare(b.member.name, 'ru'));
+      .sort((a, b) => (a.member.name ?? '').localeCompare(b.member.name ?? '', 'ru'));
     setStats(sorted);
     setLoading(false);
   }, [month]);

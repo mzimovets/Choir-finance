@@ -21,7 +21,6 @@ import { CSS } from '@dnd-kit/utilities'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { notifyDataChanged } from '@/lib/dataSignal'
 import type { EventTypeDoc, MemberRole } from '@/lib/types'
-import { FESTIVE_READER_PRICES } from '@/lib/types'
 
 interface Props {
   isOpen: boolean
@@ -158,6 +157,12 @@ export function EventTypesDrawer({ isOpen, onClose, choirType }: Props) {
   const [activeNumpad, setActiveNumpad] = useState<'singer' | 'soloist' | 'regent' | 'reader' | null>(null)
   const [discardOpen, setDiscardOpen] = useState(false)
 
+  // Цены чтеца праздничного хора (обычный/праздничный выход) — отдельная
+  // настройка, не привязанная к конкретному типу выхода
+  const [readerPricesForm, setReaderPricesForm] = useState<{ normal: string; festive: string }>({ normal: '500', festive: '600' })
+  const [readerPriceNumpad, setReaderPriceNumpad] = useState<'normal' | 'festive' | null>(null)
+  const readerPricesSaved = useRef<{ normal: number; festive: number }>({ normal: 500, festive: 600 })
+
   // Снимок формы на момент открытия — для несохранённых изменений
   const formSnapshot = useRef('')
   const isFormDirty = () => showForm && formSnapshot.current !== JSON.stringify(form)
@@ -169,10 +174,38 @@ export function EventTypesDrawer({ isOpen, onClose, choirType }: Props) {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch('/api/event-types')
-    if (res.ok) setTypes(await res.json())
+    const [typesRes, settingsRes] = await Promise.all([
+      fetch('/api/event-types'),
+      choirType === 'festive' ? fetch('/api/settings') : Promise.resolve(null),
+    ])
+    if (typesRes.ok) setTypes(await typesRes.json())
+    if (settingsRes?.ok) {
+      const s = await settingsRes.json()
+      if (s?.festiveReaderPrices) {
+        readerPricesSaved.current = s.festiveReaderPrices
+        setReaderPricesForm({ normal: String(s.festiveReaderPrices.normal), festive: String(s.festiveReaderPrices.festive) })
+      }
+    }
     setLoading(false)
-  }, [])
+  }, [choirType])
+
+  async function closeReaderPriceNumpad() {
+    const kind = readerPriceNumpad
+    setReaderPriceNumpad(null)
+    if (!kind) return
+    const next = {
+      normal: parseInt(readerPricesForm.normal, 10) || 0,
+      festive: parseInt(readerPricesForm.festive, 10) || 0,
+    }
+    if (next.normal === readerPricesSaved.current.normal && next.festive === readerPricesSaved.current.festive) return
+    readerPricesSaved.current = next
+    await fetch('/api/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ festiveReaderPrices: next }),
+    })
+    notifyDataChanged()
+  }
 
   useEffect(() => {
     if (isOpen) load()
@@ -354,10 +387,10 @@ export function EventTypesDrawer({ isOpen, onClose, choirType }: Props) {
 
                     {/*
                       Чтец праздничного хора оплачивается не по тарифу типа выхода,
-                      а по фиксированной ставке — «обычная» или «праздничная» служба
-                      (см. FESTIVE_READER_PRICES в lib/types.ts). Эти два пункта не
-                      редактируются как обычные типы — просто показываем, какие цены
-                      действуют, чтобы они были видны в одном списке с остальными.
+                      а по фиксированной ставке — «обычная» или «праздничная» служба.
+                      Это не отдельные типы выходов (без перетаскивания/удаления),
+                      а настройка из lib/settings.ts — та же цена, что видна и
+                      подставляется в AddEventModal при выборе чтеца.
                     */}
                     {choirType === 'festive' && (
                       <>
@@ -367,11 +400,23 @@ export function EventTypesDrawer({ isOpen, onClose, choirType }: Props) {
                         <div className="warm-card overflow-hidden">
                           <div className="flex items-center gap-2 px-3 py-3 bg-white border-b border-warm-100">
                             <span className="flex-1 text-sm font-slab font-semibold text-warm-900">Обычная служба</span>
-                            <span className="text-xs text-warm-400 tabular-nums">{FESTIVE_READER_PRICES.normal} ₽</span>
+                            <button
+                              type="button"
+                              onClick={() => setReaderPriceNumpad((v) => v === 'normal' ? null : 'normal')}
+                              className={`text-sm font-semibold font-slab px-3 py-1 rounded-lg border transition-colors ${readerPriceNumpad === 'normal' ? 'border-[#bd9673] bg-white text-warm-900' : 'border-warm-200 bg-warm-50 text-warm-900'}`}
+                            >
+                              <SpoilerAmount text={`${(parseInt(readerPricesForm.normal, 10) || 0).toLocaleString('ru-RU')} ₽`} />
+                            </button>
                           </div>
                           <div className="flex items-center gap-2 px-3 py-3 bg-white">
                             <span className="flex-1 text-sm font-slab font-semibold text-warm-900">Праздничная служба</span>
-                            <span className="text-xs text-warm-400 tabular-nums">{FESTIVE_READER_PRICES.festive} ₽</span>
+                            <button
+                              type="button"
+                              onClick={() => setReaderPriceNumpad((v) => v === 'festive' ? null : 'festive')}
+                              className={`text-sm font-semibold font-slab px-3 py-1 rounded-lg border transition-colors ${readerPriceNumpad === 'festive' ? 'border-[#bd9673] bg-white text-warm-900' : 'border-warm-200 bg-warm-50 text-warm-900'}`}
+                            >
+                              <SpoilerAmount text={`${(parseInt(readerPricesForm.festive, 10) || 0).toLocaleString('ru-RU')} ₽`} />
+                            </button>
                           </div>
                         </div>
                       </>
@@ -400,6 +445,17 @@ export function EventTypesDrawer({ isOpen, onClose, choirType }: Props) {
                     value={form[activeNumpad]}
                     onChange={(v) => setForm(f => ({ ...f, [activeNumpad]: v }))}
                     onClose={() => setActiveNumpad(null)}
+                  />
+                </div>
+              )}
+
+              {!showForm && readerPriceNumpad && (
+                <div className="absolute bottom-0 left-0 right-0 z-50">
+                  <InlineNumpad
+                    role={readerPriceNumpad === 'normal' ? 'Обычная служба' : 'Праздничная служба'}
+                    value={readerPricesForm[readerPriceNumpad]}
+                    onChange={(v) => setReaderPricesForm((f) => ({ ...f, [readerPriceNumpad]: v }))}
+                    onClose={closeReaderPriceNumpad}
                   />
                 </div>
               )}

@@ -1,6 +1,7 @@
 import { db, dbFind } from './db'
-import { pricesToMap, applyHalf, FESTIVE_READER_PRICES } from './types'
+import { pricesToMap, applyHalf } from './types'
 import { findEvents, findMembers, updateEvent } from './secureStore'
+import { getSettings } from './settings'
 import type { Member, ChoirEvent, EventTypeDoc, MemberRole } from './types'
 
 /** Первое число месяца со сдвигом: 0 — текущий, -1 — прошлый */
@@ -26,10 +27,11 @@ interface RecalcOptions {
  * ставке, поэтому «половина» остаётся половиной и после смены цены.
  */
 export async function recalcEvents({ choirType, memberId, from, until }: RecalcOptions): Promise<number> {
-  const [events, types, members] = await Promise.all([
+  const [events, types, members, settings] = await Promise.all([
     findEvents({ choirType }),
     dbFind<EventTypeDoc>(db.eventTypes, { choirType }),
     findMembers({ choirType }),
+    getSettings(choirType),
   ])
 
   const byId = new Map(members.map((m) => [m._id, m]))
@@ -59,7 +61,7 @@ export async function recalcEvents({ choirType, memberId, from, until }: RecalcO
       // обычному/праздничному выходу, не по тарифу типа выхода
       let base: number
       if (choirType === 'festive' && att.isReader) {
-        base = FESTIVE_READER_PRICES[att.readerPriceKind ?? 'normal']
+        base = settings.festiveReaderPrices[att.readerPriceKind ?? 'normal']
       } else {
         const etDoc = types.find((t) => t.name === ev.eventType)
         const tariff = (etDoc?.prices as Record<string, number> | undefined)?.[role] ?? 0

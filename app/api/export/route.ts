@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
     if (oa !== ob) return oa - ob
     return a.createdAt.localeCompare(b.createdAt)
   })
-  members.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+  members.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'ru'))
 
   // Настройка «скрывать без выплат»: убираем из табеля тех, у кого за месяц
   // не набралось ни рубля. Появятся деньги — вернутся сами.

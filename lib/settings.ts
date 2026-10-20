@@ -4,10 +4,13 @@ import { db, dbFindOne, dbInsert, dbUpdate } from './db'
 export interface ChoirSettings {
   /** Не показывать в табеле и ведомости певчих, у которых за месяц 0 ₽ */
   hideZeroMembers: boolean
+  /** Цены чтеца праздничного хора — обычный/праздничный выход, ₽ */
+  festiveReaderPrices: { normal: number; festive: number }
 }
 
 const DEFAULTS: ChoirSettings = {
   hideZeroMembers: false,
+  festiveReaderPrices: { normal: 500, festive: 600 },
 }
 
 function key(choirType: string) {

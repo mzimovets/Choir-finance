@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
     findMembers({ choirType: session.choirType, isActive: true }),
   ])
 
-  members.sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+  members.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '', 'ru'))
 
   // Персональная ведомость для одного певчего — тот же формат что основная ведомость
   if (memberId) {
