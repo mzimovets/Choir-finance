@@ -1364,15 +1364,15 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                                           </button>
                                         </div>
-                                        <div className="flex items-center justify-between gap-2">
-                                          <select
-                                            value={row.readerPriceKind ?? 'normal'}
-                                            onChange={(e) => setFestiveReaderKind(row.key, e.target.value as 'normal' | 'festive')}
-                                            className="text-xs font-slab font-semibold rounded-lg px-2 py-1.5 border border-warm-200 bg-white text-warm-700 shrink-0"
-                                          >
-                                            <option value="normal">Обычный · {readerPrices.normal}₽</option>
-                                            <option value="festive">Праздничный · {readerPrices.festive}₽</option>
-                                          </select>
+                                        <select
+                                          value={row.readerPriceKind ?? 'normal'}
+                                          onChange={(e) => setFestiveReaderKind(row.key, e.target.value as 'normal' | 'festive')}
+                                          className="w-full text-xs font-slab font-semibold rounded-lg px-2 py-1.5 border border-warm-200 bg-white text-warm-700"
+                                        >
+                                          <option value="normal">Обычный · {readerPrices.normal}₽</option>
+                                          <option value="festive">Праздничный · {readerPrices.festive}₽</option>
+                                        </select>
+                                        <div className="flex items-center justify-end">
                                           {PriceInputs({
                                             id: `r:${row.key}`, name: shortName(row.memberName),
                                             basePrice: row.basePrice, bonus: row.bonus, fine: row.fine, share: row.share,
