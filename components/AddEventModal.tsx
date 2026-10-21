@@ -51,7 +51,7 @@ interface WeekdayRow {
   fullPrice: number
   share: number
   /** Только для чтеца праздничного хора — какой выход выбран в списке */
-  readerPriceKind?: 'normal' | 'festive'
+  readerPriceKind?: 'normal' | 'festive' | 'custom'
 }
 
 /* ─── Состояние регента / чтеца ─── */
@@ -850,12 +850,13 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
   }
 
   /** Смена «обычный/праздничный» у чтеца праздничного хора из выпадающего списка */
-  function setFestiveReaderKind(key: string, kind: 'normal' | 'festive') {
-    const price = readerPrices[kind]
-    setReaderRows((prev) => prev.map((r) => r.key === key
-      ? { ...r, readerPriceKind: kind, fullPrice: price, basePrice: priceForShare(price, r.share) }
-      : r
-    ))
+  function setFestiveReaderKind(key: string, kind: 'normal' | 'festive' | 'custom') {
+    setReaderRows((prev) => prev.map((r) => {
+      if (r.key !== key) return r
+      if (kind === 'custom') return { ...r, readerPriceKind: kind }
+      const price = readerPrices[kind]
+      return { ...r, readerPriceKind: kind, fullPrice: price, basePrice: priceForShare(price, r.share) }
+    }))
   }
 
   /* ── Будние певчие ── */
@@ -1366,16 +1367,25 @@ export function AddEventModal({ isOpen, onClose, date, choirType, editingEvent, 
                                         </div>
                                         <select
                                           value={row.readerPriceKind ?? 'normal'}
-                                          onChange={(e) => setFestiveReaderKind(row.key, e.target.value as 'normal' | 'festive')}
-                                          className="w-full text-xs font-slab font-semibold rounded-lg px-2 py-1.5 border border-warm-200 bg-white text-warm-700"
+                                          onChange={(e) => setFestiveReaderKind(row.key, e.target.value as 'normal' | 'festive' | 'custom')}
+                                          className="w-full text-[11px] font-slab font-semibold rounded-lg px-2 py-1.5 border border-warm-200 bg-white text-warm-700"
                                         >
                                           <option value="normal">Обычный · {readerPrices.normal}₽</option>
                                           <option value="festive">Праздничный · {readerPrices.festive}₽</option>
+                                          <option value="custom">Своя цена</option>
                                         </select>
-                                        <div className="flex items-center justify-end">
-                                          {PriceInputs({
-                                            id: `r:${row.key}`, name: shortName(row.memberName),
-                                            basePrice: row.basePrice, bonus: row.bonus, fine: row.fine, share: row.share,
+                                        <div className="flex items-center justify-end gap-1.5">
+                                          {row.readerPriceKind === 'custom' && PriceButton({
+                                            id: `r:${row.key}`, field: 'basePrice', name: shortName(row.memberName),
+                                            value: row.basePrice, tone: 'base', share: row.share,
+                                          })}
+                                          {PriceButton({
+                                            id: `r:${row.key}`, field: 'bonus', name: shortName(row.memberName),
+                                            value: row.bonus, tone: 'bonus',
+                                          })}
+                                          {row.readerPriceKind === 'custom' && PriceButton({
+                                            id: `r:${row.key}`, field: 'fine', name: shortName(row.memberName),
+                                            value: row.fine, tone: 'fine',
                                           })}
                                         </div>
                                       </div>

@@ -58,10 +58,13 @@ export async function recalcEvents({ choirType, memberId, from, until }: RecalcO
           : member.role
 
       // Чтец праздничного хора — цена фиксированная по выбранному им
-      // обычному/праздничному выходу, не по тарифу типа выхода
+      // обычному/праздничному выходу, не по тарифу типа выхода.
+      // «Своя цена» введена вручную и пересчётом не трогается.
+      if (choirType === 'festive' && att.isReader && att.readerPriceKind === 'custom') return att
+
       let base: number
       if (choirType === 'festive' && att.isReader) {
-        base = settings.festiveReaderPrices[att.readerPriceKind ?? 'normal']
+        base = settings.festiveReaderPrices[(att.readerPriceKind as 'normal' | 'festive') ?? 'normal']
       } else {
         const etDoc = types.find((t) => t.name === ev.eventType)
         const tariff = (etDoc?.prices as Record<string, number> | undefined)?.[role] ?? 0
